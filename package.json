@@ -1,1 +1,15 @@
-
+{
+  "name": "gomarket-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "dependencies": {
+    "@radix-ui/react-popover": "^1.1.16",
+    "date-fns": "^4.4.0",
+    "react-day-picker": "^10.0.1",
+    "recharts": "^3.8.1"
+  }
+}
