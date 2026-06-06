@@ -7,8 +7,7 @@ export async function middleware(request: NextRequest) {
 
   if (
     path.startsWith(ROUTES.AUTH.LOGIN) ||
-    path.startsWith(ROUTES.AUTH.SIGNUP) ||
-    path === ROUTES.MARKETING
+    path.startsWith(ROUTES.AUTH.SIGNUP)
   ) {
     return NextResponse.next();
   }

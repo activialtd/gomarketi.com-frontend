@@ -1,4 +1,3 @@
-// apps/vendor-web/components/merchant/Sidebar.tsx
 "use client";
 
 import { useState } from "react";

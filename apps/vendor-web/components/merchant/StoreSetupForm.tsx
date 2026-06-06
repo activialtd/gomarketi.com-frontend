@@ -1,7 +1,3 @@
-// apps/vendor-web/components/onboarding/StoreSetupForm.tsx
-// Route: /dashboard/store-setup
-// Rendered inside MerchantLayout — fills the main content area.
-
 "use client";
 
 import { useState, useEffect } from "react";

@@ -5,11 +5,9 @@ import * as PopoverPrimitive from "@radix-ui/react-popover";
 import { X } from "lucide-react";
 import { cn } from "./utils";
 
-
 const Popover = PopoverPrimitive.Root;
 const PopoverTrigger = PopoverPrimitive.Trigger;
 const PopoverAnchor = PopoverPrimitive.Anchor;
-
 
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
@@ -41,7 +39,6 @@ const PopoverContent = React.forwardRef<
 ));
 PopoverContent.displayName = PopoverPrimitive.Content.displayName;
 
-
 const PopoverClose = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Close>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Close>
@@ -62,7 +59,6 @@ const PopoverClose = React.forwardRef<
   </PopoverPrimitive.Close>
 ));
 PopoverClose.displayName = PopoverPrimitive.Close.displayName;
-
 
 import { Calendar } from "./calendar";
 import { CalendarIcon } from "lucide-react";
@@ -122,6 +118,5 @@ export function DatePickerPopover({
     </Popover>
   );
 }
-
 
 export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent, PopoverClose };
