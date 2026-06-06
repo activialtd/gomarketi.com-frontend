@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: light;
+
+  --primary: #1a7a42;
+  --primary-soft: #239452;
+  --secondary: #0a4d2a;
+  --accent: #22c55e;
+
+  --background: #ffffff;
+  --surface: #f0faf3;
+  --foreground: #1c1c1c;
+  --muted: #3d6b4f;
+  --border: #e2e8f0;
+  --input: #f1f5f9;
+  --ring: #1a7a42;
+
+  --radius: 0.5rem;
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ---------------------------------------------- */
+/* DARK MODE OVERRIDES                            */
+/* ---------------------------------------------- */
+.dark {
+  color-scheme: dark;
+  --background: #0a0a0a;
+  --surface: #121212;
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --border: #1e293b;
+  --input: #1e293b;
+  --primary: #1e8f4d;
+  --secondary: #0c5c32;
+}
+
+/* ---------------------------------------------- */
+/* BASE BODY & SCROLLBAR                          */
+/* ---------------------------------------------- */
+html,
+body,
+#root {
+  height: 100vh;
+}
+
+body {
+  @apply antialiased bg-background text-foreground;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--primary);
+  border-radius: 999px;
+}
+
+/* ---------------------------------------------- */
+/* COMPONENTS LAYER                               */
+/* ---------------------------------------------- */
+@layer components {
+  .app-shell {
+    @apply min-h-screen bg-background;
+  }
+
+  /* Card Component */
+  .card {
+    @apply rounded-xl p-6 border border-border bg-surface shadow-sm;
+  }
+
+  /* BUTTONS ----------------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg text-sm font-semibold tracking-wide transition-all duration-200 px-4 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-ring disabled:opacity-60 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply bg-primary cursor-pointer text-white shadow-md shadow-primary/20;
+  }
+
+  .btn-primary:hover {
+    @apply bg-primary-soft shadow-lg shadow-primary/30;
+  }
+
+  .btn-outline {
+    @apply border-2 border-primary text-primary bg-transparent;
+  }
+
+  .btn-outline:hover {
+    @apply bg-primary/5;
+  }
+
+  .btn-ghost {
+    @apply text-muted bg-transparent;
+  }
+
+  .btn-ghost:hover {
+    @apply bg-surface text-foreground;
+  }
+
+  /* INPUTS ----------------------------- */
+  .input {
+    @apply w-full rounded-lg border border-border px-3 py-2.5 text-sm outline-none bg-background text-foreground transition-all duration-200;
+  }
+
+  .input::placeholder {
+    @apply text-muted/70;
+  }
+
+  .input:focus-visible {
+    @apply ring-2 ring-offset-0 ring-primary border-primary;
+  }
+
+  .label {
+    @apply text-sm font-medium text-foreground mb-1.5 block;
+  }
+
+  .helper {
+    @apply text-xs text-muted mt-1.5 block;
+  }
+}
+
+/* ---------------------------------------------- */
+/* THEME INLINE (Tailwind v4 Bridge)              */
+/* ---------------------------------------------- */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+}
