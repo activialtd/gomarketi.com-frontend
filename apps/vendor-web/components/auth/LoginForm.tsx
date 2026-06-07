@@ -8,6 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Apple, Eye, EyeOff } from "lucide-react";
 import { Input } from "@gomarket/ui";
+import { authApi, ApiError } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
+import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
 
@@ -20,9 +23,11 @@ type LoginData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const {
     register,
@@ -32,11 +37,19 @@ export function LoginForm() {
 
   const busy = isLoading || !!oauthLoading;
 
-  async function onSubmit(_data: LoginData) {
+  async function onSubmit(data: LoginData) {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setIsLoading(false);
-    router.push(ROUTES.MERCHANT.OVERVIEW);
+    setApiError(null);
+    try {
+      const resp = await authApi.login({ email: data.email, password: data.password });
+      setAuth(resp.user, resp.access_token);
+      setAuthSession();
+      router.push(ROUTES.MERCHANT.OVERVIEW);
+    } catch (err) {
+      setApiError(err instanceof ApiError ? err.message : "Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   async function handleOAuth(provider: string) {
@@ -148,6 +161,16 @@ export function LoginForm() {
             </button>
           </div>
         </Field>
+
+        {/* API error */}
+        {apiError && (
+          <p
+            className="text-[12px] rounded-[8px] px-3 py-2 border"
+            style={{ color: "#dc2626", background: "#fef2f2", borderColor: "#fecaca" }}
+          >
+            {apiError}
+          </p>
+        )}
 
         {/* Submit */}
         <button

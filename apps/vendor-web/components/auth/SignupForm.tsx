@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
@@ -17,6 +17,9 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Input } from "@gomarket/ui";
+import { authApi, ApiError } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
+import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
 
@@ -46,8 +49,8 @@ const signupSchema = z
     confirmPassword: z.string().min(1, "Please confirm your password"),
     phone: z
       .string()
-      .min(7, "Enter a valid number")
-      .regex(/^\+?[\d\s\-()+]+$/, "Invalid number"),
+      .min(6, "Enter a valid number")
+      .regex(/^[\d\s\-()]+$/, "Digits only"),
     terms: z.boolean().refine((value) => value, "You must accept the terms"),
     marketing: z.boolean().optional(),
   })
@@ -101,6 +104,7 @@ const STR_COLOR = ["", "#ef4444", "#f59e0b", "#3b82f6", "#1A7A42"];
 export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const [step, setStep] = useState<Step>("METHOD_SELECT");
   const [oauthUser, setOauthUser] = useState<OAuthUser | null>(null);
@@ -109,9 +113,27 @@ export function SignupForm() {
   const [showPw, setShowPw] = useState(false);
   const [pwStrength, setPwStrength] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
-  const confirmRef = useRef<HTMLInputElement | null>(null);
+  const [dialCode, setDialCode] = useState("+234");
+
+  // OTP state
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [signupEmail, setSignupEmail] = useState("");
+  const [otpValue, setOtpValue] = useState("");
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendSuccess, setResendSuccess] = useState(false);
+
+  // Form-level API error
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const busy = isLoading || !!oauthLoading;
+
+  // Countdown tick for resend cooldown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const id = setTimeout(() => setResendCooldown((n) => n - 1), 1000);
+    return () => clearTimeout(id);
+  }, [resendCooldown]);
 
   // Read OAuth params from callback URL on mount
   useEffect(() => {
@@ -158,12 +180,84 @@ export function SignupForm() {
     setStep("OAUTH_PROFILE");
   }
 
-  async function onSignupSubmit(_data: SignupData) {
+  async function onSignupSubmit(data: SignupData) {
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setIsLoading(false);
-    setStep("VERIFY_EMAIL");
+    setApiError(null);
+    try {
+      // 1. Register account
+      const authResp = await authApi.register({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        password: data.password,
+        confirm_password: data.confirmPassword,
+        terms_accepted: data.terms,
+        marketing_consent: data.marketing ?? false,
+      });
+      setAuth(authResp.user, authResp.access_token);
+      setAuthSession();
+      setSignupEmail(data.email);
+
+      // 2. Request OTP to trigger verification email
+      try {
+        const otpResp = await authApi.requestOTP(data.email);
+        setSessionToken(otpResp.session_token);
+        setResendCooldown(60);
+      } catch {
+        // User is registered; they can use the resend button
+      }
+
+      setStep("VERIFY_EMAIL");
+    } catch (err) {
+      setApiError(
+        err instanceof ApiError ? err.message : "Something went wrong. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
+
+  async function handleOTPSubmit() {
+    if (!sessionToken || otpValue.length !== 6) return;
+    setIsLoading(true);
+    setOtpError(null);
+    try {
+      const authResp = await authApi.verifyOTP({
+        session_token: sessionToken,
+        otp: otpValue,
+      });
+      setAuth(authResp.user, authResp.access_token);
+      setAuthSession();
+      router.push(ROUTES.ONBOARDING.SETUP);
+    } catch (err) {
+      setOtpError(
+        err instanceof ApiError ? err.message : "Invalid code. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const handleResendOTP = useCallback(async () => {
+    if (!signupEmail || isLoading || resendCooldown > 0) return;
+    setIsLoading(true);
+    setOtpError(null);
+    setResendSuccess(false);
+    try {
+      const resp = await authApi.requestOTP(signupEmail);
+      setSessionToken(resp.session_token);
+      setOtpValue("");
+      setResendSuccess(true);
+      setResendCooldown(60);
+      setTimeout(() => setResendSuccess(false), 4000);
+    } catch (err) {
+      setOtpError(
+        err instanceof ApiError ? err.message : "Failed to resend. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }, [signupEmail, isLoading, resendCooldown]);
 
   async function onOAuthProfileSubmit(_data: OAuthProfileData) {
     setIsLoading(true);
@@ -174,10 +268,7 @@ export function SignupForm() {
 
   function onPasswordChange(val: string) {
     setPwStrength(computeStrength(val));
-    if (val.length >= 8 && !showConfirm) {
-      setShowConfirm(true);
-      setTimeout(() => confirmRef.current?.focus(), 80);
-    }
+    if (val.length >= 8 && !showConfirm) setShowConfirm(true);
     if (val.length === 0) setShowConfirm(false);
   }
 
@@ -186,12 +277,10 @@ export function SignupForm() {
   return (
     <div className="animate-in fade-in duration-500 w-full">
       {/* ── Back button ─────────────────────────────────────── */}
-      {(step === "SIGNUP_FORM" || step === "VERIFY_EMAIL") && (
+      {step === "SIGNUP_FORM" && (
         <button
           type="button"
-          onClick={() =>
-            setStep(step === "VERIFY_EMAIL" ? "SIGNUP_FORM" : "METHOD_SELECT")
-          }
+          onClick={() => setStep("METHOD_SELECT")}
           className="flex items-center gap-1.5 text-xs font-medium mb-6 transition-colors group"
           style={{ color: "#3D6B4F" }}
         >
@@ -222,7 +311,7 @@ export function SignupForm() {
         style={{ color: "#3D6B4F" }}
       >
         {step === "VERIFY_EMAIL"
-          ? "We sent a verification link. Click it to activate your account."
+          ? `Enter the 6-digit code we sent to ${signupEmail}.`
           : step === "OAUTH_PROFILE"
             ? `Connected via ${
                 oauthUser?.provider === "google" ? "Google" : "Apple"
@@ -403,10 +492,6 @@ export function SignupForm() {
                   autoComplete="new-password"
                   placeholder="Re-enter password"
                   {...signupForm.register("confirmPassword")}
-                  ref={(el: HTMLInputElement | null) => {
-                    signupForm.register("confirmPassword").ref(el);
-                    (confirmRef as any).current = el;
-                  }}
                 />
               </Field>
             </div>
@@ -417,12 +502,10 @@ export function SignupForm() {
             label="Phone number"
             error={signupForm.formState.errors.phone?.message}
           >
-            <Input
-              id="phone"
-              type="tel"
-              autoComplete="tel"
-              placeholder="+234 800 000 0000"
-              {...signupForm.register("phone")}
+            <PhoneInput
+              dialCode={dialCode}
+              onDialCodeChange={setDialCode}
+              inputProps={signupForm.register("phone")}
             />
           </Field>
 
@@ -430,6 +513,16 @@ export function SignupForm() {
             control={signupForm.control}
             errors={signupForm.formState.errors}
           />
+
+          {/* API error */}
+          {apiError && (
+            <p
+              className="text-[12px] rounded-[8px] px-3 py-2 border"
+              style={{ color: "#dc2626", background: "#fef2f2", borderColor: "#fecaca" }}
+            >
+              {apiError}
+            </p>
+          )}
 
           <PrimaryButton loading={isLoading} label="Create account" />
 
@@ -449,7 +542,7 @@ export function SignupForm() {
         </form>
       )}
 
-      {/* ═══ VERIFY EMAIL ════════════════════════════════════ */}
+      {/* ═══ VERIFY EMAIL (OTP) ══════════════════════════════ */}
       {step === "VERIFY_EMAIL" && (
         <div className="space-y-5">
           {/* Icon */}
@@ -481,7 +574,7 @@ export function SignupForm() {
             </div>
           </div>
 
-          {/* Instructions */}
+          {/* Info box */}
           <div
             className="rounded-[10px] border p-4 space-y-1.5"
             style={{
@@ -490,30 +583,78 @@ export function SignupForm() {
             }}
           >
             <p className="text-sm font-semibold" style={{ color: "#1C1C1C" }}>
-              What to do next
+              Enter your verification code
             </p>
             <p className="text-xs leading-relaxed" style={{ color: "#3D6B4F" }}>
-              Open the email we sent and click the verification link. It expires
-              in 24 hours. Check your spam folder if you don't see it.
+              We sent a 6-digit code to{" "}
+              <span className="font-semibold">{signupEmail}</span>. It expires
+              in 10 minutes. Check your spam folder if you don&apos;t see it.
             </p>
           </div>
 
-          {/* Dev-only shortcut */}
+          {/* OTP input */}
+          <div className="space-y-1.5">
+            <span
+              className="text-[10px] font-extrabold uppercase block"
+              style={{ letterSpacing: "0.1em", color: "#3D6B4F" }}
+            >
+              Verification code
+            </span>
+            <Input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="000000"
+              value={otpValue}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                setOtpValue(e.target.value.replace(/\D/g, "").slice(0, 6));
+                setOtpError(null);
+              }}
+              style={{
+                textAlign: "center",
+                fontSize: "22px",
+                letterSpacing: "0.4em",
+              }}
+            />
+            {otpError && (
+              <p className="text-[11px] text-red-500 mt-0.5">{otpError}</p>
+            )}
+          </div>
+
           <PrimaryButton
-            loading={false}
-            label="Simulate verification ✓"
-            onClick={() => router.push(ROUTES.ONBOARDING.SETUP)}
+            loading={isLoading}
+            disabled={otpValue.length !== 6}
+            label="Verify email →"
+            onClick={handleOTPSubmit}
           />
 
-          <p className="text-center text-[11px]" style={{ color: "#3D6B4F" }}>
-            Didn't receive it?{" "}
-            <button
-              type="button"
-              className="font-bold transition-colors"
-              style={{ color: "#1A7A42" }}
+          {resendSuccess && (
+            <p
+              className="text-center text-[12px] rounded-[8px] px-3 py-2 border"
+              style={{ color: "#15803d", background: "#f0fdf4", borderColor: "#bbf7d0" }}
             >
-              Resend email
-            </button>
+              A new code was sent to {signupEmail}
+            </p>
+          )}
+
+          <p className="text-center text-[11px]" style={{ color: "#3D6B4F" }}>
+            Didn&apos;t receive it?{" "}
+            {resendCooldown > 0 ? (
+              <span className="font-semibold" style={{ color: "rgba(61,107,79,0.5)" }}>
+                Resend in {resendCooldown}s
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={isLoading}
+                className="font-bold transition-colors disabled:opacity-50"
+                style={{ color: "#1A7A42" }}
+                onClick={handleResendOTP}
+              >
+                Resend code
+              </button>
+            )}
           </p>
         </div>
       )}
@@ -853,7 +994,7 @@ function TermsBlock({ control, errors }: { control: any; errors: any }) {
               className="text-xs leading-relaxed"
               style={{ color: "#3D6B4F" }}
             >
-              I'd like to receive marketing tips and business updates from
+              I&apos;d like to receive marketing tips and business updates from
               GoMarket.
             </span>
           </label>
@@ -863,20 +1004,97 @@ function TermsBlock({ control, errors }: { control: any; errors: any }) {
   );
 }
 
+// ─── Country dial codes ───────────────────────────────────────────────────────
+
+const COUNTRIES = [
+  { code: "+234", flag: "🇳🇬", name: "Nigeria" },
+  { code: "+233", flag: "🇬🇭", name: "Ghana" },
+  { code: "+254", flag: "🇰🇪", name: "Kenya" },
+  { code: "+27",  flag: "🇿🇦", name: "South Africa" },
+  { code: "+251", flag: "🇪🇹", name: "Ethiopia" },
+  { code: "+255", flag: "🇹🇿", name: "Tanzania" },
+  { code: "+256", flag: "🇺🇬", name: "Uganda" },
+  { code: "+237", flag: "🇨🇲", name: "Cameroon" },
+  { code: "+225", flag: "🇨🇮", name: "Côte d'Ivoire" },
+  { code: "+221", flag: "🇸🇳", name: "Senegal" },
+  { code: "+44",  flag: "🇬🇧", name: "United Kingdom" },
+  { code: "+1",   flag: "🇺🇸", name: "United States" },
+  { code: "+1",   flag: "🇨🇦", name: "Canada" },
+  { code: "+33",  flag: "🇫🇷", name: "France" },
+  { code: "+49",  flag: "🇩🇪", name: "Germany" },
+  { code: "+91",  flag: "🇮🇳", name: "India" },
+  { code: "+971", flag: "🇦🇪", name: "UAE" },
+];
+
+function PhoneInput({
+  dialCode,
+  onDialCodeChange,
+  inputProps,
+}: {
+  dialCode: string;
+  onDialCodeChange: (code: string) => void;
+  inputProps: React.InputHTMLAttributes<HTMLInputElement>;
+}) {
+  const selected = COUNTRIES.find((c) => c.code === dialCode) ?? COUNTRIES[0];
+
+  return (
+    <div
+      className="flex rounded-[10px] border overflow-hidden transition-all focus-within:outline focus-within:outline-2 focus-within:outline-offset-[-2px]"
+      style={{
+        borderColor: "#e2e8f0",
+        outlineColor: "#1A7A42",
+      } as React.CSSProperties}
+    >
+      {/* Country selector */}
+      <div className="relative shrink-0 border-r" style={{ borderColor: "#e2e8f0" }}>
+        <select
+          value={dialCode}
+          onChange={(e) => onDialCodeChange(e.target.value)}
+          aria-label="Country code"
+          className="h-[42px] pl-3 pr-7 text-[13px] font-semibold appearance-none bg-transparent cursor-pointer focus:outline-none"
+          style={{ color: "#1C1C1C" }}
+        >
+          {COUNTRIES.map((c, i) => (
+            <option key={`${c.code}-${i}`} value={c.code}>
+              {c.flag} {c.code}
+            </option>
+          ))}
+        </select>
+        {/* Chevron icon */}
+        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: "#9ca3af" }}>
+          ▾
+        </span>
+      </div>
+
+      {/* Local number */}
+      <input
+        type="tel"
+        autoComplete="tel-national"
+        placeholder={selected.code === "+234" ? "800 000 0000" : "Local number"}
+        className="flex-1 h-[42px] px-3 text-[13px] bg-white focus:outline-none placeholder:text-[#9ca3af]"
+        style={{ color: "#1C1C1C" }}
+        {...inputProps}
+      />
+    </div>
+  );
+}
+
 function PrimaryButton({
   loading,
   label,
   onClick,
+  disabled,
 }: {
   loading: boolean;
   label: string;
   onClick?: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type={onClick ? "button" : "submit"}
       onClick={onClick}
-      disabled={loading}
+      disabled={loading || disabled}
       className="w-full h-[42px] rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       style={{
         background: "#1A7A42",
@@ -884,7 +1102,7 @@ function PrimaryButton({
         boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
       }}
       onMouseOver={(e) =>
-        !loading && (e.currentTarget.style.background = "#239452")
+        !(loading || disabled) && (e.currentTarget.style.background = "#239452")
       }
       onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
     >
