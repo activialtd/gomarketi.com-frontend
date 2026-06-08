@@ -1,0 +1,7 @@
+{"timestamp":"00:00:14.927","source":"Server","level":"LOG","message":"- Experiments (use with caution):"}
+{"timestamp":"00:00:14.927","source":"Server","level":"LOG","message":"  ⨯ turbopackFileSystemCacheForDev"}
+{"timestamp":"00:00:14.927","source":"Server","level":"LOG","message":""}
+{"timestamp":"00:00:20.002","source":"Server","level":"LOG","message":"○ Compiling /merchant/store-setup ..."}
+{"timestamp":"00:00:43.183","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:00:50.255","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
+{"timestamp":"00:00:51.050","source":"Browser","level":"INFO","message":"%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"}
