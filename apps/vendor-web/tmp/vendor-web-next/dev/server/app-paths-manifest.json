@@ -1,0 +1,5 @@
+{
+  "/(auth)/auth/login/page": "app/(auth)/auth/login/page.js",
+  "/(auth)/auth/signup/page": "app/(auth)/auth/signup/page.js",
+  "/(dashboard)/merchant/store-setup/page": "app/(dashboard)/merchant/store-setup/page.js"
+}

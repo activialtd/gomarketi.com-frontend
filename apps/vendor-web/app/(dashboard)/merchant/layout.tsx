@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function MerchantLayout({
   children,
@@ -10,6 +11,17 @@ export default function MerchantLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const user = useAuthStore((s) => s.user);
+
+  // Derive display values from the real user object.
+  // Fall back to safe placeholders while the session is being restored.
+  const merchantName = user?.full_name ?? user?.email?.split("@")[0] ?? "Merchant";
+  const avatarInitials = merchantName
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <div
@@ -24,10 +36,11 @@ export default function MerchantLayout({
         {/* Header */}
         <Header
           onMenuClick={() => setSidebarOpen(true)}
-          storeName="Eko Fashion House"
-          storeSlug="eko-fashion"
-          merchantName="Akachi Ezekiel"
-          hasNotifications
+          merchantName={merchantName}
+          avatarInitials={avatarInitials}
+          userEmail={user?.email}
+          storeName="My Store"
+          storeSlug={user?.id ?? "my-store"}
           trialDaysLeft={14}
         />
 

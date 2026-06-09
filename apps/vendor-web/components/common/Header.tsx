@@ -20,6 +20,7 @@ interface HeaderProps {
   storeName?: string;
   storeSlug?: string;
   merchantName?: string;
+  userEmail?: string;
   avatarInitials?: string;
   hasNotifications?: boolean;
   trialDaysLeft?: number;
@@ -30,6 +31,7 @@ export function Header({
   storeName = "My Store",
   storeSlug = "my-store",
   merchantName = "Merchant",
+  userEmail,
   avatarInitials,
   hasNotifications = false,
   trialDaysLeft,
@@ -228,7 +230,7 @@ export function Header({
                   className="text-[11px] truncate"
                   style={{ color: "#6b7280" }}
                 >
-                  {storeName}
+                  {userEmail ?? storeName}
                 </p>
               </div>
 
