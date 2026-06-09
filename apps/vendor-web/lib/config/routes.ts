@@ -1,7 +1,7 @@
 export const ROUTES = {
   AUTH: {
     LOGIN: "/auth/login",
-    SIGNUP: "/auth/signup",
+    SIGNUP: "/auth/sign-up",
     FORGOT: "/auth/forgot-password",
     CALLBACK: "/auth/callback",
   },
@@ -15,8 +15,9 @@ export const ROUTES = {
 
     // Products
     PRODUCTS: "/merchant/products",
-    PRODUCT_FILTER: "/merchant/products/filter",
+    PRODUCTS_NEW: "/merchant/products/create-product",
     CATEGORIES: "/merchant/products/categories",
+    COLLECTIONS_NEW: "/merchant/products/create-collection",
 
     // Orders
     ORDERS: "/merchant/orders",

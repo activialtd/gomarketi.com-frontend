@@ -65,6 +65,64 @@ export const storeSetupSchema = z.object({
   staffRange: z.string().min(1, "Please select a staff range"),
 });
 
+const variantOptionSchema = z.object({
+  name: z.string().min(1, "Option name required"),
+  values: z.array(z.string().min(1)).min(1, "Add at least one value"),
+});
+
+export const createProductSchema = z.object({
+  name: z.string().min(2, "Product name must be at least 2 characters"),
+  description: z.string().optional(),
+  category: z.string().min(1, "Select a category"),
+  collectionIds: z.array(z.string()).optional(),
+  tags: z.string().optional(),
+
+  price: z.coerce.number().min(1, "Enter a price"),
+  compareAtPrice: z.coerce.number().optional(),
+  costPerItem: z.coerce.number().optional(),
+
+  hasVariants: z.boolean().default(false),
+  variantOptions: z.array(variantOptionSchema).optional(),
+
+  stock: z.coerce.number().min(0).default(0),
+  sku: z.string().optional(),
+  barcode: z.string().optional(),
+  trackInventory: z.boolean().default(true),
+  weight: z.coerce.number().optional(),
+
+  status: z.enum(["active", "draft"]).default("draft"),
+  featured: z.boolean().default(false),
+
+  seoTitle: z.string().optional(),
+  seoDescription: z.string().optional(),
+  slug: z.string().optional(),
+});
+
+export const createCollectionSchema = z.object({
+  name: z.string().min(2, "Collection name must be at least 2 characters"),
+  description: z.string().optional(),
+  productIds: z.array(z.string()).min(1, "Add at least one product"),
+  status: z.enum(["active", "draft"]).default("active"),
+});
+
+export const categorySchema = z.object({
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(60, "Max 60 characters"),
+  description: z.string().max(200, "Max 200 characters").optional(),
+  emoji: z.string().min(1, "Pick an emoji"),
+  color: z.string().min(1, "Pick a color"),
+  slug: z
+    .string()
+    .min(2, "Slug must be at least 2 characters")
+    .regex(/^[a-z0-9-]+$/, "Lowercase letters, numbers, and hyphens only")
+    .optional(),
+});
+
 export type BusinessFormValues = z.infer<typeof businessSchema>;
 export type StoreFormValues = z.infer<typeof storeSchema>;
 export type StoreSetupFormValues = z.infer<typeof storeSetupSchema>;
+export type CreateProductFormValues = z.infer<typeof createProductSchema>;
+export type CreateCollectionFormValues = z.infer<typeof createCollectionSchema>;
+export type CategoryFormValues = z.infer<typeof categorySchema>;

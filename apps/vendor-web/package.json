@@ -12,6 +12,7 @@
     "@gomarket/api-client": "workspace:*",
     "@gomarket/shared-types": "workspace:*",
     "@gomarket/ui": "workspace:*",
+    "@gomarket/shared-utils": "workspace:*",
     "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.0",
     "lucide-react": "^1.17.0",
@@ -19,6 +20,7 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-hook-form": "^7.77.0",
+    "recharts": "^3.8.1",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },
