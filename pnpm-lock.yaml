@@ -33,6 +33,9 @@ importers:
       '@gomarket/shared-types':
         specifier: workspace:*
         version: link:../../packages/shared-types
+      '@gomarket/shared-utils':
+        specifier: workspace:*
+        version: link:../../packages/shared-utils
       '@gomarket/ui':
         specifier: workspace:*
         version: link:../../packages/ui

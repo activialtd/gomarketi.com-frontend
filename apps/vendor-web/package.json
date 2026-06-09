@@ -12,6 +12,7 @@
     "@gomarket/api-client": "workspace:*",
     "@gomarket/shared-types": "workspace:*",
     "@gomarket/ui": "workspace:*",
+    "@gomarket/shared-utils": "workspace:*",
     "@hookform/resolvers": "^5.4.0",
     "@tanstack/react-query": "^5.101.0",
     "lucide-react": "^1.17.0",
