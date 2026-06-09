@@ -4,3 +4,7 @@ export * from "./label";
 export * from "./utils";
 export * from "./select";
 export * from "./checkbox";
+export * from "./skeleton";
+export * from "./chart";
+export * from "./calendar";
+export * from "./popover";
