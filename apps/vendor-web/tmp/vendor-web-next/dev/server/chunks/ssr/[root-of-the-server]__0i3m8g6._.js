@@ -37,7 +37,7 @@ __turbopack_context__.s([
     "authApi",
     ()=>authApi
 ]);
-const API_BASE = ("TURBOPACK compile-time value", "http://localhost:8080") ?? "http://localhost:8080";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 class ApiError extends Error {
     status;
     fields;

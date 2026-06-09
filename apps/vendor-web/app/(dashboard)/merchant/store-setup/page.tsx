@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { StoreSetupForm } from "@/components/merchant/StoreSetupForm";
+import { StoreSetupForm } from "@/components/merchant/store-setup/StoreSetupForm";
 
 export const metadata: Metadata = {
   title: "Store Profile | GoMarket Vendor Onboarding",

@@ -1,6 +1,6 @@
 var R=require("../../../../chunks/ssr/[turbopack]_runtime.js")("server/app/(dashboard)/merchant/store-setup/page.js")
 R.c("server/chunks/ssr/node_modules__pnpm_09x-9i_._.js")
-R.c("server/chunks/ssr/[root-of-the-server]__1zgvpz5._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__1k6lgw_._.js")
 R.c("server/chunks/ssr/1wmt_next_dist_esm_server_0uybnd4._.js")
 R.c("server/chunks/ssr/1wmt_next_dist_esm_lib_1q4ltru._.js")
 R.c("server/chunks/ssr/1wmt_next_dist_esm_10v4asg._.js")

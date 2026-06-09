@@ -1,5 +1,5 @@
 {
-  "/(auth)/auth/login/page": "app/(auth)/auth/login/page.js",
-  "/(auth)/auth/signup/page": "app/(auth)/auth/signup/page.js",
-  "/(dashboard)/merchant/store-setup/page": "app/(dashboard)/merchant/store-setup/page.js"
+  "/(dashboard)/merchant/page": "app/(dashboard)/merchant/page.js",
+  "/(dashboard)/merchant/store-setup/page": "app/(dashboard)/merchant/store-setup/page.js",
+  "/(onboarding)/auth/login/page": "app/(onboarding)/auth/login/page.js"
 }
