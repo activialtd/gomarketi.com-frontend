@@ -15,8 +15,9 @@ export const ROUTES = {
 
     // Products
     PRODUCTS: "/merchant/products",
-    PRODUCT_FILTER: "/merchant/products/filter",
+    PRODUCTS_NEW: "/merchant/products/create-product",
     CATEGORIES: "/merchant/products/categories",
+    COLLECTIONS_NEW: "/merchant/products/create-collection",
 
     // Orders
     ORDERS: "/merchant/orders",

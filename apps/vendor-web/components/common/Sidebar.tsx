@@ -1,137 +1,10 @@
-"use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
-  BarChart3,
-  Wallet,
-  Megaphone,
-  Puzzle,
-  Settings,
-  ChevronDown,
-  ChevronRight,
-  Store,
-  Zap,
-  HelpCircle,
-  LogOut,
-  Tag,
-  Filter,
-  RotateCcw,
-  UserCheck,
-  TrendingUp,
-  Globe,
-  CreditCard,
-  Receipt,
-  Building2,
-  Layers,
-} from "lucide-react";
+import { Settings, ChevronDown, Store, HelpCircle, LogOut } from "lucide-react";
 import { ROUTES } from "@/lib/config/routes";
 import { cn } from "@gomarket/ui";
-
-// ─── Nav structure ────────────────────────────────────────────────────────────
-
-type NavItem = {
-  label: string;
-  href?: string;
-  icon: React.ElementType;
-  badge?: string;
-  badgeVariant?: "green" | "red" | "gray";
-  children?: NavItem[];
-};
-
-type NavSection = {
-  title?: string;
-  items: NavItem[];
-};
-
-const NAV: NavSection[] = [
-  {
-    title: "Quick Access",
-    items: [
-      {
-        label: "Dashboard",
-        href: ROUTES.MERCHANT.OVERVIEW,
-        icon: LayoutDashboard,
-      },
-      {
-        label: "Products",
-        icon: Package,
-        children: [
-          {
-            label: "All Products",
-            href: ROUTES.MERCHANT.PRODUCTS,
-            icon: Layers,
-          },
-          {
-            label: "Product Filter",
-            href: ROUTES.MERCHANT.PRODUCT_FILTER,
-            icon: Filter,
-          },
-          { label: "Categories", href: ROUTES.MERCHANT.CATEGORIES, icon: Tag },
-        ],
-      },
-      {
-        label: "Orders",
-        icon: ShoppingCart,
-        children: [
-          { label: "All Orders", href: ROUTES.MERCHANT.ORDERS, icon: Receipt },
-          {
-            label: "Abandoned",
-            href: ROUTES.MERCHANT.ABANDONED,
-            icon: RotateCcw,
-          },
-        ],
-      },
-      { label: "Customers", href: ROUTES.MERCHANT.CUSTOMERS, icon: Users },
-      { label: "Analytics", href: ROUTES.MERCHANT.ANALYTICS, icon: BarChart3 },
-      { label: "GoMarket Wallet", href: ROUTES.MERCHANT.WALLET, icon: Wallet },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      {
-        label: "Sales & Marketing",
-        href: ROUTES.MERCHANT.MARKETING,
-        icon: Megaphone,
-      },
-      { label: "Extensions", href: ROUTES.MERCHANT.EXTENSIONS, icon: Puzzle },
-    ],
-  },
-  {
-    title: "Finance",
-    items: [
-      {
-        label: "Payouts",
-        href: ROUTES.MERCHANT.PAYOUTS,
-        icon: CreditCard,
-        badge: "New",
-        badgeVariant: "green",
-      },
-      { label: "Invoices", href: ROUTES.MERCHANT.INVOICES, icon: Receipt },
-    ],
-  },
-  {
-    title: "Store Setup",
-    items: [
-      {
-        label: "Store Information",
-        href: ROUTES.MERCHANT.STORE_INFO,
-        icon: Building2,
-      },
-      { label: "Customisation", href: ROUTES.MERCHANT.CUSTOMISE, icon: Globe },
-      { label: "Staff & Roles", href: ROUTES.MERCHANT.STAFF, icon: UserCheck },
-      { label: "More", href: ROUTES.MERCHANT.MORE, icon: Layers },
-    ],
-  },
-];
-
-// ─── Component ────────────────────────────────────────────────────────────────
+import { NAV, NavItem } from "@/lib/config/sidebar";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -152,14 +25,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     });
   }
 
-  function isActive(href?: string) {
+  function isActive(href?: string, exact?: boolean): boolean {
     if (!href) return false;
+    if (exact) return pathname === href;
     return pathname === href || pathname.startsWith(href + "/");
   }
 
   function isSectionActive(item: NavItem): boolean {
-    if (isActive(item.href)) return true;
-    return item.children?.some((c) => isActive(c.href)) ?? false;
+    if (!item.children?.length) return isActive(item.href, item.exact);
+    return item.children.some((c) => isActive(c.href, c.exact));
   }
 
   return (
@@ -220,7 +94,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
               )}
 
               {section.items.map((item) => {
-                const active = isSectionActive(item);
+                const sectionActive = isSectionActive(item);
                 const open = expanded.has(item.label);
                 const hasChildren = !!item.children?.length;
 
@@ -232,21 +106,24 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         type="button"
                         onClick={() => toggleExpand(item.label)}
                         className={cn(
-                          "w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-medium transition-all text-left group",
+                          "w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all text-left",
                           "hover:bg-[#F0FAF3]",
                         )}
                         style={{
-                          color: active ? "#1A7A42" : "#374151",
-                          background: active ? "#F0FAF3" : "transparent",
+                          // Parent is only tinted (not solid) when a child is active
+                          color: sectionActive ? "#1A7A42" : "#374151",
+                          background: sectionActive
+                            ? "rgba(26,122,66,0.05)"
+                            : "transparent",
                         }}
                       >
                         <item.icon
-                          className="w-[16px] h-[16px] shrink-0 transition-colors"
-                          style={{ color: active ? "#1A7A42" : "#6b7280" }}
+                          className="w-[16px] h-[16px] shrink-0"
+                          style={{
+                            color: sectionActive ? "#1A7A42" : "#6b7280",
+                          }}
                         />
-                        <span className="flex-1 font-semibold">
-                          {item.label}
-                        </span>
+                        <span className="flex-1">{item.label}</span>
                         <ChevronDown
                           className="w-3.5 h-3.5 transition-transform duration-200"
                           style={{
@@ -264,13 +141,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                           "hover:bg-[#F0FAF3]",
                         )}
                         style={{
-                          color: active ? "#1A7A42" : "#374151",
-                          background: active ? "#F0FAF3" : "transparent",
+                          color: sectionActive ? "#1A7A42" : "#374151",
+                          background: sectionActive ? "#F0FAF3" : "transparent",
                         }}
                       >
                         <item.icon
                           className="w-[16px] h-[16px] shrink-0"
-                          style={{ color: active ? "#1A7A42" : "#6b7280" }}
+                          style={{
+                            color: sectionActive ? "#1A7A42" : "#6b7280",
+                          }}
                         />
                         <span className="flex-1">{item.label}</span>
                         {item.badge && (
@@ -278,7 +157,8 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                             {item.badge}
                           </Badge>
                         )}
-                        {active && !hasChildren && (
+                        {/* Active dot — only on leaf items */}
+                        {sectionActive && (
                           <div
                             className="w-1.5 h-1.5 rounded-full shrink-0"
                             style={{ background: "#1A7A42" }}
@@ -294,7 +174,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                         style={{ borderColor: "#e2e8f0" }}
                       >
                         {item.children!.map((child) => {
-                          const childActive = isActive(child.href);
+                          const childActive = isActive(child.href, child.exact);
                           return (
                             <Link
                               key={child.label}

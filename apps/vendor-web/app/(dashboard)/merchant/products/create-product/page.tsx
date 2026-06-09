@@ -1,11 +1,11 @@
-import OverviewPage from "@/components/merchant/Overview";
+import CreateProductForm from "@/components/merchant/products/create/CreateProduct";
 import { Suspense } from "react";
 import OverviewSkeleton from "@/components/skeletons/OverviewSkeleton";
 
 const page = () => {
   return (
     <Suspense fallback={<OverviewSkeleton />}>
-      <OverviewPage />
+      <CreateProductForm />
     </Suspense>
   );
 };
