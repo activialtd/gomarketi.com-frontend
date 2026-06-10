@@ -1501,6 +1501,14 @@
     max-width: 220px;
   }
 
+  .max-w-\[230px\] {
+    max-width: 230px;
+  }
+
+  .max-w-\[260px\] {
+    max-width: 260px;
+  }
+
   .max-w-\[360px\] {
     max-width: 360px;
   }
@@ -2524,6 +2532,10 @@
 
   .text-\[26px\] {
     font-size: 26px;
+  }
+
+  .text-\[28px\] {
+    font-size: 28px;
   }
 
   .text-\[30px\] {

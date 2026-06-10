@@ -8,36 +8,37 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen w-full">
       {/* ── LEFT: Brand Panel ─────────────────────────────────── */}
-      <div
-        className="relative hidden lg:flex w-[52%] flex-shrink-0 flex-col overflow-hidden"
-        style={{
-          background:
-            "linear-gradient(160deg,rgba(10,77,42,0.91) 0%,rgba(10,77,42,0.76) 48%,rgba(10,77,42,0.88) 100%)",
-        }}
-      >
-        {/* Background photo */}
+      <div className="relative hidden lg:flex w-[52%] flex-shrink-0 flex-col overflow-hidden">
         <img
-          src="https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=900&q=80"
+          // src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1000&q=85"
+          src="https://img.freepik.com/free-photo/medium-shot-black-woman-running-small-business_23-2150171818.jpg"
           alt=""
           aria-hidden="true"
-          className="absolute inset-0 w-full h-full object-cover object-center"
-          style={{ zIndex: 0 }}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: "center 20%", zIndex: 0 }}
         />
 
-        {/* Green overlay */}
+        {/* Dark overlay — heavier at bottom so stats card reads cleanly */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(160deg,rgba(10,77,42,0.91) 0%,rgba(10,77,42,0.76) 48%,rgba(10,77,42,0.88) 100%)",
+              "linear-gradient(180deg, rgba(6,42,22,0.52) 0%, rgba(6,42,22,0.38) 35%, rgba(6,42,22,0.72) 70%, rgba(6,42,22,0.90) 100%)",
             zIndex: 1,
           }}
         />
 
-        {/* Dot texture */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background: "rgba(10,77,42,0.28)",
+            zIndex: 2,
+          }}
+        />
+
         <svg
           className="absolute inset-0 w-full h-full"
-          style={{ opacity: 0.045, zIndex: 2 }}
+          style={{ opacity: 0.04, zIndex: 3 }}
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
@@ -53,10 +54,9 @@ export default function AuthLayout({
           <rect width="100%" height="100%" fill="url(#dot-grid)" />
         </svg>
 
-        {/* Decorative rings bottom-right */}
         <svg
           className="absolute -bottom-16 -right-16"
-          style={{ opacity: 0.09, zIndex: 2 }}
+          style={{ opacity: 0.07, zIndex: 3 }}
           width="320"
           height="320"
           viewBox="0 0 320 320"
@@ -67,16 +67,17 @@ export default function AuthLayout({
           <circle cx="160" cy="160" r="75" stroke="white" strokeWidth="0.6" />
         </svg>
 
-        {/* Content */}
         <div
           className="relative flex flex-col h-full p-7 justify-between"
           style={{ zIndex: 10 }}
         >
-          {/* Logo */}
           <div className="flex items-center gap-2.5">
             <div
               className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center"
-              style={{ background: "rgba(255,255,255,0.15)" }}
+              style={{
+                background: "rgba(255,255,255,0.18)",
+                backdropFilter: "blur(8px)",
+              }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path
@@ -105,15 +106,43 @@ export default function AuthLayout({
             </span>
           </div>
 
-          {/* Stats card area */}
-          <div className="flex flex-col gap-2.5">
+          <div>
+            <p
+              className="text-[9px] font-extrabold uppercase tracking-[0.22em] mb-3"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+            >
+              Built for Nigerian vendors
+            </p>
+            <h2
+              className="text-[28px] font-extrabold leading-tight max-w-[260px]"
+              style={{
+                color: "#ffffff",
+                letterSpacing: "-0.5px",
+                textShadow: "0 2px 12px rgba(0,0,0,0.3)",
+              }}
+            >
+              Sell more.
+              <br />
+              Stress less.
+            </h2>
+            <p
+              className="text-[13px] mt-3 leading-relaxed max-w-[230px]"
+              style={{ color: "rgba(255,255,255,0.68)" }}
+            >
+              Accept Naira payments, manage inventory, and grow your business —
+              all from one place.
+            </p>
+          </div>
+
+          {/* Stats card + social proof */}
+          <div className="flex flex-col gap-3">
             {/* White floating card */}
             <div
               className="rounded-2xl overflow-hidden"
               style={{
                 background: "rgba(255,255,255,0.97)",
                 boxShadow:
-                  "0 20px 60px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.14)",
+                  "0 20px 60px rgba(0,0,0,0.35), 0 4px 16px rgba(0,0,0,0.18)",
               }}
             >
               {/* Card header */}
@@ -122,9 +151,7 @@ export default function AuthLayout({
                   <div className="flex items-center gap-[7px]">
                     <div
                       className="w-2 h-2 rounded-full bg-green-500"
-                      style={{
-                        animation: "pulse 2s infinite",
-                      }}
+                      style={{ animation: "pulse 2s infinite" }}
                     />
                     <span
                       className="text-[10px] font-bold uppercase tracking-[0.1em]"
@@ -331,23 +358,6 @@ export default function AuthLayout({
                 active today
               </p>
             </div>
-          </div>
-
-          {/* Tagline */}
-          <div>
-            <p
-              className="text-[9px] font-extrabold uppercase tracking-[0.22em] mb-2"
-              style={{ color: "rgba(255,255,255,0.35)" }}
-            >
-              YOUR STORE. YOUR TERMS.
-            </p>
-            <p
-              className="text-[12px] leading-relaxed max-w-[220px]"
-              style={{ color: "rgba(255,255,255,0.62)" }}
-            >
-              Accept Naira payments, manage inventory, and grow your business —
-              all from one place.
-            </p>
           </div>
         </div>
       </div>

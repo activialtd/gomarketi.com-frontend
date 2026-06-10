@@ -1,0 +1,14 @@
+{
+  "/(dashboard)/merchant/page": "app/(dashboard)/merchant/page.js",
+  "/(dashboard)/merchant/products/categories/page": "app/(dashboard)/merchant/products/categories/page.js",
+  "/(dashboard)/merchant/products/create-collection/page": "app/(dashboard)/merchant/products/create-collection/page.js",
+  "/(dashboard)/merchant/products/create-product/page": "app/(dashboard)/merchant/products/create-product/page.js",
+  "/(dashboard)/merchant/products/page": "app/(dashboard)/merchant/products/page.js",
+  "/(dashboard)/merchant/store-setup/page": "app/(dashboard)/merchant/store-setup/page.js",
+  "/(onboarding)/auth/login/page": "app/(onboarding)/auth/login/page.js",
+  "/(onboarding)/auth/sign-up/page": "app/(onboarding)/auth/sign-up/page.js",
+  "/_global-error/page": "app/_global-error/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/page": "app/page.js"
+}

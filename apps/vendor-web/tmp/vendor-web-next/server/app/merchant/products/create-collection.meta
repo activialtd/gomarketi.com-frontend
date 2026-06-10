@@ -1,0 +1,18 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(dashboard)/layout,_N_T_/(dashboard)/merchant/layout,_N_T_/(dashboard)/merchant/products/layout,_N_T_/(dashboard)/merchant/products/create-collection/layout,_N_T_/(dashboard)/merchant/products/create-collection/page,_N_T_/merchant/products/create-collection"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KGRhc2hib2FyZCk/merchant/products/create-collection/__PAGE__",
+    "/!KGRhc2hib2FyZCk/merchant/products/create-collection",
+    "/!KGRhc2hib2FyZCk/merchant/products",
+    "/!KGRhc2hib2FyZCk/merchant",
+    "/!KGRhc2hib2FyZCk",
+    "/_index",
+    "/_head"
+  ]
+}
