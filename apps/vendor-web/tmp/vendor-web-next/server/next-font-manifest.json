@@ -1,0 +1,37 @@
+{
+  "app": {
+    "[project]/apps/vendor-web/app/(dashboard)/merchant/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/(dashboard)/merchant/products/categories/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/(dashboard)/merchant/products/create-collection/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/(dashboard)/merchant/products/create-product/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/(dashboard)/merchant/products/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/(dashboard)/merchant/store-setup/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/(onboarding)/auth/login/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/(onboarding)/auth/sign-up/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/_not-found/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ],
+    "[project]/apps/vendor-web/app/page": [
+      "static/media/fba5a26ea33df6a3-s.p.18rizl4rsrl42.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

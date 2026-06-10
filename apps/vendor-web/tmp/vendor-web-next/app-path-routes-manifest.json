@@ -1,0 +1,14 @@
+{
+  "/(dashboard)/merchant/page": "/merchant",
+  "/(dashboard)/merchant/products/categories/page": "/merchant/products/categories",
+  "/(dashboard)/merchant/products/create-collection/page": "/merchant/products/create-collection",
+  "/(dashboard)/merchant/products/create-product/page": "/merchant/products/create-product",
+  "/(dashboard)/merchant/products/page": "/merchant/products",
+  "/(dashboard)/merchant/store-setup/page": "/merchant/store-setup",
+  "/(onboarding)/auth/login/page": "/auth/login",
+  "/(onboarding)/auth/sign-up/page": "/auth/sign-up",
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/favicon.ico/route": "/favicon.ico",
+  "/page": "/"
+}

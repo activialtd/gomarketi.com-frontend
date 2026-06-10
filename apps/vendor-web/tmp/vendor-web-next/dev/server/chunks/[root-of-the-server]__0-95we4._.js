@@ -137,10 +137,10 @@ async function proxy(request) {
     if (path.startsWith(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$vendor$2d$web$2f$lib$2f$config$2f$routes$2e$ts__$5b$middleware$5d$__$28$ecmascript$29$__["ROUTES"].AUTH.LOGIN) || path.startsWith(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$vendor$2d$web$2f$lib$2f$config$2f$routes$2e$ts__$5b$middleware$5d$__$28$ecmascript$29$__["ROUTES"].AUTH.SIGNUP)) {
         return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$7_$40$babel$2b$core$40$7$2e$29$2e$7_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$server$2e$js__$5b$middleware$5d$__$28$ecmascript$29$__["NextResponse"].next();
     }
-    const token = request.cookies.get("gomarket_auth")?.value;
-    if (!token) {
-        return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$7_$40$babel$2b$core$40$7$2e$29$2e$7_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$server$2e$js__$5b$middleware$5d$__$28$ecmascript$29$__["NextResponse"].redirect(new URL(__TURBOPACK__imported__module__$5b$project$5d2f$apps$2f$vendor$2d$web$2f$lib$2f$config$2f$routes$2e$ts__$5b$middleware$5d$__$28$ecmascript$29$__["ROUTES"].AUTH.LOGIN, request.url));
-    }
+    // const token = request.cookies.get("gomarket_auth")?.value;
+    const token = true;
+    if ("TURBOPACK compile-time falsy", 0) //TURBOPACK unreachable
+    ;
     return __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f2e$pnpm$2f$next$40$16$2e$2$2e$7_$40$babel$2b$core$40$7$2e$29$2e$7_react$2d$dom$40$19$2e$2$2e$4_react$40$19$2e$2$2e$4_$5f$react$40$19$2e$2$2e$4$2f$node_modules$2f$next$2f$server$2e$js__$5b$middleware$5d$__$28$ecmascript$29$__["NextResponse"].next();
 }
 const config = {

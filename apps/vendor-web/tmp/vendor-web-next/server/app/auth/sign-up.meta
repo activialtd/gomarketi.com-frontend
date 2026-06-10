@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/(onboarding)/layout,_N_T_/(onboarding)/auth/layout,_N_T_/(onboarding)/auth/sign-up/layout,_N_T_/(onboarding)/auth/sign-up/page,_N_T_/auth/sign-up"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/!KG9uYm9hcmRpbmcp/auth/sign-up/__PAGE__",
+    "/!KG9uYm9hcmRpbmcp/auth/sign-up",
+    "/!KG9uYm9hcmRpbmcp/auth",
+    "/!KG9uYm9hcmRpbmcp",
+    "/_index",
+    "/_head"
+  ]
+}
