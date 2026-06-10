@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
 import { useAuthStore } from "@/store/useAuthStore";
+import { PageWrapper } from "@/components/animations/PageWrapper";
 
 export default function MerchantLayout({
   children,
@@ -52,7 +53,7 @@ export default function MerchantLayout({
           {/* Trial banner — full width, above content */}
           <TrialBanner daysLeft={14} />
 
-          <div className="px-4 lg:px-6 py-5">{children}</div>
+          <PageWrapper className="px-4 lg:px-6 py-5">{children}</PageWrapper>
         </main>
       </div>
     </div>

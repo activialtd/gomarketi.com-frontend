@@ -1,4 +1,4 @@
-// apps/vendor-web/components/auth/AuthLayout.tsx
+import { AuthAnimator } from "@/components/animations/AuthAnimator";
 
 export default function AuthLayout({
   children,
@@ -6,9 +6,10 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
+    <AuthAnimator>
     <div className="flex min-h-screen w-full">
       {/* ── LEFT: Brand Panel ─────────────────────────────────── */}
-      <div className="relative hidden lg:flex w-[52%] flex-shrink-0 flex-col overflow-hidden">
+      <div data-auth-left className="relative hidden lg:flex w-[52%] flex-shrink-0 flex-col overflow-hidden">
         <img
           // src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1000&q=85"
           src="https://img.freepik.com/free-photo/medium-shot-black-woman-running-small-business_23-2150171818.jpg"
@@ -363,9 +364,10 @@ export default function AuthLayout({
       </div>
 
       {/* ── RIGHT: Form Area ──────────────────────────────────── */}
-      <div className="flex flex-1 flex-col items-center overflow-y-auto bg-white px-9 py-10">
-        <div className="w-full max-w-[360px] my-auto">{children}</div>
+      <div data-auth-right className="flex flex-1 flex-col items-center overflow-y-auto bg-white px-9 py-10">
+        <div data-auth-card className="w-full max-w-[360px] my-auto">{children}</div>
       </div>
     </div>
+    </AuthAnimator>
   );
 }
