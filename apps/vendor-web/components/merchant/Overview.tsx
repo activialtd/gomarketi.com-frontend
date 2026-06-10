@@ -115,6 +115,7 @@ export default function OverviewPage() {
     <div className="w-full space-y-6">
       {/* ── Onboarding banner ─────────────────────────────── */}
       <div
+        data-animate
         className="rounded-[12px] border p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
         style={{ background: "#F0FAF3", borderColor: "rgba(26,122,66,0.2)" }}
       >
@@ -141,7 +142,7 @@ export default function OverviewPage() {
       </div>
 
       {/* ── Top row: Greeting + Wallet + Account + To-do ─── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div data-animate className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Wallet card */}
         <div
           className="lg:col-span-2 rounded-[14px] border p-5 space-y-4"
@@ -425,7 +426,7 @@ export default function OverviewPage() {
       </div>
 
       {/* ── Stats row ─────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-animate className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           {
             label: "Total Orders",
@@ -519,7 +520,7 @@ export default function OverviewPage() {
       </div>
 
       {/* ── Business overview chart + top sales ────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div data-animate className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Chart — spans 2 cols */}
         <div
           className="lg:col-span-2 rounded-[14px] border p-5"
@@ -757,6 +758,7 @@ export default function OverviewPage() {
 
       {/* ── Recent orders ──────────────────────────────────── */}
       <div
+        data-animate
         className="rounded-[14px] border"
         style={{ background: "#fff", borderColor: "#e2e8f0" }}
       >

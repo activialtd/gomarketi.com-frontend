@@ -104,7 +104,7 @@ self.__SERVER_FILES_MANIFEST={
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "/Users/user/Desktop/gomarketi.com-frontend",
+    "outputFileTracingRoot": "/Users/mac/Documents/DevWork/activia/gomarketi.com/gomarketi.com-frontend",
     "cacheComponents": false,
     "cacheLife": {
       "default": {
@@ -166,7 +166,7 @@ self.__SERVER_FILES_MANIFEST={
       "proxyPrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 7,
+      "cpus": 3,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -309,11 +309,11 @@ self.__SERVER_FILES_MANIFEST={
       "@gomarket/api-client"
     ],
     "turbopack": {
-      "root": "/Users/user/Desktop/gomarketi.com-frontend"
+      "root": "/Users/mac/Documents/DevWork/activia/gomarketi.com/gomarketi.com-frontend"
     },
     "distDirRoot": "/tmp/vendor-web-next"
   },
-  "appDir": "/Users/user/Desktop/gomarketi.com-frontend/apps/vendor-web",
+  "appDir": "/Users/mac/Documents/DevWork/activia/gomarketi.com/gomarketi.com-frontend/apps/vendor-web",
   "relativeAppDir": "apps/vendor-web",
   "files": [
     "/tmp/vendor-web-next/package.json",
