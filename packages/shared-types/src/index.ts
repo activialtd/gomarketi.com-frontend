@@ -35,3 +35,15 @@ export interface Store {
   state: string; //[cite: 1]
   coordinates: { lat: number; lng: number }; //[cite: 1]
 }
+
+export type OrderStatus =
+  | "pending"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "refunded";
+
+export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
+export type PaymentMethod = "card" | "transfer" | "paystack" | "cash" | "ussd";
+export type ShippingMethod = "pickup" | "delivery" | "express";
