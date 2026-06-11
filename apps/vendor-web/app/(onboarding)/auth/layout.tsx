@@ -1,5 +1,3 @@
-// apps/vendor-web/components/auth/AuthLayout.tsx
-
 export default function AuthLayout({
   children,
 }: {

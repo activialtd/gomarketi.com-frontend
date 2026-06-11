@@ -24,6 +24,7 @@ build/
 # turbopack / next cache
 .turbo/
 /tmp/
+tmp/
 
 # misc
 .DS_Store
