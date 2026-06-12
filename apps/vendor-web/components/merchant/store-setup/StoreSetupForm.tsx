@@ -22,6 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@gomarket/ui";
+import { storefrontApi, authApi, ApiError } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 import {
   storeSetupSchema,
@@ -51,11 +53,14 @@ type ExtendedFormValues = StoreSetupFormValues & { phone?: string };
 
 export function StoreSetupForm() {
   const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const setAuth = useAuthStore((s) => s.setAuth);
   const [step, setStep] = useState<Step>(0);
   const [direction, setDirection] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [kycLoading, setKycLoading] = useState(false);
   const [slugEdited, setSlugEdited] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -63,6 +68,7 @@ export function StoreSetupForm() {
     control,
     watch,
     setValue,
+    setError,
     trigger,
     formState: { errors },
   } = useForm<ExtendedFormValues>({
@@ -105,11 +111,50 @@ export function StoreSetupForm() {
     if (valid) goTo(2, 1);
   }
 
-  async function onSubmit(_data: ExtendedFormValues) {
+  async function onSubmit(data: ExtendedFormValues) {
+    if (!accessToken) return;
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setIsLoading(false);
-    goTo(3, 1);
+    setSubmitError(null);
+    try {
+      await storefrontApi.createStore(
+        {
+          name: data.businessName,
+          slug: data.slug,
+          category: data.category,
+          currency: data.currency,
+          team_size: data.teamSize ?? "",
+          staff_range: data.staffRange ?? "",
+        },
+        accessToken,
+      );
+      // Refresh tokens so subsequent API calls can look up this user's new store.
+      try {
+        const fresh = await authApi.refreshTokens();
+        setAuth(fresh.user, fresh.access_token);
+      } catch {
+        // Not fatal — the gateway cache will still pick up the store on first catalogue/orders request.
+      }
+      goTo(3, 1);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 409) {
+          // Store already exists for this vendor — just advance
+          goTo(3, 1);
+        } else if (err.status === 422 && err.fields) {
+          err.fields.forEach((f) => {
+            if (f.field === "slug") {
+              setError("slug", { message: f.message });
+            }
+          });
+        } else {
+          setSubmitError(err.message || "Failed to create store. Please try again.");
+        }
+      } else {
+        setSubmitError("Something went wrong. Please try again.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function handleVerifyKyc() {
@@ -717,6 +762,13 @@ export function StoreSetupForm() {
                 >
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
+
+                {submitError && (
+                  <p className="text-red-500 text-[13px] flex items-center gap-1.5">
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    {submitError}
+                  </p>
+                )}
 
                 <button
                   type="submit"

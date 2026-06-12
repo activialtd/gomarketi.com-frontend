@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AreaChart,
   Area,
@@ -24,9 +24,7 @@ import {
   Zap,
   ArrowRight,
   Plus,
-  RefreshCw,
   BarChart3,
-  AlertCircle,
   CheckCircle2,
   Clock,
   ChevronRight,
@@ -35,9 +33,12 @@ import {
   Store,
   Image as ImageIcon,
   Tag,
+  Loader2,
+  InboxIcon,
 } from "lucide-react";
 import { CustomTooltip } from "./overview/helpers";
-import { RECENT_ORDERS } from "@/lib/data/orders";
+import { analyticsApi, ordersApi, type AnalyticsOverviewResp, type OrderResp } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 import { ORDER_STATUS_CONFIG } from "@gomarket/shared-utils";
 
 const CHART_DATA = [
@@ -93,17 +94,56 @@ const QUICK_ACTIONS = [
   },
 ];
 
+function koboToNaira(kobo: number) {
+  return `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+function formatOrderDate(iso: string) {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffHrs = diffMs / (1000 * 60 * 60);
+  if (diffHrs < 24) return `Today, ${d.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}`;
+  if (diffHrs < 48) return `Yesterday, ${d.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit" })}`;
+  return d.toLocaleDateString("en-NG", { day: "numeric", month: "short" });
+}
+
 // ─── Page component ───────────────────────────────────────────────────────────
 
 export default function OverviewPage() {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [balanceVisible, setBalanceVisible] = useState(false);
   const [earningsVisible, setEarningsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [analytics, setAnalytics] = useState<AnalyticsOverviewResp | null>(null);
+  const [recentOrders, setRecentOrders] = useState<OrderResp[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const accountNumber = "9740176746";
   const balance = "₦248,500.00";
-  const earnings = "₦105,750.00";
+  const earnings = analytics ? koboToNaira(analytics.total_revenue_kobo) : "—";
   const pendingSettlement = "₦18,300.00";
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const [ov, ol] = await Promise.allSettled([
+          analyticsApi.getOverview(accessToken!),
+          ordersApi.listOrders({ per_page: 5 }, accessToken!),
+        ]);
+        if (cancelled) return;
+        if (ov.status === "fulfilled") setAnalytics(ov.value);
+        if (ol.status === "fulfilled") setRecentOrders(ol.value.orders);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [accessToken]);
 
   function handleCopy() {
     navigator.clipboard.writeText(accountNumber);
@@ -430,39 +470,31 @@ export default function OverviewPage() {
         {[
           {
             label: "Total Orders",
-            value: "34",
-            change: "+12",
-            positive: true,
+            value: loading ? null : String(analytics?.total_orders ?? 0),
             icon: ShoppingCart,
             iconColor: "#3b82f6",
             iconBg: "#eff6ff",
           },
           {
-            label: "Products Sold",
-            value: "142",
-            change: "+28",
-            positive: true,
+            label: "Pending Orders",
+            value: loading ? null : String(analytics?.pending_orders ?? 0),
             icon: Package,
             iconColor: "#8b5cf6",
             iconBg: "#f5f3ff",
           },
           {
-            label: "New Customers",
-            value: "18",
-            change: "+5",
-            positive: true,
+            label: "Total Customers",
+            value: loading ? null : String(analytics?.total_customers ?? 0),
             icon: Users,
             iconColor: "#f59e0b",
             iconBg: "#fffbeb",
           },
           {
-            label: "Website Visits",
-            value: "1,204",
-            change: "-3%",
-            positive: false,
+            label: "Total Revenue",
+            value: loading ? null : koboToNaira(analytics?.total_revenue_kobo ?? 0),
             icon: Globe,
-            iconColor: "#ef4444",
-            iconBg: "#fef2f2",
+            iconColor: "#1A7A42",
+            iconBg: "#F0FAF3",
           },
         ].map((stat) => (
           <div
@@ -477,34 +509,16 @@ export default function OverviewPage() {
               >
                 {stat.label}
               </p>
-              <p
-                className="text-[26px] font-extrabold leading-none"
-                style={{ color: "#1C1C1C", letterSpacing: "-0.5px" }}
-              >
-                {stat.value}
-              </p>
-              <div className="flex items-center gap-1 mt-1.5">
-                {stat.positive ? (
-                  <TrendingUp
-                    className="w-3 h-3"
-                    style={{ color: "#22c55e" }}
-                  />
-                ) : (
-                  <TrendingDown
-                    className="w-3 h-3"
-                    style={{ color: "#ef4444" }}
-                  />
-                )}
-                <span
-                  className="text-[11px] font-semibold"
-                  style={{ color: stat.positive ? "#22c55e" : "#ef4444" }}
+              {stat.value === null ? (
+                <div className="h-7 w-16 rounded-[6px] animate-pulse" style={{ background: "#f1f5f9" }} />
+              ) : (
+                <p
+                  className="text-[26px] font-extrabold leading-none"
+                  style={{ color: "#1C1C1C", letterSpacing: "-0.5px" }}
                 >
-                  {stat.change}
-                </span>
-                <span className="text-[11px]" style={{ color: "#94a3b8" }}>
-                  this month
-                </span>
-              </div>
+                  {stat.value}
+                </p>
+              )}
             </div>
             <div
               className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0"
@@ -798,55 +812,71 @@ export default function OverviewPage() {
         </div>
 
         {/* Rows */}
-        <div className="divide-y" style={{ borderColor: "#f9fafb" }}>
-          {RECENT_ORDERS.map((order) => {
-            const s = ORDER_STATUS_CONFIG[order.status];
-            return (
-              <div
-                key={order.id}
-                className="grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-2 sm:gap-4 px-5 py-3.5 transition-colors hover:bg-[#fafafa] cursor-pointer border-b border-[#f1f5f9]"
-              >
-                <div>
-                  <p
-                    className="text-[13px] font-bold"
-                    style={{ color: "#1C1C1C" }}
-                  >
-                    {order.id}
+        {loading ? (
+          <div className="flex items-center justify-center py-12 gap-2" style={{ color: "#94a3b8" }}>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-[13px]">Loading orders…</span>
+          </div>
+        ) : recentOrders.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-14">
+            <div
+              className="w-12 h-12 rounded-[12px] flex items-center justify-center"
+              style={{ background: "#F0FAF3" }}
+            >
+              <InboxIcon className="w-5 h-5" style={{ color: "#1A7A42" }} />
+            </div>
+            <div className="text-center">
+              <p className="text-[14px] font-bold" style={{ color: "#1C1C1C" }}>
+                No orders yet
+              </p>
+              <p className="text-[12px] mt-1" style={{ color: "#6b7280" }}>
+                When customers place orders, they'll appear here.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="divide-y" style={{ borderColor: "#f9fafb" }}>
+            {recentOrders.map((order) => {
+              const s = ORDER_STATUS_CONFIG[order.status] ?? { bg: "#f1f5f9", color: "#6b7280", label: order.status };
+              const firstItem = order.items[0];
+              return (
+                <div
+                  key={order.id}
+                  className="grid grid-cols-1 sm:grid-cols-[2fr_1.5fr_1fr_1fr_1fr] gap-2 sm:gap-4 px-5 py-3.5 transition-colors hover:bg-[#fafafa] cursor-pointer border-b border-[#f1f5f9]"
+                >
+                  <div>
+                    <p className="text-[13px] font-bold" style={{ color: "#1C1C1C" }}>
+                      #{order.id.slice(0, 8).toUpperCase()}
+                    </p>
+                    <p className="text-[11px]" style={{ color: "#6b7280" }}>
+                      {order.customer_name}
+                    </p>
+                  </div>
+                  <p className="text-[12px] font-medium self-center" style={{ color: "#374151" }}>
+                    {firstItem ? firstItem.name : "—"}
+                    {order.items.length > 1 && (
+                      <span style={{ color: "#94a3b8" }}> +{order.items.length - 1}</span>
+                    )}
                   </p>
-                  <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                    {order.customer}
+                  <p className="text-[13px] font-bold self-center tabular-nums" style={{ color: "#1C1C1C" }}>
+                    {koboToNaira(order.total_kobo)}
+                  </p>
+                  <div className="self-center">
+                    <span
+                      className="text-[10px] font-bold px-2 py-1 rounded-full"
+                      style={{ background: s.bg, color: s.color }}
+                    >
+                      {s.label}
+                    </span>
+                  </div>
+                  <p className="text-[11px] self-center" style={{ color: "#94a3b8" }}>
+                    {formatOrderDate(order.created_at)}
                   </p>
                 </div>
-                <p
-                  className="text-[12px] font-medium self-center"
-                  style={{ color: "#374151" }}
-                >
-                  {order.product}
-                </p>
-                <p
-                  className="text-[13px] font-bold self-center tabular-nums"
-                  style={{ color: "#1C1C1C" }}
-                >
-                  {order.amount}
-                </p>
-                <div className="self-center">
-                  <span
-                    className="text-[10px] font-bold px-2 py-1 rounded-full"
-                    style={{ background: s.bg, color: s.color }}
-                  >
-                    {s.label}
-                  </span>
-                </div>
-                <p
-                  className="text-[11px] self-center"
-                  style={{ color: "#94a3b8" }}
-                >
-                  {order.date}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
