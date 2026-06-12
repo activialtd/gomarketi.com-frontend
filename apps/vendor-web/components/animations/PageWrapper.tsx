@@ -15,32 +15,48 @@ export function PageWrapper({ children, className = "" }: PageWrapperProps) {
     const el = ref.current;
     if (!el) return;
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        el,
-        { opacity: 0, y: 18 },
-        { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }
-      );
+    let ctx: gsap.Context | undefined;
 
-      const targets = el.querySelectorAll("[data-animate]");
-      if (targets.length > 0) {
+    // rAF defers GSAP past React's hydration consistency check so the
+    // "from" inline styles (opacity:0, transform) are never seen by React.
+    const rafId = requestAnimationFrame(() => {
+      ctx = gsap.context(() => {
         gsap.fromTo(
-          targets,
-          { opacity: 0, y: 24, scale: 0.97 },
+          el,
+          { opacity: 0, y: 18 },
           {
             opacity: 1,
             y: 0,
-            scale: 1,
-            duration: 0.4,
-            stagger: 0.07,
-            ease: "power2.out",
-            delay: 0.15,
+            duration: 0.45,
+            ease: "power3.out",
+            clearProps: "transform,opacity",
           }
         );
-      }
-    }, el);
 
-    return () => ctx.revert();
+        const targets = el.querySelectorAll("[data-animate]");
+        if (targets.length > 0) {
+          gsap.fromTo(
+            targets,
+            { opacity: 0, y: 24, scale: 0.97 },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.4,
+              stagger: 0.07,
+              ease: "power2.out",
+              delay: 0.15,
+              clearProps: "transform,opacity,scale",
+            }
+          );
+        }
+      }, el);
+    });
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      ctx?.revert();
+    };
   }, []);
 
   return (
