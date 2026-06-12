@@ -16,27 +16,28 @@ export function PageWrapper({ children, className = "" }: PageWrapperProps) {
     if (!el) return;
 
     const ctx = gsap.context(() => {
-      // Page fade + lift entrance
       gsap.fromTo(
         el,
         { opacity: 0, y: 18 },
         { opacity: 1, y: 0, duration: 0.45, ease: "power3.out" }
       );
 
-      // Stagger all direct stat/card children
-      gsap.fromTo(
-        el.querySelectorAll("[data-animate]"),
-        { opacity: 0, y: 24, scale: 0.97 },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.4,
-          stagger: 0.07,
-          ease: "power2.out",
-          delay: 0.15,
-        }
-      );
+      const targets = el.querySelectorAll("[data-animate]");
+      if (targets.length > 0) {
+        gsap.fromTo(
+          targets,
+          { opacity: 0, y: 24, scale: 0.97 },
+          {
+            opacity: 1,
+            y: 0,
+            scale: 1,
+            duration: 0.4,
+            stagger: 0.07,
+            ease: "power2.out",
+            delay: 0.15,
+          }
+        );
+      }
     }, el);
 
     return () => ctx.revert();
