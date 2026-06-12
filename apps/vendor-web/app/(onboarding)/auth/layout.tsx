@@ -1,5 +1,6 @@
 import { AuthAnimator } from "@/components/animations/AuthAnimator";
 
+
 export default function AuthLayout({
   children,
 }: {

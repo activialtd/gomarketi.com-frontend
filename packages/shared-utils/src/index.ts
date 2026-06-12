@@ -1,3 +1,5 @@
+import { PaymentStatus } from "../../shared-types/src";
+
 export const formatKobo = (amount: number) => `₦${(amount / 100).toFixed(2)}`;
 export const toKobo = (amount: number) => Math.round(amount * 100);
 
@@ -38,4 +40,24 @@ export function toSlug(name: string): string {
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .slice(0, 60);
+}
+
+export const PAYMENT_CFG: Record<
+  PaymentStatus,
+  { label: string; bg: string; color: string }
+> = {
+  paid: { label: "Paid", bg: "#dcfce7", color: "#15803d" },
+  pending: { label: "Awaiting", bg: "#fef3c7", color: "#92400e" },
+  failed: { label: "Failed", bg: "#fee2e2", color: "#dc2626" },
+  refunded: { label: "Refunded", bg: "#f3f4f6", color: "#374151" },
+};
+
+export function fmtNaira(kobo: number): string {
+  return (
+    "₦" +
+    (kobo / 100).toLocaleString("en-NG", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  );
 }
