@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PageWrapper } from "@/components/animations/PageWrapper";
+import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
+import { authApi, storefrontApi } from "@gomarket/api-client";
+import { clearAuthSession } from "@/lib/auth/session";
+import { ROUTES } from "@/lib/config/routes";
+
+const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
 export default function MerchantLayout({
   children,
@@ -12,11 +19,12 @@ export default function MerchantLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const user = useAuthStore((s) => s.user);
+  const [storeName, setStoreName] = useState("My Store");
+  const [storeSlug, setStoreSlug] = useState("");
+  const router = useRouter();
+  const { user, hydrating, clearAuth, accessToken } = useAuthStore();
 
-  // Derive display values from the real user object.
-  // Fall back to safe placeholders while the session is being restored.
-  const merchantName = user?.full_name ?? user?.email?.split("@")[0] ?? "Merchant";
+  const merchantName = user?.full_name ?? user?.email?.split("@")[0] ?? "";
   const avatarInitials = merchantName
     .split(" ")
     .map((n: string) => n[0])
@@ -24,13 +32,64 @@ export default function MerchantLayout({
     .toUpperCase()
     .slice(0, 2);
 
+  // Fetch vendor's store to get real slug and name for the header
+  useEffect(() => {
+    if (!accessToken) return;
+    storefrontApi.getMyStore(accessToken)
+      .then((store) => {
+        setStoreName(store.name);
+        setStoreSlug(store.slug);
+      })
+      .catch(() => {
+        // No store yet — vendor hasn't completed setup; leave defaults
+      });
+  }, [accessToken]);
+
+  async function handleSignOut() {
+    try {
+      await authApi.logout();
+    } catch {
+      // best-effort — clear local state regardless
+    }
+    clearAuth();
+    clearAuthSession();
+    router.push(ROUTES.AUTH.LOGIN);
+  }
+
+  if (hydrating) {
+    return (
+      <div
+        className="flex h-screen items-center justify-center"
+        style={{ background: "#f8fafc" }}
+      >
+        <div
+          className="w-8 h-8 rounded-full border-[3px] border-[#1A7A42] border-t-transparent animate-spin"
+          role="status"
+          aria-label="Loading"
+        />
+      </div>
+    );
+  }
+
+  if (!user) {
+    router.replace(ROUTES.AUTH.LOGIN);
+    return null;
+  }
+
   return (
     <div
       className="flex h-screen overflow-hidden"
       style={{ background: "#f8fafc" }}
     >
+      {/* Dashboard tour — shown once to new vendors */}
+      <DashboardTour />
+
       {/* ── Sidebar ─────────────────────────────────────────── */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onSignOut={handleSignOut}
+      />
 
       {/* ── Main column ─────────────────────────────────────── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
@@ -40,9 +99,11 @@ export default function MerchantLayout({
           merchantName={merchantName}
           avatarInitials={avatarInitials}
           userEmail={user?.email}
-          storeName="My Store"
-          storeSlug={user?.id ?? "my-store"}
+          storeName={storeName}
+          storeSlug={storeSlug}
+          storeDomain={STORE_DOMAIN}
           trialDaysLeft={14}
+          onSignOut={handleSignOut}
         />
 
         {/* Page content */}

@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 
 export const BRAND = "#1A7A42";
@@ -6,22 +5,8 @@ export const BRAND_LIGHT = "rgba(26,122,66,0.07)";
 export const BORDER = "#e2e8f0";
 
 export const CURRENCIES = [
-  {
-    code: "NGN",
-    symbol: "₦",
-    name: "Nigerian Naira",
-    flag: "🇳🇬",
-    active: true,
-  },
-  {
-    code: "KES",
-    symbol: "KSh",
-    name: "Kenyan Shilling",
-    flag: "🇰🇪",
-    active: false,
-  },
-  { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸", active: false },
-  { code: "EUR", symbol: "€", name: "Euro", flag: "🇪🇺", active: false },
+  { code: "NGN", symbol: "₦", name: "Nigerian Naira", flag: "🇳🇬", active: true },
+  { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸", active: true },
 ] as const;
 
 export const TEAM_SIZES = [
@@ -30,16 +15,6 @@ export const TEAM_SIZES = [
   { value: "11-50", label: "11 – 50", sub: "Growing" },
   { value: "51-200", label: "51 – 200", sub: "Scaling" },
   { value: "200+", label: "200+", sub: "Enterprise" },
-];
-
-export const STAFF_RANGES = [
-  { value: "1-3", label: "1 – 3" },
-  { value: "3-5", label: "3 – 5" },
-  { value: "5-15", label: "5 – 15" },
-  { value: "15-30", label: "15 – 30" },
-  { value: "30-50", label: "30 – 50" },
-  { value: "50-100", label: "50 – 100" },
-  { value: "100+", label: "100+" },
 ];
 
 export const STORE_CATEGORIES = [
@@ -195,81 +170,3 @@ export function FieldError({ children }: { children: React.ReactNode }) {
   return <p className="text-[11px] text-red-500">{children}</p>;
 }
 
-export const stepVariants = {
-  enter: (dir: number) => ({
-    opacity: 0,
-    x: dir > 0 ? 32 : -32,
-  }),
-  center: {
-    opacity: 1,
-    x: 0,
-    transition: { type: "spring", stiffness: 280, damping: 26 },
-  },
-  exit: (dir: number) => ({
-    opacity: 0,
-    x: dir > 0 ? -32 : 32,
-    transition: { duration: 0.18, ease: "easeIn" },
-  }),
-};
-
-// stagger children
-export const listVariants = {
-  hidden: {},
-  show: {
-    transition: { staggerChildren: 0.07, delayChildren: 0.05 },
-  },
-};
-
-export const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { type: "spring", stiffness: 300, damping: 24 },
-  },
-};
-
-const STEP_LABELS = ["Your store", "Preferences", "Verify"];
-
-export function ProgressBar({ current }: { current: 1 | 2 | 3 }) {
-  return (
-    <div className="flex items-center gap-0 mb-7">
-      {STEP_LABELS.map((label, i) => {
-        const idx = (i + 1) as 1 | 2 | 3;
-        const done = idx < current;
-        const active = idx === current;
-        const last = i === STEP_LABELS.length - 1;
-        return (
-          <div key={label} className="flex items-center flex-1 last:flex-none">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <motion.div
-                className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
-                animate={{
-                  background: done || active ? BRAND : BORDER,
-                  color: done || active ? "#fff" : "#94a3b8",
-                  scale: active ? 1.12 : 1,
-                }}
-                transition={{ duration: 0.25 }}
-              >
-                {done ? <Check className="w-3 h-3" /> : idx}
-              </motion.div>
-              <span
-                className="text-[12px] font-semibold hidden sm:block transition-colors duration-200"
-                style={{ color: active ? BRAND : done ? "#6b7280" : "#94a3b8" }}
-              >
-                {label}
-              </span>
-            </div>
-            {!last && (
-              <motion.div
-                className="flex-1 h-px mx-2"
-                animate={{ background: done ? BRAND : BORDER }}
-                transition={{ duration: 0.35 }}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}

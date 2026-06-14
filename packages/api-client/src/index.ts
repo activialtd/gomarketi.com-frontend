@@ -28,8 +28,8 @@ export interface CreateStoreReq {
   slug: string;
   category: string;
   currency: string;
-  team_size: string;
-  staff_range: string;
+  team_size?: string;
+  support_phone?: string;
 }
 
 export interface UpdateStoreReq {
