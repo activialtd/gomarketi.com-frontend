@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "gomarketi.com";
 
 // Subdomains that belong to the platform itself, not stores
-const RESERVED = new Set(["www", "app", "api", "admin", "mail", "cdn"]);
+const RESERVED = new Set(["www", "vendor", "app", "api", "admin", "mail", "cdn"]);
 
 export function middleware(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
