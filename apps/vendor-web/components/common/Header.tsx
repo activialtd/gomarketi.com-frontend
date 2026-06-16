@@ -19,22 +19,26 @@ interface HeaderProps {
   onMenuClick: () => void;
   storeName?: string;
   storeSlug?: string;
+  storeDomain?: string;
   merchantName?: string;
   userEmail?: string;
   avatarInitials?: string;
   hasNotifications?: boolean;
   trialDaysLeft?: number;
+  onSignOut?: () => void;
 }
 
 export function Header({
   onMenuClick,
   storeName = "My Store",
-  storeSlug = "my-store",
+  storeSlug = "",
+  storeDomain = "gomarketi.com",
   merchantName = "Merchant",
   userEmail,
   avatarInitials,
   hasNotifications = false,
   trialDaysLeft,
+  onSignOut,
 }: HeaderProps) {
   const [locationOpen, setLocationOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -142,16 +146,18 @@ export function Header({
           </div>
         )}
 
-        {/* View Store */}
+        {/* View Store — only shown once vendor has a store */}
         <Link
-          href={`https://${storeSlug}.gomarketi.com`}
-          target="_blank"
+          href={storeSlug ? `http://${storeSlug}.${storeDomain}` : "#"}
+          target={storeSlug ? "_blank" : undefined}
           rel="noopener noreferrer"
+          aria-disabled={!storeSlug}
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[13px] font-bold transition-all active:scale-[0.98]"
           style={{
-            background: "#1A7A42",
-            color: "#fff",
-            boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
+            background: storeSlug ? "#1A7A42" : "#e2e8f0",
+            color: storeSlug ? "#fff" : "#94a3b8",
+            boxShadow: storeSlug ? "0 2px 8px rgba(26,122,66,0.25)" : "none",
+            pointerEvents: storeSlug ? "auto" : "none",
           }}
           onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
           onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
@@ -257,6 +263,7 @@ export function Header({
               >
                 <button
                   type="button"
+                  onClick={onSignOut}
                   className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] font-medium text-left transition-colors hover:bg-red-50"
                   style={{ color: "#dc2626" }}
                 >

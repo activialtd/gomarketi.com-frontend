@@ -9,9 +9,10 @@ import { NAV, NavItem } from "@/lib/config/sidebar";
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onSignOut?: () => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
   const pathname = usePathname();
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(["Products", "Orders"]),
@@ -99,7 +100,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 const hasChildren = !!item.children?.length;
 
                 return (
-                  <div key={item.label}>
+                  <div key={item.label} data-tour={item.label.toLowerCase().replace(/\s+/g, "-")}>
                     {/* Top-level item */}
                     {hasChildren ? (
                       <button
@@ -231,6 +232,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </Link>
           <button
             type="button"
+            onClick={onSignOut}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all hover:bg-red-50 text-left"
             style={{ color: "#374151" }}
             onMouseOver={(e) => (e.currentTarget.style.color = "#dc2626")}
