@@ -28,8 +28,10 @@ export const ORDER_STATUS_CONFIG: Record<
 > = {
   delivered: { bg: "#dcfce7", color: "#15803d", label: "Delivered" },
   processing: { bg: "#fef3c7", color: "#92400e", label: "Processing" },
-  shipped: { bg: "#dbeafe", color: "#1e40af", label: "Shipped" },
+  confirmed: { bg: "#dbeafe", color: "#1e40af", label: "Confirmed" },
+  shipped: { bg: "#e0f2fe", color: "#0369a1", label: "Shipped" },
   cancelled: { bg: "#fee2e2", color: "#991b1b", label: "Cancelled" },
+  pending: { bg: "#fef3c7", color: "#92400e", label: "Pending" },
 };
 
 export function toSlug(name: string): string {

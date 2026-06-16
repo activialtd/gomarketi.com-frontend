@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Tag,
@@ -9,14 +9,19 @@ import {
   X,
   ArrowUpDown,
   Info,
+  Loader2,
 } from "lucide-react";
-import { CATEGORIES, type Category } from "@/lib/data/categories";
+import { type Category } from "@/lib/data/categories";
 import { CategoryFormValues } from "@/lib/validations/schemas";
 import { CategoryFormPanel, CategoryRow, DeleteModal } from "./helpers";
 import { toSlug } from "@gomarket/shared-utils";
+import { catalogueApi } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function Categories() {
-  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "productCount">("name");
   const [sortAsc, setSortAsc] = useState(true);
@@ -31,6 +36,37 @@ export default function Categories() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 2800);
   }
+
+  function apiToCategory(c: { id: string; store_id: string; name: string; parent_id?: string }): Category {
+    return {
+      id: c.id,
+      name: c.name,
+      slug: toSlug(c.name),
+      emoji: "📦",
+      color: "#F0FAF3",
+      productCount: 0,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const data = await catalogueApi.listCategories(accessToken!);
+        if (!cancelled) setCategories(data.map(apiToCategory));
+      } catch {
+        if (!cancelled) setCategories([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [accessToken]);
 
   const filtered = useMemo(() => {
     let list = [...categories];
@@ -54,48 +90,49 @@ export default function Categories() {
     return list;
   }, [categories, search, sortBy, sortAsc]);
 
-  function handleSave(data: CategoryFormValues, id?: string) {
-    if (id) {
-      // Edit existing
-      setCategories((prev) =>
-        prev.map((c) =>
-          c.id === id
-            ? {
-                ...c,
-                name: data.name,
-                description: data.description,
-                emoji: data.emoji,
-                color: data.color,
-                slug: data.slug ?? c.slug,
-              }
-            : c,
-        ),
-      );
-      setEditTarget(null);
-      showToast(`"${data.name}" updated`);
-    } else {
-      // Create new
-      const newCat: Category = {
-        id: `cat-${Date.now()}`,
-        name: data.name,
-        slug: data.slug ?? toSlug(data.name),
-        description: data.description,
-        emoji: data.emoji,
-        color: data.color,
-        productCount: 0,
-        isDefault: false,
-        createdAt: new Date().toISOString(),
-      };
-      setCategories((prev) => [...prev, newCat]);
-      showToast(`"${data.name}" added`);
+  async function handleSave(data: CategoryFormValues, id?: string) {
+    if (!accessToken) return;
+    try {
+      if (id) {
+        const updated = await catalogueApi.updateCategory(id, { name: data.name }, accessToken);
+        setCategories((prev) =>
+          prev.map((c) => c.id === id ? { ...c, name: updated.name, slug: toSlug(updated.name), emoji: data.emoji ?? c.emoji, color: data.color ?? c.color } : c),
+        );
+        setEditTarget(null);
+        showToast(`"${data.name}" updated`);
+      } else {
+        const created = await catalogueApi.createCategory({ name: data.name }, accessToken);
+        const newCat: Category = {
+          id: created.id,
+          name: created.name,
+          slug: toSlug(created.name),
+          description: data.description,
+          emoji: data.emoji ?? "📦",
+          color: data.color ?? "#F0FAF3",
+          productCount: 0,
+          isDefault: false,
+          createdAt: new Date().toISOString(),
+        };
+        setCategories((prev) => [...prev, newCat]);
+        showToast(`"${data.name}" added`);
+      }
+    } catch {
+      showToast("Something went wrong. Please try again.", "error");
     }
   }
 
-  function handleDelete(category: Category) {
-    setCategories((prev) => prev.filter((c) => c.id !== category.id));
-    setDeleteTarget(null);
-    if (editTarget?.id === category.id) setEditTarget(null);
-    showToast(`"${category.name}" deleted`, "error");
+  async function handleDelete(category: Category) {
+    if (!accessToken) return;
+    try {
+      await catalogueApi.deleteCategory(category.id, accessToken);
+      setCategories((prev) => prev.filter((c) => c.id !== category.id));
+      setDeleteTarget(null);
+      if (editTarget?.id === category.id) setEditTarget(null);
+      showToast(`"${category.name}" deleted`, "error");
+    } catch {
+      setDeleteTarget(null);
+      showToast("Failed to delete category.", "error");
+    }
   }
 
   const totalProducts = categories.reduce((s, c) => s + c.productCount, 0);
@@ -288,7 +325,12 @@ export default function Categories() {
                 </span>
               </div>
 
-              {filtered.length === 0 ? (
+              {loading ? (
+                <div className="flex items-center justify-center py-12 gap-2" style={{ color: "#94a3b8" }}>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-[13px]">Loading categories…</span>
+                </div>
+              ) : filtered.length === 0 ? (
                 <div className="py-12 flex flex-col items-center gap-2.5">
                   <div
                     className="w-12 h-12 rounded-[12px] flex items-center justify-center"

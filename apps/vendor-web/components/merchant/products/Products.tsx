@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -15,15 +15,11 @@ import {
   AlertTriangle,
   ArrowUpDown,
   Layers,
+  Loader2,
 } from "lucide-react";
-import {
-  PRODUCTS,
-  COLLECTIONS,
-  TOTAL_RETAIL_VALUE,
-  TOTAL_INVENTORY_VALUE,
-  TOTAL_PRODUCTS_SOLD,
-  TOTAL_OUT_OF_STOCK,
-} from "@/lib/data/products";
+import { type Product, COLLECTIONS } from "@/lib/data/products";
+import { catalogueApi } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 import { fmt } from "@gomarket/shared-utils";
 import {
@@ -39,6 +35,7 @@ type ViewMode = "grid" | "list";
 type SortKey = "name" | "price" | "stock" | "sold" | "createdAt";
 
 export default function ProductsPage() {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [tab, setTab] = useState<Tab>("products");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
@@ -46,6 +43,45 @@ export default function ProductsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortAsc, setSortAsc] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    let cancelled = false;
+    async function load() {
+      setLoadingProducts(true);
+      try {
+        const resp = await catalogueApi.listProducts({ per_page: 100 }, accessToken!);
+        if (cancelled) return;
+        const mapped: Product[] = resp.products.map((p) => ({
+          id: p.id,
+          name: p.name,
+          slug: p.id,
+          category: p.category_id ?? "Uncategorised",
+          collectionIds: [],
+          description: p.description ?? "",
+          images: p.images ?? [],
+          price: p.price_kobo / 100,
+          currency: "NGN",
+          hasVariants: false,
+          stock: p.stock,
+          sold: 0,
+          status: p.stock === 0 ? "out_of_stock" : p.is_published ? "active" : "draft",
+          featured: false,
+          createdAt: p.created_at,
+          tags: p.tags ?? [],
+        }));
+        setProducts(mapped);
+      } catch {
+        if (!cancelled) setProducts([]);
+      } finally {
+        if (!cancelled) setLoadingProducts(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [accessToken]);
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -64,7 +100,7 @@ export default function ProductsPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    let list = [...PRODUCTS];
+    let list = [...products];
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(
@@ -88,7 +124,10 @@ export default function ProductsPage() {
         : (vb as number) - (va as number);
     });
     return list;
-  }, [search, statusFilter, sortKey, sortAsc]);
+  }, [products, search, statusFilter, sortKey, sortAsc]);
+
+  const totalRetailValue = products.reduce((s, p) => s + p.price * p.stock, 0);
+  const outOfStock = products.filter((p) => p.status === "out_of_stock").length;
 
   const allSelected =
     filteredProducts.length > 0 && selected.size === filteredProducts.length;
@@ -107,12 +146,14 @@ export default function ProductsPage() {
           >
             Products
           </h1>
-          <span
-            className="text-[11px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "#F0FAF3", color: "#1A7A42" }}
-          >
-            {PRODUCTS.length}
-          </span>
+          {!loadingProducts && (
+            <span
+              className="text-[11px] font-bold px-2 py-0.5 rounded-full"
+              style={{ background: "#F0FAF3", color: "#1A7A42" }}
+            >
+              {products.length}
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -165,28 +206,28 @@ export default function ProductsPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
             label="Total Retail Value"
-            value={fmt(TOTAL_RETAIL_VALUE)}
+            value={loadingProducts ? "—" : fmt(totalRetailValue)}
             icon={Tag}
             iconBg="#eff6ff"
             iconColor="#3b82f6"
           />
           <StatCard
-            label="Total Inventory Value"
-            value={fmt(TOTAL_INVENTORY_VALUE)}
+            label="Total Products"
+            value={loadingProducts ? "—" : String(products.length)}
             icon={Package}
             iconBg="#fef3c7"
             iconColor="#f59e0b"
           />
           <StatCard
-            label="Products Sold"
-            value={String(TOTAL_PRODUCTS_SOLD)}
+            label="Published"
+            value={loadingProducts ? "—" : String(products.filter((p) => p.status === "active").length)}
             icon={ArrowUpDown}
             iconBg="#F0FAF3"
             iconColor="#1A7A42"
           />
           <StatCard
             label="Out of Stock"
-            value={String(TOTAL_OUT_OF_STOCK)}
+            value={loadingProducts ? "—" : String(outOfStock)}
             icon={AlertTriangle}
             iconBg="#fee2e2"
             iconColor="#dc2626"
@@ -226,7 +267,7 @@ export default function ProductsPage() {
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-0.5"
                     style={{ background: "#F0FAF3", color: "#1A7A42" }}
                   >
-                    {PRODUCTS.length}
+                    {products.length}
                   </span>
                 </span>
               )}
@@ -347,7 +388,12 @@ export default function ProductsPage() {
             </div>
 
             {/* Content */}
-            {filteredProducts.length === 0 ? (
+            {loadingProducts ? (
+              <div className="flex items-center justify-center py-20 gap-2" style={{ color: "#94a3b8" }}>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="text-[13px]">Loading products…</span>
+              </div>
+            ) : filteredProducts.length === 0 ? (
               <EmptyProducts />
             ) : viewMode === "list" ? (
               <div

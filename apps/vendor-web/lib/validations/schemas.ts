@@ -58,11 +58,11 @@ export const storeSetupSchema = z.object({
 
   category: z.string().min(1, "Please select a store category"),
 
-  currency: z.literal("NGN"),
+  currency: z.enum(["NGN", "USD"]),
 
-  teamSize: z.string().min(1, "Please select your team size"),
+  teamSize: z.string().optional(),
 
-  staffRange: z.string().min(1, "Please select a staff range"),
+  businessPhone: z.string().optional(),
 });
 
 const variantOptionSchema = z.object({

@@ -1,11 +1,10 @@
-name: Deploy vendor-web
+name: Deploy web (gomarketi.com landing)
 
 on:
   push:
     branches: [main, staging]
     paths:
-      - 'apps/vendor-web/**'
-      - 'packages/**'
+      - 'apps/web/**'
       - 'pnpm-lock.yaml'
 
 jobs:
@@ -28,16 +27,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build vendor-web
-        run: pnpm --filter vendor-web build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ github.ref_name == 'main' && 'https://api.gomarketi.com' || 'https://api-staging.gomarketi.com' }}
+      - name: Build web
+        run: pnpm --filter web build
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_VENDOR_WEB }}
-          working-directory: apps/vendor-web
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_WEB }}
+          working-directory: apps/web
           vercel-args: ${{ github.ref_name == 'main' && '--prod' || '' }}

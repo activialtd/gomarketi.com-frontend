@@ -7,6 +7,7 @@ export const ROUTES = {
   },
 
   ONBOARDING: {
+    WELCOME: "/merchant/welcome",
     SETUP: "/merchant/store-setup",
   },
 

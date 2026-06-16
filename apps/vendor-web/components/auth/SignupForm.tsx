@@ -105,6 +105,7 @@ export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
+  const setSignupPhone = useAuthStore((s) => s.setSignupPhone);
 
   const [step, setStep] = useState<Step>("METHOD_SELECT");
   const [oauthUser, setOauthUser] = useState<OAuthUser | null>(null);
@@ -228,7 +229,10 @@ export function SignupForm() {
       });
       setAuth(authResp.user, authResp.access_token);
       setAuthSession();
-      router.push(ROUTES.ONBOARDING.SETUP);
+      // Persist the signup phone so store setup can pre-fill the WhatsApp field.
+      const rawPhone = signupForm.getValues("phone");
+      if (rawPhone) setSignupPhone(`${dialCode}${rawPhone.replace(/\D/g, "")}`);
+      router.push(ROUTES.ONBOARDING.WELCOME);
     } catch (err) {
       setOtpError(
         err instanceof ApiError ? err.message : "Invalid code. Please try again."
@@ -263,7 +267,8 @@ export function SignupForm() {
     setIsLoading(true);
     await new Promise((r) => setTimeout(r, 800));
     setIsLoading(false);
-    router.push(ROUTES.ONBOARDING.SETUP);
+    if (_data.phone) setSignupPhone(_data.phone);
+    router.push(ROUTES.ONBOARDING.WELCOME);
   }
 
   function onPasswordChange(val: string) {
