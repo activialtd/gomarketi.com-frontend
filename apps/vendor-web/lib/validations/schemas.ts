@@ -120,9 +120,33 @@ export const categorySchema = z.object({
     .optional(),
 });
 
+export const storeInfoSchema = z.object({
+  storeName: z.string().min(2, "At least 2 characters").max(80),
+  storeTagline: z.string().max(120).optional(),
+  storeEmail: z.string().email("Enter a valid email"),
+  storePhone: z
+    .string()
+    .regex(/^(0|\+234)[789][01]\d{8}$/, "Enter a valid Nigerian number"),
+  storeAddress: z.string().min(5, "Enter a full address"),
+  storeCity: z.string().min(2, "Required"),
+  storeState: z.string().min(2, "Required"),
+  supportEmail: z
+    .string()
+    .email("Enter a valid email")
+    .optional()
+    .or(z.literal("")),
+  whatsapp: z.string().optional(),
+  instagram: z.string().optional(),
+  twitter: z.string().optional(),
+  facebook: z.string().optional(),
+  openingHours: z.string().optional(),
+  returnPolicy: z.string().optional(),
+});
+
 export type BusinessFormValues = z.infer<typeof businessSchema>;
 export type StoreFormValues = z.infer<typeof storeSchema>;
 export type StoreSetupFormValues = z.infer<typeof storeSetupSchema>;
 export type CreateProductFormValues = z.infer<typeof createProductSchema>;
 export type CreateCollectionFormValues = z.infer<typeof createCollectionSchema>;
 export type CategoryFormValues = z.infer<typeof categorySchema>;
+export type StoreInfoValues = z.infer<typeof storeInfoSchema>;

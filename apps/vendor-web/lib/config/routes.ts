@@ -38,7 +38,7 @@ export const ROUTES = {
 
     // Store setup
     STORE_INFO: "/merchant/store/information",
-    CUSTOMISE: "/merchant/store/customise",
+    CUSTOMISE: "/merchant/store/customize",
     STAFF: "/merchant/store/staff",
     MORE: "/merchant/store/more",
 

@@ -47,3 +47,13 @@ export type OrderStatus =
 export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
 export type PaymentMethod = "card" | "transfer" | "paystack" | "cash" | "ussd";
 export type ShippingMethod = "pickup" | "delivery" | "express";
+
+export type BankAccount = {
+  id: string;
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  isDefault: boolean;
+  verifiedAt: string;
+};
