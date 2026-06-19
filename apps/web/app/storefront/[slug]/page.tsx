@@ -53,16 +53,17 @@ export default async function StorefrontPage({
 
   const store = {
     id: "1",
-    name: "Demo Store",
-    slug: "demo-store",
-    category: "Electronics",
+    name: "Eko Fashion House",
+    slug: "eko-fashion-house",
+    category: "Fashion",
     currency: "NGN",
-    tagline: "Best electronics store in Nigeria",
-    logo_url: "https://example.com/logo.png",
+    tagline: "Premium Nigerian fashion for every occasion",
+    logo_url:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAuky-YXXZ1A23fgXilzopg3GtbckVRDtzaVUn8L47oQ&s=10",
     is_active: true,
   };
 
-  // if (!store || !store.is_active) notFound();
+  if (!store || !store.is_active) notFound();
 
   return (
     <main className="min-h-screen bg-white">

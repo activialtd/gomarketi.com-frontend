@@ -35,7 +35,8 @@ export default function MerchantLayout({
   // Fetch vendor's store to get real slug and name for the header
   useEffect(() => {
     if (!accessToken) return;
-    storefrontApi.getMyStore(accessToken)
+    storefrontApi
+      .getMyStore(accessToken)
       .then((store) => {
         setStoreName(store.name);
         setStoreSlug(store.slug);
@@ -71,10 +72,10 @@ export default function MerchantLayout({
     );
   }
 
-  if (!user) {
-    router.replace(ROUTES.AUTH.LOGIN);
-    return null;
-  }
+  // if (!user) {
+  //   router.replace(ROUTES.AUTH.LOGIN);
+  //   return null;
+  // }
 
   return (
     <div

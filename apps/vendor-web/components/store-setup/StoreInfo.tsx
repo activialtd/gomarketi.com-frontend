@@ -16,7 +16,7 @@ import {
 import { Input } from "@gomarket/ui";
 import { storeInfoSchema, StoreInfoValues } from "@/lib/validations/schemas";
 import { LogoUpload, Field, StyledTextarea, Section } from "./helpers";
-import { NIGERIAN_STATES } from "@gomarket/shared-utils";
+import { NIGERIAN_STATES, toSlug } from "@gomarket/shared-utils";
 
 export default function StoreInformationPage() {
   const [logo, setLogo] = useState<string | null>(null);
@@ -29,6 +29,7 @@ export default function StoreInformationPage() {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<StoreInfoValues>({
     resolver: zodResolver(storeInfoSchema),
     defaultValues: {
@@ -49,6 +50,7 @@ export default function StoreInformationPage() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
+  const storeSlug = toSlug(getValues("storeName"));
 
   return (
     <div className="w-full">
@@ -414,7 +416,9 @@ export default function StoreInformationPage() {
               </span>
             </div>
             <a
-              href="#"
+              href={`https://${storeSlug}.${process.env.NEXT_PUBLIC_FRONTEND_URL} || http://${storeSlug}.localhost:3000`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-[12px] font-semibold"
               style={{ color: "#1A7A42" }}
             >
