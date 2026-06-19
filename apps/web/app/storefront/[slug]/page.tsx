@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import Home from "@/components/storefront/Home";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -48,7 +49,19 @@ export default async function StorefrontPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const store = await getStore(slug);
+  // const store = await getStore(slug);
+
+  const store = {
+    id: "1",
+    name: "Eko Fashion House",
+    slug: "eko-fashion-house",
+    category: "Fashion",
+    currency: "NGN",
+    tagline: "Premium Nigerian fashion for every occasion",
+    logo_url:
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSAuky-YXXZ1A23fgXilzopg3GtbckVRDtzaVUn8L47oQ&s=10",
+    is_active: true,
+  };
 
   if (!store || !store.is_active) notFound();
 
@@ -75,7 +88,10 @@ export default async function StorefrontPage({
           </div>
         )}
         <div>
-          <h1 className="font-extrabold text-[17px]" style={{ color: "#1C1C1C" }}>
+          <h1
+            className="font-extrabold text-[17px]"
+            style={{ color: "#1C1C1C" }}
+          >
             {store.name}
           </h1>
           {store.tagline && (
@@ -95,9 +111,7 @@ export default async function StorefrontPage({
       </header>
 
       {/* Products will go here */}
-      <div className="max-w-6xl mx-auto px-6 py-12 text-center">
-        <p className="text-gray-400 text-sm">Products coming soon…</p>
-      </div>
+      <Home />
     </main>
   );
 }
