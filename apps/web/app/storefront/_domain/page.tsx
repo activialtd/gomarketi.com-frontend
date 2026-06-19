@@ -50,18 +50,37 @@ export default async function CustomDomainStorefrontPage() {
   // Reuse the same store UI — just a different lookup path
   return (
     <main className="min-h-screen bg-white">
-      <header className="px-6 py-4 border-b flex items-center gap-3" style={{ borderColor: "#e2e8f0" }}>
+      <header
+        className="px-6 py-4 border-b flex items-center gap-3"
+        style={{ borderColor: "#e2e8f0" }}
+      >
         {store.logo_url ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={store.logo_url} alt={store.name} className="w-10 h-10 rounded-xl object-cover" />
+          <img
+            src={store.logo_url}
+            alt={store.name}
+            className="w-10 h-10 rounded-xl object-cover"
+          />
         ) : (
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-lg" style={{ background: "#1A7A42" }}>
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-lg"
+            style={{ background: "#1A7A42" }}
+          >
             {store.name[0].toUpperCase()}
           </div>
         )}
         <div>
-          <h1 className="font-extrabold text-[17px]" style={{ color: "#1C1C1C" }}>{store.name}</h1>
-          {store.tagline && <p className="text-[12px]" style={{ color: "#6b7280" }}>{store.tagline}</p>}
+          <h1
+            className="font-extrabold text-[17px]"
+            style={{ color: "#1C1C1C" }}
+          >
+            {store.name}
+          </h1>
+          {store.tagline && (
+            <p className="text-[12px]" style={{ color: "#6b7280" }}>
+              {store.tagline}
+            </p>
+          )}
         </div>
       </header>
       <div className="max-w-6xl mx-auto px-6 py-12 text-center">
