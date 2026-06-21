@@ -6,8 +6,8 @@ export type Template = {
   tagline: string;
   bestFor: string[];
   isPro: boolean;
-  accent: string; // demo tint for the card
-  preview: React.ReactNode; // inline SVG thumbnail
+  accent: string;
+  preview: React.ReactNode;
 };
 
 // Inline SVG thumbnails — minimal "wireframe" of each layout
@@ -391,16 +391,6 @@ export const TEMPLATES: Template[] = [
     bestFor: ["Luxury", "Fashion", "Premium brands"],
     isPro: false,
     accent: "#f0f9ff",
-    preview: null,
-  },
-  {
-    id: "abuja",
-    name: "Abuja",
-    tagline:
-      "Modern sidebar layout — great for large catalogues with categories",
-    bestFor: ["Electronics", "Multi-category", "High-volume stores"],
-    isPro: true,
-    accent: "#faf5ff",
     preview: null,
   },
 ];
