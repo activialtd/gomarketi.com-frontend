@@ -72,10 +72,10 @@ export default function MerchantLayout({
     );
   }
 
-  // if (!user) {
-  //   router.replace(ROUTES.AUTH.LOGIN);
-  //   return null;
-  // }
+  if (!user) {
+    router.replace(ROUTES.AUTH.LOGIN);
+    return null;
+  }
 
   return (
     <div
