@@ -19,15 +19,11 @@ import { Product, PRODUCTS } from "@/lib/data/products";
 import { useCart } from "@/lib/cartContext";
 import { fmtNaira } from "@gomarket/shared-utils";
 
-export default function ProductDetailPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
+export default function ProductDetailPage({ slug }: { slug: string }) {
   const c = STORE_CONFIG.colors;
   const router = useRouter();
   const { addToCart } = useCart();
-  const product = PRODUCTS.find((p) => p.slug === params.slug) ?? null;
+  const product = PRODUCTS.find((p) => p.slug === slug) ?? null;
   const [activeImage, setActiveImage] = useState(0);
   const [selectedOptions, setSelectedOptions] = useState<
     Record<string, string>

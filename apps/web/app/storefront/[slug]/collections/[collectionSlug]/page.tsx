@@ -1,25 +1,19 @@
-import Collection from "@/components/storefront/Collection";
-import { Metadata } from "next";
+import { STORE_CONFIG } from "@/lib/storeConfig";
+import EkoCollection from "@/components/storefront/eko/EkoCollection";
+import LagosCollection from "@/components/storefront/lagos/LagosCollection";
+import { use } from "react";
 
-export const metadata: Metadata = {
-  title: "Collection",
-  description: "Collection",
-};
-
-export default async function CollectionPage({
+export default function CollectionPage({
   params,
 }: {
-  params: Promise<{
-    collectionSlug: string;
-  }>;
+  params: Promise<{ collectionSlug: string }>;
 }) {
-  const { collectionSlug } = await params;
-
-  return (
-    <Collection
-      params={{
-        collectionSlug,
-      }}
-    />
-  );
+  const { collectionSlug } = use(params);
+  switch (STORE_CONFIG.template) {
+    case "lagos":
+      return <LagosCollection collectionSlug={collectionSlug} />;
+    case "eko":
+    default:
+      return <EkoCollection collectionSlug={collectionSlug} />;
+  }
 }

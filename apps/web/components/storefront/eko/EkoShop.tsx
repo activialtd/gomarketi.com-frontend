@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
-import { ProductCard } from "@/components/storefront/ProductCard";
+import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
 
 const CATEGORIES = Array.from(new Set(PRODUCTS.map((p) => p.category)));
 

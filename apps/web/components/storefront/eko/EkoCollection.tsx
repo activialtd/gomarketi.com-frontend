@@ -2,18 +2,15 @@
 
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { STORE_CONFIG } from "@/lib/storeConfig";
 import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
-import { ProductCard } from "@/components/storefront/ProductCard";
+import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
 
 export default function CollectionPage({
-  params,
+  collectionSlug,
 }: {
-  params: { collectionSlug: string };
+  collectionSlug: string;
 }) {
-  const collection = COLLECTIONS.find(
-    (col) => col.slug === params.collectionSlug,
-  );
+  const collection = COLLECTIONS.find((col) => col.slug === collectionSlug);
 
   if (!collection) {
     return (

@@ -1,13 +1,15 @@
-import Shop from "@/components/storefront/Shop";
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "Shop",
-  description: "Shop",
-};
+import { STORE_CONFIG } from "@/lib/storeConfig";
+import EkoShop from "@/components/storefront/eko/EkoShop";
+import LagosShop from "@/components/storefront/lagos/LagosShop";
 
-const page = () => {
-  return <Shop />;
-};
-
-export default page;
+export default function ShopPage() {
+  switch (STORE_CONFIG.template) {
+    case "lagos":
+      return <LagosShop />;
+    case "eko":
+    default:
+      return <EkoShop />;
+  }
+}

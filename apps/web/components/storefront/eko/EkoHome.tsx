@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { STORE_CONFIG } from "@/lib/storeConfig";
 import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
-import { ProductCard } from "@/components/storefront/ProductCard";
+import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
 
 export default function HomePage() {
   const featured = PRODUCTS.filter(

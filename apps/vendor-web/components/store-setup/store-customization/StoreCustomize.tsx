@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import {
   Check,
   ExternalLink,
@@ -9,13 +9,10 @@ import {
   Palette,
   Type,
   Layout,
-  ChevronRight,
   Monitor,
   Smartphone,
   Tablet,
-  Star,
   Lock,
-  Sparkles,
   Info,
 } from "lucide-react";
 import {
