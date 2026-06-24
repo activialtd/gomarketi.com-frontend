@@ -86,7 +86,7 @@ export default function WalletPage() {
             style={{ background: "#fff", borderColor: "#e2e8f0" }}
           >
             {/* Green header stripe */}
-            <div className="px-6 py-5" style={{ background: "#1A7A42" }}>
+            <div className="px-6 py-5" style={{ background: "#0A2E1A" }}>
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
                   <Wallet className="w-4 h-4 text-white opacity-80" />
@@ -129,14 +129,14 @@ export default function WalletPage() {
                 onClick={() => setWithdrawOpen(true)}
                 className="flex items-center gap-2 h-10 px-5 rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.98]"
                 style={{
-                  background: "#1A7A42",
+                  background: "#0A2E1A",
                   boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
                 }}
                 onMouseOver={(e) =>
                   (e.currentTarget.style.background = "#239452")
                 }
                 onMouseOut={(e) =>
-                  (e.currentTarget.style.background = "#1A7A42")
+                  (e.currentTarget.style.background = "#0A2E1A")
                 }
               >
                 <ArrowUpRight className="w-4 h-4" /> Withdraw

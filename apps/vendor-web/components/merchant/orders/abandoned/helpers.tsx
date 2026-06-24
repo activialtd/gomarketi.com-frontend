@@ -843,14 +843,14 @@ export function AbandonedRow({
                   onClick={onOutreach}
                   className="w-full flex items-center justify-center gap-2 h-9 rounded-[8px] text-white text-[12px] font-bold transition-all"
                   style={{
-                    background: "#1A7A42",
+                    background: "#0A2E1A",
                     boxShadow: "0 2px 8px rgba(26,122,66,0.2)",
                   }}
                   onMouseOver={(e) =>
                     (e.currentTarget.style.background = "#239452")
                   }
                   onMouseOut={(e) =>
-                    (e.currentTarget.style.background = "#1A7A42")
+                    (e.currentTarget.style.background = "#0A2E1A")
                   }
                 >
                   <Send className="w-3.5 h-3.5" /> Send recovery message

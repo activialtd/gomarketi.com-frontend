@@ -33,15 +33,10 @@ export const ROUTES = {
     PAYOUTS: "/merchant/finance/payouts",
     INVOICES: "/merchant/finance/invoices",
 
-    // Growth
-    MARKETING: "/merchant/marketing",
-    EXTENSIONS: "/merchant/extensions",
-
     // Store setup
     STORE_INFO: "/merchant/store/information",
     CUSTOMISE: "/merchant/store/customize",
     STAFF: "/merchant/store/staff",
-    MORE: "/merchant/store/more",
 
     // Account
     SETTINGS: "/merchant/settings",
