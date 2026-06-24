@@ -1,9 +1,5 @@
-import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import { CartProvider } from "@/lib/cartContext";
-import { STORE_CONFIG } from "@/lib/storeConfig";
-import EkoLayout from "@/components/storefront/eko/EkoLayout";
-import LagosLayout from "@/components/storefront/lagos/LagosLayout";
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -11,21 +7,8 @@ const jakarta = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: STORE_CONFIG.storeName,
-  description: STORE_CONFIG.tagline,
-};
-
-function TemplateLayout({ children }: { children: React.ReactNode }) {
-  switch (STORE_CONFIG.template) {
-    case "lagos":
-      return <LagosLayout>{children}</LagosLayout>;
-    case "eko":
-    default:
-      return <EkoLayout>{children}</EkoLayout>;
-  }
-}
-
+// Each page (EkoHome, LagosHome, StoreSkeleton) owns its own header and footer
+// so the layout only provides the font + cart context.
 export default function RootLayout({
   children,
 }: {
@@ -38,7 +21,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <CartProvider>
-          <TemplateLayout>{children}</TemplateLayout>
+          {children}
         </CartProvider>
       </body>
     </html>

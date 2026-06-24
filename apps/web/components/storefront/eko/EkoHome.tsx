@@ -9,9 +9,10 @@ import {
   Sparkles,
   Package,
 } from "lucide-react";
-import { STORE_CONFIG } from "@/lib/storeConfig";
 import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
+import { STORE_CONFIG } from "@/lib/storeConfig";
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
+import EkoLayout from "@/components/storefront/eko/EkoLayout";
 import type { StoreData, ThemeConfig } from "@/app/storefront/[slug]/page";
 
 interface Props {
@@ -22,7 +23,12 @@ interface Props {
 export default function HomePage({ store, themeConfig }: Props) {
   const storeName = store?.name ?? STORE_CONFIG.storeName;
   const sec = themeConfig?.sections;
-  const colors = themeConfig?.colors ?? { primary: STORE_CONFIG.colors.primary, secondary: STORE_CONFIG.colors.secondary, bg: STORE_CONFIG.colors.bg, text: STORE_CONFIG.colors.text };
+  const colors = themeConfig?.colors ?? {
+    primary: STORE_CONFIG.colors.primary,
+    secondary: STORE_CONFIG.colors.secondary,
+    bg: STORE_CONFIG.colors.bg,
+    text: STORE_CONFIG.colors.text,
+  };
 
   const tagline = sec?.hero.enabled ? (sec.hero.headline || storeName) : storeName;
   const subtagline = sec?.hero.enabled ? (sec.hero.subheadline || "") : "";
@@ -36,7 +42,14 @@ export default function HomePage({ store, themeConfig }: Props) {
       : PRODUCTS.filter((p) => p.status === "active").slice(0, 6);
 
   return (
-    <div>
+    <EkoLayout
+      storeName={storeName}
+      primary={colors.primary}
+      secondary={colors.secondary}
+      tagline={sec?.footer.tagline}
+      whatsapp={sec?.footer.whatsapp}
+      instagram={sec?.footer.instagram}
+    >
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--store-bg)]">
         {/* Ambient blob — purely decorative, sits behind content */}
@@ -220,25 +233,30 @@ export default function HomePage({ store, themeConfig }: Props) {
       </section>
 
       {/* ── Bottom CTA band ──────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-5 pb-20">
-        <div className="overflow-hidden rounded-3xl bg-[var(--store-secondary)] px-8 py-12 text-center sm:py-16">
-          <h3 className="text-[22px] font-extrabold tracking-tight text-white sm:text-[26px]">
-            Have a question before you order?
-          </h3>
-          <p className="mx-auto mt-2 max-w-sm text-[13px] text-white/65">
-            Message {storeName} directly on WhatsApp — we usually reply within minutes.
-          </p>
-          <a
-            href={`https://wa.me/${STORE_CONFIG.contact.whatsapp.replace(/\D/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-[13px] font-bold text-[var(--store-secondary)] transition-transform duration-200 hover:-translate-y-0.5"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Chat on WhatsApp
-          </a>
-        </div>
-      </section>
-    </div>
+      {(sec ? sec.ctaBand.enabled : false) && (
+        <section className="mx-auto max-w-6xl px-5 pb-20">
+          <div className="overflow-hidden rounded-3xl px-8 py-12 text-center sm:py-16" style={{ background: colors.secondary }}>
+            <h3 className="text-[22px] font-extrabold tracking-tight text-white sm:text-[26px]">
+              {sec?.ctaBand.headline || "Have a question?"}
+            </h3>
+            <p className="mx-auto mt-2 max-w-sm text-[13px] text-white/65">
+              {sec?.ctaBand.text || `Message ${storeName} directly on WhatsApp.`}
+            </p>
+            {sec?.footer.whatsapp && (
+              <a
+                href={`https://wa.me/${sec.footer.whatsapp.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-[13px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
+                style={{ color: colors.secondary }}
+              >
+                <MessageCircle className="h-4 w-4" />
+                {sec?.ctaBand.btnText || "Chat on WhatsApp"}
+              </a>
+            )}
+          </div>
+        </section>
+      )}
+    </EkoLayout>
   );
 }
