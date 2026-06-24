@@ -570,8 +570,12 @@ export default function StoreCustomize() {
     }).catch(() => {});
   }, [accessToken]);
 
+  // setIsDirty must be called outside the setDraft functional updater —
+  // calling state setters inside another state setter's updater is a React anti-pattern
+  // that Strict Mode intentionally suppresses on the second invocation.
   const updateDraft = useCallback((updater: (prev: ThemeConfig) => ThemeConfig) => {
-    setDraft((prev) => { const next = updater(prev); setIsDirty(true); return next; });
+    setDraft((prev) => updater(prev));
+    setIsDirty(true);
   }, []);
 
   function setSection<K extends SectionKey>(key: K, value: Partial<ThemeConfig["sections"][K]>) {
@@ -657,11 +661,11 @@ export default function StoreCustomize() {
 
           <button type="button" onClick={handlePublish} disabled={isSaving || !store}
             className="flex items-center gap-1.5 h-8 px-4 rounded-[7px] text-[12px] font-bold text-white transition-colors disabled:opacity-50"
-            style={{ background: isDirty ? "#1A7A42" : "#6b7280" }}
-            onMouseOver={(e) => { if (isDirty && !isSaving) e.currentTarget.style.background = "#239452"; }}
-            onMouseOut={(e) => (e.currentTarget.style.background = isDirty ? "#1A7A42" : "#6b7280")}>
+            style={{ background: "#1A7A42" }}
+            onMouseOver={(e) => { if (!isSaving) e.currentTarget.style.background = "#239452"; }}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}>
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {isSaving ? "Publishing…" : "Publish"}
+            {isSaving ? "Publishing…" : isDirty ? "Publish changes" : "Publish"}
           </button>
         </div>
       </div>
@@ -733,17 +737,21 @@ export default function StoreCustomize() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-2.5" style={{ color: "#94a3b8" }}>Template</p>
                   <div className="grid grid-cols-3 gap-2">
                     {([
-                      { id: "eko",   label: "Eko",   Thumb: EkoThumb },
-                      { id: "lagos", label: "Lagos", Thumb: LagosThumb },
-                      { id: "abuja", label: "Abuja", Thumb: AbujaThumb },
-                    ] as const).map(({ id, label, Thumb }) => (
-                      <button key={id} type="button" onClick={() => updateDraft((p) => ({ ...p, template: id }))}
-                        className="rounded-[8px] border-2 overflow-hidden transition-all"
-                        style={{ borderColor: draft.template === id ? "#1A7A42" : "#e2e8f0" }}>
+                      { id: "eko",   label: "Eko",   Thumb: EkoThumb,   soon: false },
+                      { id: "lagos", label: "Lagos", Thumb: LagosThumb, soon: false },
+                      { id: "abuja", label: "Abuja", Thumb: AbujaThumb, soon: true  },
+                    ] as const).map(({ id, label, Thumb, soon }) => (
+                      <button key={id} type="button"
+                        onClick={() => { if (!soon) updateDraft((p) => ({ ...p, template: id })); }}
+                        className="rounded-[8px] border-2 overflow-hidden transition-all relative"
+                        style={{ borderColor: draft.template === id ? "#1A7A42" : "#e2e8f0", opacity: soon ? 0.55 : 1, cursor: soon ? "not-allowed" : "pointer" }}>
                         <div className="aspect-[7/5]"><Thumb colors={thumbColors} /></div>
                         <div className="flex items-center justify-between px-1.5 py-1" style={{ background: draft.template === id ? "#F0FAF3" : "#f8fafc" }}>
                           <span className="text-[10px] font-bold" style={{ color: draft.template === id ? "#1A7A42" : "#374151" }}>{label}</span>
-                          {draft.template === id && <Check className="w-3 h-3" style={{ color: "#1A7A42" }} />}
+                          {soon
+                            ? <span className="text-[8px] font-bold px-1 rounded" style={{ background: "#f1f5f9", color: "#94a3b8" }}>SOON</span>
+                            : draft.template === id && <Check className="w-3 h-3" style={{ color: "#1A7A42" }} />
+                          }
                         </div>
                       </button>
                     ))}

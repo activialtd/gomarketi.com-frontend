@@ -89,6 +89,7 @@ export default async function StorefrontPage({
 
   switch (template) {
     case "lagos":
+    case "abuja": // Abuja layout coming — uses Lagos as base until its own component is built
       return <LagosHome store={store} themeConfig={themeConfig} />;
     case "eko":
     default:
