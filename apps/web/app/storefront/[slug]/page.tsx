@@ -16,7 +16,7 @@ export interface ThemeSections {
 }
 
 export interface ThemeConfig {
-  template: "eko" | "lagos";
+  template: "eko" | "lagos" | "abuja";
   colors: { primary: string; secondary: string; bg: string; text: string };
   font: string;
   sections: ThemeSections;
