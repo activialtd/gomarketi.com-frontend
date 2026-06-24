@@ -38,19 +38,19 @@ export default function LagosHome({ store, themeConfig }: Props) {
     >
       {/* ── Announcement ─────────────────────────────── */}
       {sec?.announcement?.enabled && (
-        <div style={{ background: sec.announcement.bgColor ?? "#1A1A1A", color: sec.announcement.textColor ?? "#fff" }}
+        <div style={{ background: sec.announcement?.bgColor ?? "#1A1A1A", color: sec.announcement?.textColor ?? "#fff" }}
           className="py-2 px-6 text-center text-[11px] font-semibold">
-          {sec.announcement.text}
+          {sec.announcement?.text}
         </div>
       )}
 
       {/* ── Hero ─────────────────────────────────────── */}
-      {(sec ? sec.hero?.enabled : true) && (
+      {sec?.hero?.enabled !== false && (
         <section className="relative mx-auto grid max-w-7xl grid-cols-1 gap-0 px-6 pb-0 pt-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch lg:gap-10 lg:pt-16">
           <div className="flex flex-col justify-center">
             {sec?.hero?.eyebrow && (
               <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: accent }}>
-                {sec.hero.eyebrow}
+                {sec.hero?.eyebrow}
               </p>
             )}
             <h1 className="mt-5 text-[clamp(2.6rem,7vw,5rem)] font-semibold leading-[0.95] tracking-tight text-[#F7F4EE]"
@@ -67,7 +67,7 @@ export default function LagosHome({ store, themeConfig }: Props) {
               {sec?.hero?.secondaryCtaText && (
                 <Link href="/collections"
                   className="text-[12px] font-semibold uppercase tracking-[0.1em] text-white/50 no-underline hover:text-white transition-colors">
-                  {sec.hero.secondaryCtaText}
+                  {sec.hero?.secondaryCtaText}
                 </Link>
               )}
             </div>
@@ -89,7 +89,7 @@ export default function LagosHome({ store, themeConfig }: Props) {
       )}
 
       {/* ── Collections ──────────────────────────────── */}
-      {(sec ? sec.collections?.enabled : true) && COLLECTIONS.length > 0 && (
+      {sec?.collections?.enabled !== false && COLLECTIONS.length > 0 && (
         <section className="mx-auto max-w-7xl px-6 py-20">
           <div className="mb-8 flex items-baseline justify-between">
             <h2 className="text-[28px] font-semibold tracking-tight text-[#F7F4EE]"
@@ -118,7 +118,7 @@ export default function LagosHome({ store, themeConfig }: Props) {
       )}
 
       {/* ── Featured products ─────────────────────────── */}
-      {(sec ? sec.featured?.enabled : true) && (
+      {sec?.featured?.enabled !== false && (
         <section className="mx-auto max-w-7xl px-6 pb-24">
           <div className="mb-8 flex items-baseline justify-between">
             <h2 className="text-[28px] font-semibold tracking-tight text-[#F7F4EE]"
@@ -153,14 +153,14 @@ export default function LagosHome({ store, themeConfig }: Props) {
         <section className="border-t border-white/10 px-6 py-20 text-center">
           <h3 className="mx-auto mt-3 max-w-md text-[26px] font-semibold leading-tight text-[#F7F4EE]"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-            {sec.ctaBand.headline || `${storeName} replies on WhatsApp, usually within minutes.`}
+            {sec?.ctaBand?.headline || `${storeName} replies on WhatsApp, usually within minutes.`}
           </h3>
           {sec?.footer?.contact?.whatsapp && (
-            <a href={`https://wa.me/${sec.footer.contact.whatsapp.replace(/\D/g, "")}`}
+            <a href={`https://wa.me/${sec?.footer?.contact?.whatsapp?.replace(/\D/g, "")}`}
               target="_blank" rel="noopener noreferrer"
               className="mt-7 inline-flex items-center gap-2 px-7 py-3.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-white no-underline transition-transform duration-200 hover:-translate-y-0.5"
               style={{ background: accent }}>
-              <MessageCircle className="h-4 w-4" /> {sec.ctaBand.btnText || "Message us"}
+              <MessageCircle className="h-4 w-4" /> {sec?.ctaBand?.btnText || "Message us"}
             </a>
           )}
         </section>

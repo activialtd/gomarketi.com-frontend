@@ -30,8 +30,8 @@ export default function HomePage({ store, themeConfig }: Props) {
     text: STORE_CONFIG.colors.text,
   };
 
-  const tagline = sec?.hero.enabled ? (sec.hero.headline || storeName) : storeName;
-  const subtagline = sec?.hero.enabled ? (sec.hero.subheadline || "") : "";
+  const tagline = sec?.hero?.enabled ? (sec.hero?.headline || storeName) : storeName;
+  const subtagline = sec?.hero?.enabled ? (sec.hero?.subheadline || "") : "";
 
   const featured = PRODUCTS.filter(
     (p) => p.featured && p.status === "active",
@@ -46,9 +46,9 @@ export default function HomePage({ store, themeConfig }: Props) {
       storeName={storeName}
       primary={colors.primary}
       secondary={colors.secondary}
-      tagline={sec?.footer.tagline}
-      whatsapp={sec?.footer.whatsapp}
-      instagram={sec?.footer.instagram}
+      tagline={sec?.footer?.tagline}
+      whatsapp={sec?.footer?.contact?.whatsapp}
+      instagram={sec?.footer?.social?.instagram}
     >
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--store-bg)]">
@@ -233,25 +233,25 @@ export default function HomePage({ store, themeConfig }: Props) {
       </section>
 
       {/* ── Bottom CTA band ──────────────────────────────── */}
-      {(sec ? sec.ctaBand.enabled : false) && (
+      {sec?.ctaBand?.enabled && (
         <section className="mx-auto max-w-6xl px-5 pb-20">
           <div className="overflow-hidden rounded-3xl px-8 py-12 text-center sm:py-16" style={{ background: colors.secondary }}>
             <h3 className="text-[22px] font-extrabold tracking-tight text-white sm:text-[26px]">
-              {sec?.ctaBand.headline || "Have a question?"}
+              {sec?.ctaBand?.headline || "Have a question?"}
             </h3>
             <p className="mx-auto mt-2 max-w-sm text-[13px] text-white/65">
-              {sec?.ctaBand.text || `Message ${storeName} directly on WhatsApp.`}
+              {sec?.ctaBand?.text || `Message ${storeName} directly on WhatsApp.`}
             </p>
-            {sec?.footer.whatsapp && (
+            {sec?.footer?.contact?.whatsapp && (
               <a
-                href={`https://wa.me/${sec.footer.whatsapp.replace(/\D/g, "")}`}
+                href={`https://wa.me/${sec?.footer?.contact?.whatsapp?.replace(/\D/g, "")}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-[13px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
                 style={{ color: colors.secondary }}
               >
                 <MessageCircle className="h-4 w-4" />
-                {sec?.ctaBand.btnText || "Chat on WhatsApp"}
+                {sec?.ctaBand?.btnText || "Chat on WhatsApp"}
               </a>
             )}
           </div>
