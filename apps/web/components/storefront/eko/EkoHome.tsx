@@ -7,12 +7,22 @@ import {
   ShieldCheck,
   MessageCircle,
   Sparkles,
+  Package,
 } from "lucide-react";
 import { STORE_CONFIG } from "@/lib/storeConfig";
 import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
+import type { StoreData } from "@/app/storefront/[slug]/page";
 
-export default function HomePage() {
+interface Props {
+  store?: StoreData;
+}
+
+export default function HomePage({ store }: Props) {
+  const storeName = store?.name ?? STORE_CONFIG.storeName;
+  const tagline = store?.tagline ?? STORE_CONFIG.hero.headline;
+  const subtagline = store ? `Welcome to ${storeName} — browse our catalogue below.` : STORE_CONFIG.hero.subheadline;
+
   const featured = PRODUCTS.filter(
     (p) => p.featured && p.status === "active",
   ).slice(0, 6);
@@ -33,15 +43,15 @@ export default function HomePage() {
           <div className="w-full max-w-xl animate-[fadeUp_0.6s_ease_forwards] text-center lg:text-left">
             <span className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--store-primary)] shadow-sm">
               <Sparkles className="h-3 w-3" />
-              {STORE_CONFIG.hero.eyebrow}
+              {storeName}
             </span>
 
             <h1 className="text-[clamp(2rem,5.5vw,3.25rem)] font-extrabold leading-[1.05] tracking-tight text-[var(--store-text)]">
-              {STORE_CONFIG.hero.headline}
+              {tagline}
             </h1>
 
             <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-gray-500 lg:mx-0">
-              {STORE_CONFIG.hero.subheadline}
+              {subtagline}
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
@@ -62,22 +72,22 @@ export default function HomePage() {
           </div>
 
           <div className="relative w-full max-w-md animate-[fadeUp_0.7s_ease_forwards] [animation-delay:120ms]">
-            <div className="aspect-[4/5] overflow-hidden rounded-[28px] shadow-2xl shadow-black/10">
-              <img
-                src={STORE_CONFIG.hero.image}
-                alt=""
-                className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out hover:scale-105"
-              />
-            </div>
-            {/* Floating stat chip — anchors the hero with a concrete number */}
-            <div className="absolute -bottom-5 -left-5 rounded-2xl bg-white px-5 py-4 shadow-xl">
-              <p className="text-[20px] font-extrabold leading-none text-[var(--store-text)]">
-                {PRODUCTS.length}+
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                Pieces in store
-              </p>
-            </div>
+            {store && !STORE_CONFIG.hero.image ? (
+              <div className="aspect-[4/5] flex flex-col items-center justify-center rounded-[28px] gap-4" style={{ background: "var(--store-bg)", border: "2px dashed var(--store-primary)", opacity: 0.6 }}>
+                <Package className="h-12 w-12 text-[var(--store-primary)]" />
+                <p className="text-[13px] font-semibold text-center text-[var(--store-primary)] px-6">
+                  Your store banner will appear here once you add one from your dashboard.
+                </p>
+              </div>
+            ) : (
+              <div className="aspect-[4/5] overflow-hidden rounded-[28px] shadow-2xl shadow-black/10">
+                <img
+                  src={STORE_CONFIG.hero.image}
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out hover:scale-105"
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -184,11 +194,25 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-          {displayProducts.map((product, i) => (
-            <ProductCard key={product.id} product={product} index={i} />
-          ))}
-        </div>
+        {displayProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            {displayProducts.map((product, i) => (
+              <ProductCard key={product.id} product={product} index={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-24 gap-5 rounded-2xl border-2 border-dashed border-gray-200">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--store-bg)]">
+              <Package className="h-8 w-8 text-[var(--store-primary)]" />
+            </div>
+            <div className="text-center">
+              <p className="text-[18px] font-extrabold text-[var(--store-text)]">{storeName} is setting up</p>
+              <p className="mt-2 text-[14px] text-gray-500 max-w-xs">
+                Products are on their way. Check back soon or send us a message.
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ── Bottom CTA band ──────────────────────────────── */}
@@ -198,8 +222,7 @@ export default function HomePage() {
             Have a question before you order?
           </h3>
           <p className="mx-auto mt-2 max-w-sm text-[13px] text-white/65">
-            Message {STORE_CONFIG.storeName} directly on WhatsApp — we usually
-            reply within minutes.
+            Message {storeName} directly on WhatsApp — we usually reply within minutes.
           </p>
           <a
             href={`https://wa.me/${STORE_CONFIG.contact.whatsapp.replace(/\D/g, "")}`}

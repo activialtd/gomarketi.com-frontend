@@ -1,12 +1,11 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { STORE_CONFIG } from "@/lib/storeConfig";
 import EkoHome from "@/components/storefront/eko/EkoHome";
 import LagosHome from "@/components/storefront/lagos/LagosHome";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-interface Store {
+export interface StoreData {
   id: string;
   name: string;
   slug: string;
@@ -15,12 +14,13 @@ interface Store {
   tagline: string | null;
   logo_url: string | null;
   is_active: boolean;
+  template?: string;
 }
 
-async function getStore(slug: string): Promise<Store | null> {
+async function getStore(slug: string): Promise<StoreData | null> {
   try {
     const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`, {
-      next: { revalidate: 60 }, // cache for 60s, refresh in background
+      next: { revalidate: 60 },
     });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`API error ${res.status}`);
@@ -41,16 +41,27 @@ export async function generateMetadata({
   if (!store) return { title: "Store not found" };
   return {
     title: store.name,
-    description: store.tagline ?? `Shop at ${store.name} on GoMarket`,
+    description: store.tagline ?? `Shop at ${store.name} on GoMarketi`,
   };
 }
 
-export default function StorefrontPage() {
-  switch (STORE_CONFIG.template) {
+export default async function StorefrontPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const store = await getStore(slug);
+
+  if (!store || !store.is_active) notFound();
+
+  const template = store.template ?? "eko";
+
+  switch (template) {
     case "lagos":
-      return <LagosHome />;
+      return <LagosHome store={store} />;
     case "eko":
     default:
-      return <EkoHome />;
+      return <EkoHome store={store} />;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Check,
   ExternalLink,
@@ -27,33 +27,48 @@ import {
   LagosThumb,
   AbujaThumb,
 } from "./helpers";
+import { storefrontApi } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function StoreCustomize() {
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [activeTemplate, setActiveTemplate] = useState<TemplateId>("eko");
-  const [activeColors, setActiveColors] = useState<ColorPreset>(
-    COLOR_PRESETS[0],
-  );
+  const [activeColors, setActiveColors] = useState<ColorPreset>(COLOR_PRESETS[0]);
   const [activeFont, setActiveFont] = useState("plus-jakarta");
-  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">(
-    "desktop",
-  );
-  const [storeName, setStoreName] = useState("Eko Fashion House");
+  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [storeName, setStoreName] = useState("");
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
   const [headline, setHeadline] = useState("Fashion that tells your story");
   const [subheadline, setSubheadline] = useState(
     "Premium Nigerian fashion for weddings, events, and everyday life.",
   );
-  const [activePanel, setActivePanel] = useState<
-    "template" | "colors" | "typography" | "content"
-  >("template");
+  const [activePanel, setActivePanel] = useState<"template" | "colors" | "typography" | "content">("template");
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+
+  useEffect(() => {
+    if (!accessToken) return;
+    storefrontApi.getMyStore(accessToken).then((s) => {
+      setStoreName(s.name);
+      setStoreId(s.id);
+      setStoreSlug(s.slug);
+      if (s.tagline) setHeadline(s.tagline);
+    }).catch(() => {});
+  }, [accessToken]);
+
   async function handleSave() {
+    if (!accessToken || !storeId) return;
     setIsSaving(true);
-    await new Promise((r) => setTimeout(r, 900));
-    setIsSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    try {
+      await storefrontApi.updateStore(storeId, { tagline: headline }, accessToken);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   const thumbColors = {
@@ -114,14 +129,15 @@ export default function StoreCustomize() {
           </div>
 
           <a
-            href="#"
+            href={storeSlug ? `http://${storeSlug}.${STORE_DOMAIN}` : "#"}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1.5 h-9 px-3.5 rounded-[8px] border text-[12px] font-semibold transition-colors"
             style={{
               borderColor: "#e2e8f0",
               background: "#fff",
-              color: "#374151",
+              color: storeSlug ? "#374151" : "#94a3b8",
+              pointerEvents: storeSlug ? "auto" : "none",
             }}
             onMouseOver={(e) => (e.currentTarget.style.background = "#F0FAF3")}
             onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
