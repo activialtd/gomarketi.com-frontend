@@ -35,6 +35,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${jakarta.variable} min-h-full font-[family-name:var(--font-jakarta)] antialiased`}
+        suppressHydrationWarning
       >
         <CartProvider>
           <TemplateLayout>{children}</TemplateLayout>
