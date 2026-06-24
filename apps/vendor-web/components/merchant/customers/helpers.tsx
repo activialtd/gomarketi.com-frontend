@@ -286,7 +286,7 @@ export function CustomerRow({
       {/* Avatar */}
       <div
         className="w-9 h-9 rounded-full flex items-center justify-center text-[11px] font-extrabold text-white shrink-0"
-        style={{ background: "#1A7A42" }}
+        style={{ background: "#0A2E1A" }}
       >
         {customer.name
           .split(" ")

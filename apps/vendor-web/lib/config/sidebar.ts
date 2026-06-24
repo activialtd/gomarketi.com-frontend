@@ -106,21 +106,6 @@ export const NAV: NavSection[] = [
     ],
   },
   {
-    title: "Operations",
-    items: [
-      {
-        label: "Sales & Marketing",
-        href: ROUTES.MERCHANT.MARKETING,
-        icon: Megaphone,
-      },
-      {
-        label: "Extensions",
-        href: ROUTES.MERCHANT.EXTENSIONS,
-        icon: Puzzle,
-      },
-    ],
-  },
-  {
     title: "Finance",
     items: [
       {
@@ -154,11 +139,6 @@ export const NAV: NavSection[] = [
         label: "Staff & Roles",
         href: ROUTES.MERCHANT.STAFF,
         icon: UserCheck,
-      },
-      {
-        label: "More",
-        href: ROUTES.MERCHANT.MORE,
-        icon: Layers,
       },
     ],
   },

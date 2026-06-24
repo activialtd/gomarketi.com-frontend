@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -42,8 +44,7 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
       {/* Mobile backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 lg:hidden"
-          style={{ background: "rgba(0,0,0,0.4)" }}
+          className="fixed inset-0 z-40 lg:hidden bg-black/50 backdrop-blur-sm"
           onClick={onClose}
         />
       )}
@@ -55,190 +56,273 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
           "lg:relative lg:translate-x-0 lg:z-auto",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
-        style={{
-          width: "240px",
-          background: "#ffffff",
-          borderRight: "1px solid #e2e8f0",
-        }}
+        style={{ width: "248px", background: "#0A2E1A" }}
       >
         {/* ── Logo ──────────────────────────────────────────── */}
         <div
-          className="flex items-center gap-2.5 px-5 shrink-0"
-          style={{ height: "60px", borderBottom: "1px solid #f1f5f9" }}
+          className="flex items-center gap-3 px-5 shrink-0"
+          style={{
+            height: "64px",
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+          }}
         >
           <div
-            className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0"
-            style={{ background: "#1A7A42" }}
+            className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0"
+            style={{ background: "rgba(255,255,255,0.12)" }}
           >
-            <Store className="w-4 h-4 text-white" />
+            <Store className="w-[17px] h-[17px]" style={{ color: "#fff" }} />
           </div>
-          <span
-            className="font-extrabold text-[17px] tracking-tight"
-            style={{ color: "#1C1C1C" }}
-          >
-            GoMarket
-          </span>
+          <div>
+            <p className="text-[15px] font-extrabold tracking-tight text-white leading-none">
+              GoMarket
+            </p>
+            <p
+              className="text-[10px] font-medium mt-0.5"
+              style={{ color: "rgba(255,255,255,0.4)" }}
+            >
+              Vendor dashboard
+            </p>
+          </div>
         </div>
 
         {/* ── Nav ───────────────────────────────────────────── */}
-        <nav className="flex-1 overflow-y-auto py-3 px-3">
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
           {NAV.map((section, si) => (
-            <div key={si} className={si > 0 ? "mt-1" : ""}>
+            <div key={si} className={si > 0 ? "pt-4" : ""}>
               {/* Section header */}
               {section.title && (
                 <p
-                  className="text-[9px] font-extrabold uppercase px-3 pt-4 pb-1.5"
-                  style={{ letterSpacing: "0.14em", color: "#94a3b8" }}
+                  className="text-[9.5px] font-bold uppercase px-3 pb-2"
+                  style={{
+                    letterSpacing: "0.16em",
+                    color: "rgba(255,255,255,0.28)",
+                  }}
                 >
                   {section.title}
                 </p>
               )}
 
-              {section.items.map((item) => {
-                const sectionActive = isSectionActive(item);
-                const open = expanded.has(item.label);
-                const hasChildren = !!item.children?.length;
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const sectionActive = isSectionActive(item);
+                  const open = expanded.has(item.label);
+                  const hasChildren = !!item.children?.length;
 
-                return (
-                  <div key={item.label} data-tour={item.label.toLowerCase().replace(/\s+/g, "-")}>
-                    {/* Top-level item */}
-                    {hasChildren ? (
-                      <button
-                        type="button"
-                        onClick={() => toggleExpand(item.label)}
-                        className={cn(
-                          "w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all text-left",
-                          "hover:bg-[#F0FAF3]",
-                        )}
-                        style={{
-                          // Parent is only tinted (not solid) when a child is active
-                          color: sectionActive ? "#1A7A42" : "#374151",
-                          background: sectionActive
-                            ? "rgba(26,122,66,0.05)"
-                            : "transparent",
-                        }}
-                      >
-                        <item.icon
-                          className="w-[16px] h-[16px] shrink-0"
+                  return (
+                    <div
+                      key={item.label}
+                      data-tour={item.label.toLowerCase().replace(/\s+/g, "-")}
+                    >
+                      {/* Top-level item */}
+                      {hasChildren ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleExpand(item.label)}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all text-left"
                           style={{
-                            color: sectionActive ? "#1A7A42" : "#6b7280",
+                            color: sectionActive
+                              ? "rgba(255,255,255,0.95)"
+                              : "rgba(255,255,255,0.55)",
+                            background: sectionActive
+                              ? "rgba(255,255,255,0.07)"
+                              : "transparent",
                           }}
-                        />
-                        <span className="flex-1">{item.label}</span>
-                        <ChevronDown
-                          className="w-3.5 h-3.5 transition-transform duration-200"
-                          style={{
-                            color: "#9ca3af",
-                            transform: open ? "rotate(0deg)" : "rotate(-90deg)",
+                          onMouseOver={(e) => {
+                            if (!sectionActive)
+                              e.currentTarget.style.background =
+                                "rgba(255,255,255,0.05)";
                           }}
-                        />
-                      </button>
-                    ) : (
-                      <Link
-                        href={item.href!}
-                        onClick={() => onClose()}
-                        className={cn(
-                          "flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all",
-                          "hover:bg-[#F0FAF3]",
-                        )}
-                        style={{
-                          color: sectionActive ? "#1A7A42" : "#374151",
-                          background: sectionActive ? "#F0FAF3" : "transparent",
-                        }}
-                      >
-                        <item.icon
-                          className="w-[16px] h-[16px] shrink-0"
-                          style={{
-                            color: sectionActive ? "#1A7A42" : "#6b7280",
+                          onMouseOut={(e) => {
+                            if (!sectionActive)
+                              e.currentTarget.style.background = "transparent";
                           }}
-                        />
-                        <span className="flex-1">{item.label}</span>
-                        {item.badge && (
-                          <Badge variant={item.badgeVariant}>
-                            {item.badge}
-                          </Badge>
-                        )}
-                        {/* Active dot — only on leaf items */}
-                        {sectionActive && (
-                          <div
-                            className="w-1.5 h-1.5 rounded-full shrink-0"
-                            style={{ background: "#1A7A42" }}
+                        >
+                          <item.icon
+                            className="w-[15px] h-[15px] shrink-0"
+                            style={{
+                              color: sectionActive
+                                ? "rgba(255,255,255,0.9)"
+                                : "rgba(255,255,255,0.4)",
+                            }}
                           />
-                        )}
-                      </Link>
-                    )}
+                          <span className="flex-1">{item.label}</span>
+                          <ChevronDown
+                            className="w-3.5 h-3.5 transition-transform duration-200"
+                            style={{
+                              color: "rgba(255,255,255,0.3)",
+                              transform: open
+                                ? "rotate(0deg)"
+                                : "rotate(-90deg)",
+                            }}
+                          />
+                        </button>
+                      ) : (
+                        <Link
+                          href={item.href!}
+                          onClick={onClose}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all"
+                          style={{
+                            color: sectionActive
+                              ? "#0A2E1A"
+                              : "rgba(255,255,255,0.55)",
+                            background: sectionActive
+                              ? "#F0FAF3"
+                              : "transparent",
+                          }}
+                          onMouseOver={(e) => {
+                            if (!sectionActive) {
+                              e.currentTarget.style.color =
+                                "rgba(255,255,255,0.85)";
+                              e.currentTarget.style.background =
+                                "rgba(255,255,255,0.05)";
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!sectionActive) {
+                              e.currentTarget.style.color =
+                                "rgba(255,255,255,0.55)";
+                              e.currentTarget.style.background = "transparent";
+                            }
+                          }}
+                        >
+                          <item.icon
+                            className="w-[15px] h-[15px] shrink-0"
+                            style={{
+                              color: sectionActive
+                                ? "#1A7A42"
+                                : "rgba(255,255,255,0.4)",
+                            }}
+                          />
+                          <span className="flex-1">{item.label}</span>
+                          {item.badge && (
+                            <Badge variant={item.badgeVariant}>
+                              {item.badge}
+                            </Badge>
+                          )}
+                        </Link>
+                      )}
 
-                    {/* Children */}
-                    {hasChildren && open && (
-                      <div
-                        className="ml-[28px] mt-0.5 mb-1 space-y-0.5 border-l pl-3"
-                        style={{ borderColor: "#e2e8f0" }}
-                      >
-                        {item.children!.map((child) => {
-                          const childActive = isActive(child.href, child.exact);
-                          return (
-                            <Link
-                              key={child.label}
-                              href={child.href!}
-                              onClick={() => onClose()}
-                              className="flex items-center gap-2 py-1.5 px-2 rounded-[6px] text-[12px] font-medium transition-all hover:bg-[#F0FAF3]"
-                              style={{
-                                color: childActive ? "#1A7A42" : "#6b7280",
-                                background: childActive
-                                  ? "rgba(26,122,66,0.06)"
-                                  : "transparent",
-                              }}
-                            >
-                              <child.icon className="w-3.5 h-3.5 shrink-0" />
-                              {child.label}
-                              {childActive && (
-                                <div
-                                  className="ml-auto w-1.5 h-1.5 rounded-full"
-                                  style={{ background: "#1A7A42" }}
+                      {/* Children */}
+                      {hasChildren && open && (
+                        <div
+                          className="ml-[22px] mt-0.5 mb-1 space-y-0.5 border-l pl-3"
+                          style={{ borderColor: "rgba(255,255,255,0.08)" }}
+                        >
+                          {item.children!.map((child) => {
+                            const childActive = isActive(
+                              child.href,
+                              child.exact,
+                            );
+                            return (
+                              <Link
+                                key={child.label}
+                                href={child.href!}
+                                onClick={onClose}
+                                className="flex items-center gap-2 py-1.5 px-2 rounded-[6px] text-[12px] font-medium transition-all"
+                                style={{
+                                  color: childActive
+                                    ? "#0A2E1A"
+                                    : "rgba(255,255,255,0.45)",
+                                  background: childActive
+                                    ? "#F0FAF3"
+                                    : "transparent",
+                                }}
+                                onMouseOver={(e) => {
+                                  if (!childActive) {
+                                    e.currentTarget.style.color =
+                                      "rgba(255,255,255,0.75)";
+                                    e.currentTarget.style.background =
+                                      "rgba(255,255,255,0.05)";
+                                  }
+                                }}
+                                onMouseOut={(e) => {
+                                  if (!childActive) {
+                                    e.currentTarget.style.color =
+                                      "rgba(255,255,255,0.45)";
+                                    e.currentTarget.style.background =
+                                      "transparent";
+                                  }
+                                }}
+                              >
+                                <child.icon
+                                  className="w-3.5 h-3.5 shrink-0"
+                                  style={{
+                                    color: childActive
+                                      ? "#1A7A42"
+                                      : "rgba(255,255,255,0.3)",
+                                  }}
                                 />
-                              )}
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                                {child.label}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ))}
         </nav>
 
         {/* ── Bottom actions ─────────────────────────────────── */}
         <div
-          className="px-3 py-3 space-y-0.5 shrink-0"
-          style={{ borderTop: "1px solid #f1f5f9" }}
+          className="px-3 pb-4 pt-3 space-y-0.5 shrink-0"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
         >
-          <Link
-            href={ROUTES.MERCHANT.SETTINGS}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all hover:bg-[#F0FAF3]"
-            style={{ color: "#374151" }}
-          >
-            <Settings className="w-4 h-4" style={{ color: "#6b7280" }} />
-            Settings
-          </Link>
-          <Link
-            href={ROUTES.MERCHANT.HELP}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all hover:bg-[#F0FAF3]"
-            style={{ color: "#374151" }}
-          >
-            <HelpCircle className="w-4 h-4" style={{ color: "#6b7280" }} />
-            Help & Support
-          </Link>
+          {[
+            {
+              href: ROUTES.MERCHANT.SETTINGS,
+              Icon: Settings,
+              label: "Settings",
+            },
+            {
+              href: ROUTES.MERCHANT.HELP,
+              Icon: HelpCircle,
+              label: "Help & Support",
+            },
+          ].map(({ href, Icon, label }) => (
+            <Link
+              key={label}
+              href={href}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-medium transition-all"
+              style={{ color: "rgba(255,255,255,0.45)" }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = "rgba(255,255,255,0.8)";
+                e.currentTarget.style.background = "rgba(255,255,255,0.05)";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = "rgba(255,255,255,0.45)";
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <Icon
+                className="w-4 h-4 shrink-0"
+                style={{ color: "rgba(255,255,255,0.3)" }}
+              />
+              {label}
+            </Link>
+          ))}
+
           <button
             type="button"
             onClick={onSignOut}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-semibold transition-all hover:bg-red-50 text-left"
-            style={{ color: "#374151" }}
-            onMouseOver={(e) => (e.currentTarget.style.color = "#dc2626")}
-            onMouseOut={(e) => (e.currentTarget.style.color = "#374151")}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[8px] text-[13px] font-medium transition-all text-left"
+            style={{ color: "rgba(255,255,255,0.45)" }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = "#fca5a5";
+              e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = "rgba(255,255,255,0.45)";
+              e.currentTarget.style.background = "transparent";
+            }}
           >
-            <LogOut className="w-4 h-4" style={{ color: "#6b7280" }} />
+            <LogOut
+              className="w-4 h-4 shrink-0"
+              style={{ color: "rgba(255,255,255,0.3)" }}
+            />
             Sign out
           </button>
         </div>
@@ -247,7 +331,7 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
   );
 }
 
-// ─── Badge ───────────────────────────────────────────────────────────────────
+// ─── Badge ────────────────────────────────────────────────────────────────────
 
 function Badge({
   children,
@@ -257,13 +341,16 @@ function Badge({
   variant?: "green" | "red" | "gray";
 }) {
   const styles = {
-    green: { background: "#dcfce7", color: "#15803d" },
-    red: { background: "#fee2e2", color: "#dc2626" },
-    gray: { background: "#f1f5f9", color: "#64748b" },
+    green: { background: "rgba(34,197,94,0.18)", color: "#86efac" },
+    red: { background: "rgba(239,68,68,0.18)", color: "#fca5a5" },
+    gray: {
+      background: "rgba(255,255,255,0.1)",
+      color: "rgba(255,255,255,0.5)",
+    },
   };
   return (
     <span
-      className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-full"
+      className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full"
       style={{ letterSpacing: "0.08em", ...styles[variant] }}
     >
       {children}

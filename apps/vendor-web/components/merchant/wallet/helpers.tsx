@@ -709,13 +709,13 @@ export function WithdrawModal({
               }
               className="w-full flex items-center justify-center gap-2 h-11 rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.98] disabled:opacity-50"
               style={{
-                background: "#1A7A42",
+                background: "#0a2e1a",
                 boxShadow: "0 4px 14px rgba(26,122,66,0.25)",
               }}
               onMouseOver={(e) =>
                 !processing && (e.currentTarget.style.background = "#239452")
               }
-              onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+              onMouseOut={(e) => (e.currentTarget.style.background = "#0a2e1a")}
             >
               {processing ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

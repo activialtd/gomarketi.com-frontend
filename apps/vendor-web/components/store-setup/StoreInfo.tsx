@@ -92,13 +92,13 @@ export default function StoreInformationPage() {
             disabled={isSaving}
             className="flex items-center gap-1.5 h-9 px-4 rounded-[8px] text-white text-[12px] font-bold transition-all disabled:opacity-60"
             style={{
-              background: "#1A7A42",
+              background: "#0A2E1A",
               boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
             }}
             onMouseOver={(e) =>
               !isSaving && (e.currentTarget.style.background = "#239452")
             }
-            onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
           >
             {isSaving ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />

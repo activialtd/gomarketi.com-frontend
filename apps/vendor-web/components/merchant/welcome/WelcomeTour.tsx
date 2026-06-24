@@ -70,8 +70,14 @@ function useConfetti() {
 
     const ctx = canvas.getContext("2d")!;
     const COLORS = [
-      "#1A7A42", "#f59e0b", "#ef4444", "#3b82f6",
-      "#8b5cf6", "#ec4899", "#10b981", "#f97316",
+      "#1A7A42",
+      "#f59e0b",
+      "#ef4444",
+      "#3b82f6",
+      "#8b5cf6",
+      "#ec4899",
+      "#10b981",
+      "#f97316",
     ];
 
     const particles = Array.from({ length: 150 }, () => ({
@@ -182,7 +188,10 @@ export function WelcomeTour() {
       <div className="w-full min-h-[calc(100vh-56px)] flex items-center justify-center px-4 py-10">
         <div
           className="relative w-full max-w-[440px] rounded-[24px] overflow-hidden"
-          style={{ background: "#ffffff", boxShadow: "0 8px 40px rgba(0,0,0,0.1)" }}
+          style={{
+            background: "#ffffff",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.1)",
+          }}
         >
           {/* Skip */}
           <button
@@ -234,7 +243,7 @@ export function WelcomeTour() {
                 style={{
                   width: i === slide ? 24 : 7,
                   height: 7,
-                  background: i === slide ? "#1A7A42" : "#e2e8f0",
+                  background: i === slide ? "#0A2E1A" : "#e2e8f0",
                   transition: "width 0.25s, background 0.25s",
                 }}
               />
@@ -251,7 +260,11 @@ export function WelcomeTour() {
               onClick={() => goTo(slide - 1, "left")}
               disabled={slide === 0}
               className="flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-[13px] font-semibold transition-all disabled:opacity-0 disabled:pointer-events-none"
-              style={{ color: "#6b7280", background: "#f8fafc", border: "1px solid #e2e8f0" }}
+              style={{
+                color: "#6b7280",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+              }}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
@@ -262,9 +275,16 @@ export function WelcomeTour() {
                 type="button"
                 onClick={proceed}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.97]"
-                style={{ background: "#1A7A42", boxShadow: "0 4px 16px rgba(26,122,66,0.32)" }}
-                onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
-                onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+                style={{
+                  background: "#0A2E1A",
+                  boxShadow: "0 4px 16px rgba(26,122,66,0.32)",
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "#239452")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "#0A2E1A")
+                }
               >
                 <Check className="w-4 h-4" />
                 Set up my store
@@ -274,16 +294,26 @@ export function WelcomeTour() {
                 type="button"
                 onClick={() => goTo(slide + 1, "right")}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.97]"
-                style={{ background: "#1A7A42", boxShadow: "0 4px 16px rgba(26,122,66,0.32)" }}
-                onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
-                onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+                style={{
+                  background: "#0A2E1A",
+                  boxShadow: "0 4px 16px rgba(26,122,66,0.32)",
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "#0A2E1A")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "#0A2E1A")
+                }
               >
                 Next <ArrowRight className="w-4 h-4" />
               </button>
             )}
           </div>
 
-          <p className="text-center text-[11px] pb-4" style={{ color: "#c4c8d0" }}>
+          <p
+            className="text-center text-[11px] pb-4"
+            style={{ color: "#c4c8d0" }}
+          >
             {slide + 1} of {total}
           </p>
         </div>

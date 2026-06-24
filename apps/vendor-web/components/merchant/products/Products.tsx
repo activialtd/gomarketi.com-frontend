@@ -52,7 +52,10 @@ export default function ProductsPage() {
     async function load() {
       setLoadingProducts(true);
       try {
-        const resp = await catalogueApi.listProducts({ per_page: 100 }, accessToken!);
+        const resp = await catalogueApi.listProducts(
+          { per_page: 100 },
+          accessToken!,
+        );
         if (cancelled) return;
         const mapped: Product[] = resp.products.map((p) => ({
           id: p.id,
@@ -67,7 +70,12 @@ export default function ProductsPage() {
           hasVariants: false,
           stock: p.stock,
           sold: 0,
-          status: p.stock === 0 ? "out_of_stock" : p.is_published ? "active" : "draft",
+          status:
+            p.stock === 0
+              ? "out_of_stock"
+              : p.is_published
+                ? "active"
+                : "draft",
           featured: false,
           createdAt: p.created_at,
           tags: p.tags ?? [],
@@ -80,7 +88,9 @@ export default function ProductsPage() {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [accessToken]);
 
   const toggleSelect = (id: string) => {
@@ -190,11 +200,11 @@ export default function ProductsPage() {
             href={ROUTES.MERCHANT.PRODUCTS_NEW}
             className="flex items-center gap-1.5 h-9 px-4 rounded-[8px] text-white text-[12px] font-bold transition-all active:scale-[0.98]"
             style={{
-              background: "#1A7A42",
+              background: "#0A2E1A",
               boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
             }}
             onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
           >
             <Plus className="w-3.5 h-3.5" /> Add New Product
           </Link>
@@ -220,7 +230,11 @@ export default function ProductsPage() {
           />
           <StatCard
             label="Published"
-            value={loadingProducts ? "—" : String(products.filter((p) => p.status === "active").length)}
+            value={
+              loadingProducts
+                ? "—"
+                : String(products.filter((p) => p.status === "active").length)
+            }
             icon={ArrowUpDown}
             iconBg="#F0FAF3"
             iconColor="#1A7A42"
@@ -389,7 +403,10 @@ export default function ProductsPage() {
 
             {/* Content */}
             {loadingProducts ? (
-              <div className="flex items-center justify-center py-20 gap-2" style={{ color: "#94a3b8" }}>
+              <div
+                className="flex items-center justify-center py-20 gap-2"
+                style={{ color: "#94a3b8" }}
+              >
                 <Loader2 className="w-5 h-5 animate-spin" />
                 <span className="text-[13px]">Loading products…</span>
               </div>

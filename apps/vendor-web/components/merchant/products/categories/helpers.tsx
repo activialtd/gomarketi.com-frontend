@@ -398,13 +398,13 @@ export function CategoryFormPanel({
             disabled={isSubmitting}
             className="flex-1 flex items-center justify-center gap-1.5 h-10 rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.98] disabled:opacity-60"
             style={{
-              background: "#1A7A42",
+              background: "#0A2E1A",
               boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
             }}
             onMouseOver={(e) =>
               !isSubmitting && (e.currentTarget.style.background = "#239452")
             }
-            onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
           >
             {isSubmitting ? (
               <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
