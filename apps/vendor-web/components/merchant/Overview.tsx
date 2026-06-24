@@ -16,7 +16,6 @@ import {
   Copy,
   Check,
   TrendingUp,
-  TrendingDown,
   ShoppingCart,
   Users,
   Package,
@@ -26,15 +25,14 @@ import {
   Plus,
   BarChart3,
   CheckCircle2,
-  Clock,
   ChevronRight,
   Wallet,
-  CreditCard,
   Store,
   Image as ImageIcon,
   Tag,
   Loader2,
   InboxIcon,
+  ExternalLink,
 } from "lucide-react";
 import { CustomTooltip } from "./overview/helpers";
 import { analyticsApi, ordersApi, storefrontApi, type AnalyticsOverviewResp, type OrderResp, type StoreResp } from "@gomarket/api-client";
