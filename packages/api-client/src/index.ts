@@ -1,4 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://prenatal-slather-explicit.ngrok-free.dev";
 
 // ── Request types ──────────────────────────────────────────────────────────────
 
@@ -236,44 +238,76 @@ async function request<T>(
 
 export const authApi = {
   register: (data: RegisterReq) =>
-    request<AuthResp>("/v1/auth/register", { method: "POST", body: JSON.stringify(data) }),
+    request<AuthResp>("/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   login: (data: LoginReq) =>
-    request<AuthResp>("/v1/auth/login", { method: "POST", body: JSON.stringify(data) }),
+    request<AuthResp>("/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   requestOTP: (email: string) =>
-    request<OTPRequestResp>("/v1/auth/otp/request", { method: "POST", body: JSON.stringify({ email }) }),
+    request<OTPRequestResp>("/v1/auth/otp/request", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
 
   verifyOTP: (data: OTPVerifyReq) =>
-    request<AuthResp>("/v1/auth/otp/verify", { method: "POST", body: JSON.stringify(data) }),
+    request<AuthResp>("/v1/auth/otp/verify", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   refreshTokens: () =>
     request<AuthResp>("/v1/auth/token/refresh", { method: "POST" }),
 
-  logout: () =>
-    request<void>("/v1/auth/logout", { method: "POST" }),
+  logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
 };
 
 // ── Storefront API ─────────────────────────────────────────────────────────────
 
 export const storefrontApi = {
   createStore: (data: CreateStoreReq, token: string) =>
-    request<StoreResp>("/v1/storefront/stores", { method: "POST", body: JSON.stringify(data) }, token),
+    request<StoreResp>(
+      "/v1/storefront/stores",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   getMyStore: (token: string) =>
     request<StoreResp>("/v1/storefront/stores/mine", {}, token),
 
   updateStore: (id: string, data: UpdateStoreReq, token: string) =>
-    request<StoreResp>(`/v1/storefront/stores/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
+    request<StoreResp>(
+      `/v1/storefront/stores/${id}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      token,
+    ),
 
   checkSlug: (slug: string, token: string) =>
-    request<SlugCheckResp>(`/v1/storefront/slugs/check?slug=${encodeURIComponent(slug)}`, {}, token),
+    request<SlugCheckResp>(
+      `/v1/storefront/slugs/check?slug=${encodeURIComponent(slug)}`,
+      {},
+      token,
+    ),
 };
 
 // ── Catalogue API ──────────────────────────────────────────────────────────────
 
 export const catalogueApi = {
-  listProducts: (params: { page?: number; per_page?: number; category_id?: string; q?: string; published_only?: boolean }, token: string) => {
+  listProducts: (
+    params: {
+      page?: number;
+      per_page?: number;
+      category_id?: string;
+      q?: string;
+      published_only?: boolean;
+    },
+    token: string,
+  ) => {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
     if (params.per_page) qs.set("per_page", String(params.per_page));
@@ -284,37 +318,68 @@ export const catalogueApi = {
   },
 
   createProduct: (data: CreateProductReq, token: string) =>
-    request<ProductResp>("/v1/catalogue/products", { method: "POST", body: JSON.stringify(data) }, token),
+    request<ProductResp>(
+      "/v1/catalogue/products",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   updateProduct: (id: string, data: UpdateProductReq, token: string) =>
-    request<ProductResp>(`/v1/catalogue/products/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
+    request<ProductResp>(
+      `/v1/catalogue/products/${id}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      token,
+    ),
 
   deleteProduct: (id: string, token: string) =>
     request<void>(`/v1/catalogue/products/${id}`, { method: "DELETE" }, token),
 
   publishProduct: (id: string, token: string) =>
-    request<ProductResp>(`/v1/catalogue/products/${id}/publish`, { method: "POST" }, token),
+    request<ProductResp>(
+      `/v1/catalogue/products/${id}/publish`,
+      { method: "POST" },
+      token,
+    ),
 
   unpublishProduct: (id: string, token: string) =>
-    request<ProductResp>(`/v1/catalogue/products/${id}/unpublish`, { method: "POST" }, token),
+    request<ProductResp>(
+      `/v1/catalogue/products/${id}/unpublish`,
+      { method: "POST" },
+      token,
+    ),
 
   listCategories: (token: string) =>
     request<CategoryResp[]>("/v1/catalogue/categories", {}, token),
 
   createCategory: (data: CategoryReq, token: string) =>
-    request<CategoryResp>("/v1/catalogue/categories", { method: "POST", body: JSON.stringify(data) }, token),
+    request<CategoryResp>(
+      "/v1/catalogue/categories",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   updateCategory: (id: string, data: CategoryReq, token: string) =>
-    request<CategoryResp>(`/v1/catalogue/categories/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
+    request<CategoryResp>(
+      `/v1/catalogue/categories/${id}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      token,
+    ),
 
   deleteCategory: (id: string, token: string) =>
-    request<void>(`/v1/catalogue/categories/${id}`, { method: "DELETE" }, token),
+    request<void>(
+      `/v1/catalogue/categories/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
 };
 
 // ── Orders API ─────────────────────────────────────────────────────────────────
 
 export const ordersApi = {
-  listOrders: (params: { page?: number; per_page?: number; status?: string; q?: string }, token: string) => {
+  listOrders: (
+    params: { page?: number; per_page?: number; status?: string; q?: string },
+    token: string,
+  ) => {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
     if (params.per_page) qs.set("per_page", String(params.per_page));
@@ -324,7 +389,11 @@ export const ordersApi = {
   },
 
   updateOrderStatus: (id: string, status: string, token: string) =>
-    request<OrderResp>(`/v1/orders/${id}/status`, { method: "PATCH", body: JSON.stringify({ status }) }, token),
+    request<OrderResp>(
+      `/v1/orders/${id}/status`,
+      { method: "PATCH", body: JSON.stringify({ status }) },
+      token,
+    ),
 };
 
 // ── Analytics API ──────────────────────────────────────────────────────────────

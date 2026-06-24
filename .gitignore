@@ -25,6 +25,8 @@ build/
 .turbo/
 /tmp/
 tmp/
+**/.next/
+**/tmp/
 
 # misc
 .DS_Store

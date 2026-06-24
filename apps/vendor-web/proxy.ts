@@ -12,8 +12,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // const token = request.cookies.get("gomarket_auth")?.value;
-  const token = true;
+  const token = request.cookies.get("gomarket_auth")?.value;
+  // const token = true;
 
   if (!token) {
     return NextResponse.redirect(new URL(ROUTES.AUTH.LOGIN, request.url));

@@ -47,3 +47,50 @@ export type OrderStatus =
 export type PaymentStatus = "paid" | "pending" | "failed" | "refunded";
 export type PaymentMethod = "card" | "transfer" | "paystack" | "cash" | "ussd";
 export type ShippingMethod = "pickup" | "delivery" | "express";
+
+export type BankAccount = {
+  id: string;
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  isDefault: boolean;
+  verifiedAt: string;
+};
+
+export type StoreConfig = {
+  slug: string;
+  storeName: string;
+  tagline: string;
+  template: "eko" | "lagos" | "abuja";
+  colors: {
+    primary: string;
+    secondary: string;
+    bg: string;
+    text: string;
+  };
+  fontFamily: string;
+  hero: {
+    eyebrow: string;
+    headline: string;
+    subheadline: string;
+    image: string;
+  };
+  contact: {
+    email: string;
+    phone: string;
+    whatsapp: string;
+    address: string;
+    city: string;
+    state: string;
+    openingHours: string;
+  };
+  social: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+  };
+  returnPolicy: string;
+  logo?: string;
+  currency: "NGN";
+};

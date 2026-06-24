@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { STORE_CONFIG } from "@/lib/storeConfig";
+import EkoHome from "@/components/storefront/eko/EkoHome";
+import LagosHome from "@/components/storefront/lagos/LagosHome";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
@@ -42,62 +45,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function StorefrontPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
-  const store = await getStore(slug);
-
-  if (!store || !store.is_active) notFound();
-
-  return (
-    <main className="min-h-screen bg-white">
-      {/* Storefront header */}
-      <header
-        className="px-6 py-4 border-b flex items-center gap-3"
-        style={{ borderColor: "#e2e8f0" }}
-      >
-        {store.logo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={store.logo_url}
-            alt={store.name}
-            className="w-10 h-10 rounded-xl object-cover"
-          />
-        ) : (
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-extrabold text-lg"
-            style={{ background: "#1A7A42" }}
-          >
-            {store.name[0].toUpperCase()}
-          </div>
-        )}
-        <div>
-          <h1 className="font-extrabold text-[17px]" style={{ color: "#1C1C1C" }}>
-            {store.name}
-          </h1>
-          {store.tagline && (
-            <p className="text-[12px]" style={{ color: "#6b7280" }}>
-              {store.tagline}
-            </p>
-          )}
-        </div>
-        <div className="ml-auto">
-          <span
-            className="text-[11px] font-bold px-2.5 py-1 rounded-full"
-            style={{ background: "#f0fdf4", color: "#1A7A42" }}
-          >
-            {store.currency}
-          </span>
-        </div>
-      </header>
-
-      {/* Products will go here */}
-      <div className="max-w-6xl mx-auto px-6 py-12 text-center">
-        <p className="text-gray-400 text-sm">Products coming soon…</p>
-      </div>
-    </main>
-  );
+export default function StorefrontPage() {
+  switch (STORE_CONFIG.template) {
+    case "lagos":
+      return <LagosHome />;
+    case "eko":
+    default:
+      return <EkoHome />;
+  }
 }
