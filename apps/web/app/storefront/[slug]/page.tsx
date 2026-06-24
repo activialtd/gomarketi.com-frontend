@@ -7,12 +7,22 @@ import StoreSkeleton from "@/components/storefront/StoreSkeleton";
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export interface ThemeSections {
-  announcement: { enabled: boolean; text: string; bgColor: string };
-  hero: { enabled: boolean; headline: string; subheadline: string; ctaText: string; imageUrl?: string };
-  collections: { enabled: boolean; title: string };
-  featured: { enabled: boolean; title: string; count: number };
-  ctaBand: { enabled: boolean; headline: string; text: string; btnText: string };
-  footer: { tagline: string; whatsapp?: string; instagram?: string };
+  announcement?: { enabled?: boolean; text?: string; bgColor?: string; textColor?: string; dismissible?: boolean };
+  header?: { logoUrl?: string; sticky?: boolean; showSearch?: boolean; showStoreName?: boolean };
+  nav?: { items?: Array<{ id: string; label: string; url: string }> };
+  hero?: { enabled?: boolean; headline?: string; subheadline?: string; ctaText?: string; secondaryCtaText?: string; imageUrl?: string; eyebrow?: string; layout?: string; overlayOpacity?: number };
+  collections?: { enabled?: boolean; title?: string; subtitle?: string; columns?: number };
+  featured?: { enabled?: boolean; title?: string; subtitle?: string; count?: number; layout?: string };
+  newsletter?: { enabled?: boolean; headline?: string; subtext?: string; placeholder?: string };
+  ctaBand?: { enabled?: boolean; headline?: string; text?: string; btnText?: string };
+  footer?: {
+    tagline?: string; showPoweredBy?: boolean; copyright?: string;
+    showAbout?: boolean; showLinks?: boolean; showContact?: boolean;
+    customLinks?: Array<{ id: string; label: string; url: string }>;
+    contact?: { whatsapp?: string; email?: string; phone?: string; address?: string };
+    social?: { instagram?: string; twitter?: string; facebook?: string; tiktok?: string; youtube?: string };
+    newsletter?: boolean;
+  };
 }
 
 export interface ThemeConfig {
