@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, Search, Menu, X, Instagram, Phone } from "lucide-react";
+import { ShoppingBag, Search, Menu, X, Share2, Phone } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 import { CartDrawer } from "@/components/storefront/CartDrawer";
 
@@ -164,7 +164,7 @@ export default function EkoLayout({
                     className="flex h-8 w-8 items-center justify-center rounded-full transition-colors"
                     style={{ background: "rgba(255,255,255,0.12)" }}
                   >
-                    <Instagram className="h-3.5 w-3.5 text-white" />
+                    <Share2 className="h-3.5 w-3.5 text-white" />
                   </a>
                 )}
               </div>
