@@ -709,9 +709,12 @@ export default function StoreCustomize() {
 
                   return (
                     <div key={def.key} className="border-b" style={{ borderColor: "#f1f5f9" }}>
-                      <button type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setExpandedSection(isExpanded ? null : def.key)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-[#fafafa] text-left">
+                        onKeyDown={(e) => e.key === "Enter" && setExpandedSection(isExpanded ? null : def.key)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors hover:bg-[#fafafa] cursor-pointer select-none">
                         <def.icon className="w-3.5 h-3.5 shrink-0" style={{ color: isOn ? "#1A7A42" : "#94a3b8" }} />
                         <span className="flex-1 text-[12px] font-bold" style={{ color: isOn ? "#1C1C1C" : "#94a3b8" }}>
                           {def.label}
@@ -719,7 +722,7 @@ export default function StoreCustomize() {
                         {def.toggleable && <Toggle on={isOn} onChange={() => toggleSection(def.key)} />}
                         {!def.toggleable && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#f1f5f9", color: "#94a3b8" }}>ON</span>}
                         <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform" style={{ color: "#94a3b8", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }} />
-                      </button>
+                      </div>
 
                       {isExpanded && (
                         <div className="px-3 pb-4" style={{ background: "#fafafa" }}>
