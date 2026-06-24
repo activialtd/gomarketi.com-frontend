@@ -531,6 +531,7 @@ export default function StoreCustomize() {
   const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
   const [store, setStore] = useState<{ id: string; name: string; slug: string } | null>(null);
+  const [storeLoading, setStoreLoading] = useState(true);
   const [draft, setDraft] = useState<ThemeConfig>(DEFAULT_CONFIG);
   const [published, setPublished] = useState<ThemeConfig | null>(null);
   const [isDirty, setIsDirty] = useState(false);
@@ -546,6 +547,7 @@ export default function StoreCustomize() {
     if (!accessToken) return;
     storefrontApi.getMyStore(accessToken).then((s) => {
       setStore({ id: s.id, name: s.name, slug: s.slug });
+      setStoreLoading(false);
       if (s.theme_config) {
         try {
           const cfg = JSON.parse(s.theme_config) as ThemeConfig;
@@ -567,7 +569,7 @@ export default function StoreCustomize() {
           setPublished(merged);
         } catch { /* use defaults */ }
       }
-    }).catch(() => {});
+    }).catch(() => { setStoreLoading(false); });
   }, [accessToken]);
 
   // setIsDirty must be called outside the setDraft functional updater —
@@ -588,7 +590,12 @@ export default function StoreCustomize() {
   }
 
   async function handlePublish() {
-    if (!accessToken || !store) return;
+    if (!accessToken) return;
+    if (!store) {
+      setSaveError("Store not loaded yet — please wait a moment.");
+      setTimeout(() => setSaveError(null), 3000);
+      return;
+    }
     setSaveError(null);
     setIsSaving(true);
     try {
@@ -659,13 +666,17 @@ export default function StoreCustomize() {
             </button>
           )}
 
-          <button type="button" onClick={handlePublish} disabled={isSaving || !store}
-            className="flex items-center gap-1.5 h-8 px-4 rounded-[7px] text-[12px] font-bold text-white transition-colors disabled:opacity-50"
-            style={{ background: "#1A7A42" }}
+          <button type="button" onClick={handlePublish} disabled={isSaving}
+            className="flex items-center gap-1.5 h-8 px-4 rounded-[7px] text-[12px] font-bold text-white transition-colors"
+            style={{ background: "#1A7A42", opacity: isSaving ? 0.7 : 1 }}
             onMouseOver={(e) => { if (!isSaving) e.currentTarget.style.background = "#239452"; }}
             onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}>
-            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {isSaving ? "Publishing…" : isDirty ? "Publish changes" : "Publish"}
+            {isSaving
+              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Publishing…</>
+              : storeLoading
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading…</>
+                : <><Save className="w-3.5 h-3.5" /> {isDirty ? "Publish changes" : "Publish"}</>
+            }
           </button>
         </div>
       </div>
