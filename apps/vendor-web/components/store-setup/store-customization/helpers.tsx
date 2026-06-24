@@ -553,10 +553,10 @@ export function LivePreview({
   const isTablet = viewport === "tablet";
 
   return (
-    <div className="w-full overflow-auto flex justify-center">
+    <div className="w-full">
       <div
         style={{
-          width: widths[viewport],
+          width: "100%",
           minWidth: isMobile ? "375px" : undefined,
           transition: "width 0.3s ease",
           fontFamily,

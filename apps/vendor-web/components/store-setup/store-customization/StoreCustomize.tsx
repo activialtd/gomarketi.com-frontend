@@ -650,30 +650,47 @@ export default function StoreCustomize() {
 
         {/* ── Preview pane ─────────────────────────────────── */}
         <div
-          className="flex-1 flex flex-col items-center overflow-auto py-4 px-4"
+          className="flex-1 overflow-y-auto py-4 px-4"
           style={{ background: "#f1f5f9" }}
         >
+          {/* Browser-frame chrome */}
           <div
-            className="bg-white rounded-[12px] shadow-lg overflow-hidden transition-all duration-300"
+            className="mx-auto rounded-[12px] shadow-xl overflow-clip transition-all duration-300 border"
             style={{
               width: viewport === "desktop" ? "100%" : viewport === "tablet" ? "768px" : "375px",
               maxWidth: "100%",
-              minHeight: "400px",
+              borderColor: "#e2e8f0",
             }}
           >
-            <LivePreview
-              template={draft.template}
-              colors={draft.colors}
-              font={draft.font}
-              storeName={store?.name ?? "Your Store"}
-              headline={draft.sections.hero.enabled ? draft.sections.hero.headline : ""}
-              subheadline={draft.sections.hero.enabled ? draft.sections.hero.subheadline : ""}
-              viewport={viewport}
-              config={draft}
-            />
+            {/* Fake browser top bar */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b" style={{ background: "#f8fafc", borderColor: "#e2e8f0" }}>
+              <div className="flex gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#ef4444" }} />
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#f59e0b" }} />
+                <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#22c55e" }} />
+              </div>
+              <div className="flex-1 mx-3 px-3 py-1 rounded-[5px] text-[10px] font-mono truncate" style={{ background: "#fff", border: "1px solid #e2e8f0", color: "#94a3b8" }}>
+                {store ? `${store.slug}.${STORE_DOMAIN}` : "your-store.gomarketi.com"}
+              </div>
+            </div>
+
+            {/* Storefront content */}
+            <div style={{ background: "#fff" }}>
+              <LivePreview
+                template={draft.template}
+                colors={draft.colors}
+                font={draft.font}
+                storeName={store?.name ?? "Your Store"}
+                headline={draft.sections.hero.enabled ? draft.sections.hero.headline : ""}
+                subheadline={draft.sections.hero.enabled ? draft.sections.hero.subheadline : ""}
+                viewport={viewport}
+                config={draft}
+              />
+            </div>
           </div>
-          <p className="mt-3 text-[11px]" style={{ color: "#94a3b8" }}>
-            Preview only — click <strong>Publish</strong> to push changes to your live store
+
+          <p className="mt-3 text-center text-[11px]" style={{ color: "#94a3b8" }}>
+            Preview — click <strong>Publish</strong> to push changes live
           </p>
         </div>
       </div>
