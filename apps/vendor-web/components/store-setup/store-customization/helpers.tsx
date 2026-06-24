@@ -477,14 +477,24 @@ export const FONT_FAMILIES: Record<string, string> = {
 
 // ─── Live preview component ───────────────────────────────────────────────────
 
-// Import type only — avoids a circular dep since ThemeConfig lives in StoreCustomize.tsx
+// Loose shape — just the fields LivePreview actually reads, all optional for safety
 type ThemeSections = {
-  announcement: { enabled: boolean; text: string; bgColor: string };
-  hero: { enabled: boolean; headline: string; subheadline: string; ctaText: string; imageUrl?: string };
-  collections: { enabled: boolean; title: string };
-  featured: { enabled: boolean; title: string; count: number };
-  ctaBand: { enabled: boolean; headline: string; text: string; btnText: string };
-  footer: { tagline: string; whatsapp?: string; instagram?: string };
+  announcement?: { enabled?: boolean; text?: string; bgColor?: string; textColor?: string; dismissible?: boolean };
+  header?: { logoUrl?: string; sticky?: boolean; showSearch?: boolean; showStoreName?: boolean };
+  nav?: { items?: Array<{ id: string; label: string; url: string }> };
+  hero?: { enabled?: boolean; headline?: string; subheadline?: string; ctaText?: string; imageUrl?: string; layout?: string; eyebrow?: string };
+  collections?: { enabled?: boolean; title?: string };
+  featured?: { enabled?: boolean; title?: string; count?: number };
+  newsletter?: { enabled?: boolean; headline?: string; subtext?: string; placeholder?: string };
+  ctaBand?: { enabled?: boolean; headline?: string; text?: string; btnText?: string };
+  footer?: {
+    tagline?: string; showPoweredBy?: boolean; copyright?: string;
+    showAbout?: boolean; showLinks?: boolean; showContact?: boolean;
+    customLinks?: Array<{ id: string; label: string; url: string }>;
+    contact?: { whatsapp?: string; email?: string; phone?: string };
+    social?: { instagram?: string; twitter?: string; facebook?: string };
+    newsletter?: boolean;
+  };
 };
 
 export function LivePreview({
@@ -565,11 +575,11 @@ export function LivePreview({
         {template === "eko" && (
           <div style={{ background: "#fff", minHeight: "600px" }}>
             {/* Announcement bar */}
-            {sec?.announcement.enabled && (
+            {sec?.announcement?.enabled && (
               <div style={{
                 background: sec.announcement.bgColor || colors.primary,
-                color: "#fff", padding: "8px 24px",
-                fontSize: "12px", fontWeight: 600, textAlign: "center",
+                color: sec.announcement.textColor || "#fff",
+                padding: "7px 24px", fontSize: "11px", fontWeight: 600, textAlign: "center",
               }}>
                 {sec.announcement.text || "Free delivery on orders above ₦20,000"}
               </div>
@@ -585,28 +595,14 @@ export function LivePreview({
                 justifyContent: "space-between",
               }}
             >
-              <span
-                style={{
-                  color: "#fff",
-                  fontWeight: 800,
-                  fontSize: "18px",
-                  letterSpacing: "-0.3px",
-                }}
-              >
+              <span style={{ color: "#fff", fontWeight: 800, fontSize: "18px", letterSpacing: "-0.3px" }}>
                 {storeName}
               </span>
               {!isMobile && (
-                <div style={{ display: "flex", gap: "24px" }}>
-                  {["Shop", "Collections", "About"].map((l) => (
-                    <span
-                      key={l}
-                      style={{
-                        color: "rgba(255,255,255,0.75)",
-                        fontSize: "13px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {l}
+                <div style={{ display: "flex", gap: "20px" }}>
+                  {(sec?.nav?.items?.length ? sec.nav.items : [{ label: "Shop" }, { label: "Collections" }]).slice(0, 4).map((item) => (
+                    <span key={item.label} style={{ color: "rgba(255,255,255,0.75)", fontSize: "12px", cursor: "pointer" }}>
+                      {item.label}
                     </span>
                   ))}
                 </div>
@@ -746,15 +742,33 @@ export function LivePreview({
               </div>
             )}
 
+            {/* Newsletter */}
+            {sec?.newsletter?.enabled && (
+              <div style={{ background: colors.bg, padding: "32px 40px", textAlign: "center" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: 800, color: colors.text, marginBottom: "6px" }}>
+                  {sec.newsletter.headline || "Stay in the loop"}
+                </h3>
+                <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "14px" }}>{sec.newsletter.subtext}</p>
+                <div style={{ display: "flex", gap: "8px", maxWidth: "320px", margin: "0 auto" }}>
+                  <input readOnly placeholder={sec.newsletter.placeholder || "Enter your email"}
+                    style={{ flex: 1, padding: "9px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "12px", outline: "none" }} />
+                  <button style={{ padding: "9px 16px", borderRadius: "8px", background: colors.primary, color: "#fff", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                    Subscribe
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Footer */}
-            <div style={{ background: colors.secondary, padding: "24px 40px", marginTop: "20px" }}>
-              {sec?.footer.tagline && (
-                <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "12px", textAlign: "center", marginBottom: "8px" }}>
+            <div style={{ background: colors.secondary, padding: "24px 40px", marginTop: "8px" }}>
+              {sec?.footer?.tagline && (
+                <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "12px", textAlign: "center", marginBottom: "6px" }}>
                   {sec.footer.tagline}
                 </p>
               )}
-              <p style={{ color: "rgba(255,255,255,0.5)", fontSize: "11px", textAlign: "center" }}>
-                © 2026 {storeName} · Powered by GoMarket
+              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "10px", textAlign: "center" }}>
+                {sec?.footer?.copyright || `© 2026 ${storeName}`}
+                {sec?.footer?.showPoweredBy !== false && " · Powered by GoMarketi"}
               </p>
             </div>
           </div>
