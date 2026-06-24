@@ -104,14 +104,14 @@ export default function LagosProductDetail({ slug }: { slug: string }) {
   }
 
   function handleAddToCart() {
-    if (needsSelection || isOutOfStock) return;
+    if (!product || needsSelection || isOutOfStock) return;
     addToCart(product, matchedVariant, quantity);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
   }
 
   function handleBuyNow() {
-    if (needsSelection || isOutOfStock) return;
+    if (!product || needsSelection || isOutOfStock) return;
     addToCart(product, matchedVariant, quantity);
     router.push("/checkout");
   }
