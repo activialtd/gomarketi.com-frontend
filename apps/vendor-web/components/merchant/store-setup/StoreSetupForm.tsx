@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Store,
   ShieldCheck,
+  X,
 } from "lucide-react";
 import {
   Input,
@@ -108,6 +109,8 @@ export function StoreSetupForm() {
   const [kycLoading, setKycLoading] = useState(false);
   const [slugEdited, setSlugEdited] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const {
     register,
@@ -142,6 +145,54 @@ export function StoreSetupForm() {
     }
   }, [businessNameVal, slugEdited, setValue]);
 
+  // Debounced slug availability check
+  useEffect(() => {
+    if (!slugVal || slugVal.length < 2) {
+      setSlugStatus("idle");
+      setSuggestions([]);
+      return;
+    }
+    setSlugStatus("checking");
+    const timer = setTimeout(async () => {
+      if (!accessToken) return;
+      try {
+        const { available } = await storefrontApi.checkSlug(slugVal, accessToken);
+        if (available) {
+          setSlugStatus("available");
+          setSuggestions([]);
+        } else {
+          setSlugStatus("taken");
+          const candidates = [
+            `${slugVal}-store`,
+            `${slugVal}-ng`,
+            `the-${slugVal}`,
+            `${slugVal}hq`,
+            `${slugVal}-official`,
+            `${slugVal}-shop`,
+          ];
+          const results = await Promise.all(
+            candidates.map((s) =>
+              storefrontApi.checkSlug(s, accessToken)
+                .then((r) => (r.available ? s : null))
+                .catch(() => null)
+            )
+          );
+          setSuggestions(results.filter(Boolean).slice(0, 4) as string[]);
+        }
+      } catch {
+        setSlugStatus("idle");
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [slugVal, accessToken]);
+
+  function applySuggestion(s: string) {
+    setValue("slug", s, { shouldValidate: true });
+    setSlugEdited(true);
+    setSlugStatus("available");
+    setSuggestions([]);
+  }
+
   const storeName = businessNameVal.trim() || null;
   const firstName = storeName ? storeName.split(" ")[0] : null;
 
@@ -150,6 +201,7 @@ export function StoreSetupForm() {
   }
 
   async function handleStep1Next() {
+    if (slugStatus === "checking" || slugStatus === "taken") return;
     const valid = await trigger(["businessName", "category", "slug"]);
     if (valid) goTo(2);
   }
@@ -419,34 +471,21 @@ export function StoreSetupForm() {
               </Field>
 
               <div className="sm:col-span-2">
-                <Field
-                  label="Store URL"
-                  hint={
-                    !errors.slug && slugVal.length > 0 ? (
-                      <div className="flex items-center gap-1.5">
-                        <Check className="w-3 h-3 shrink-0" style={{ color: BRAND }} />
-                        <span className="text-[11px] font-medium" style={{ color: BRAND }}>
-                          {slugVal}.gomarketi.com
-                        </span>
-                      </div>
-                    ) : errors.slug ? (
-                      <div className="flex items-center gap-1.5">
-                        <AlertCircle className="w-3 h-3 text-red-500 shrink-0" />
-                        <span className="text-[11px] text-red-500">{errors.slug.message}</span>
-                      </div>
-                    ) : null
-                  }
-                >
+                <Field label="Store URL">
                   <div
                     className="flex items-center h-[42px] rounded-[10px] border overflow-hidden"
-                    style={{ borderColor: BORDER, transition: "border-color 0.15s" }}
+                    style={{
+                      borderColor: slugStatus === "taken" ? "#ef4444" : slugStatus === "available" ? BRAND : BORDER,
+                      transition: "border-color 0.15s",
+                    }}
                     onFocusCapture={(e) => {
                       (e.currentTarget as HTMLElement).style.borderColor = BRAND;
                       (e.currentTarget as HTMLElement).style.outline = `2px solid ${BRAND}`;
                       (e.currentTarget as HTMLElement).style.outlineOffset = "-2px";
                     }}
                     onBlurCapture={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = BORDER;
+                      (e.currentTarget as HTMLElement).style.borderColor =
+                        slugStatus === "taken" ? "#ef4444" : slugStatus === "available" ? BRAND : BORDER;
                       (e.currentTarget as HTMLElement).style.outline = "none";
                     }}
                   >
@@ -463,6 +502,22 @@ export function StoreSetupForm() {
                       onChange={slugRegister.onChange}
                       onBlur={slugRegister.onBlur}
                     />
+                    {/* Status icon inside the field */}
+                    {slugStatus === "checking" && (
+                      <div className="px-3 flex items-center">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "#94a3b8" }} />
+                      </div>
+                    )}
+                    {slugStatus === "available" && (
+                      <div className="px-3 flex items-center">
+                        <Check className="w-3.5 h-3.5" style={{ color: BRAND }} />
+                      </div>
+                    )}
+                    {slugStatus === "taken" && (
+                      <div className="px-3 flex items-center">
+                        <X className="w-3.5 h-3.5 text-red-500" />
+                      </div>
+                    )}
                     <div
                       className="h-full flex items-center px-4 border-l text-[12px] font-semibold shrink-0 select-none"
                       style={{ background: "#f8fafc", borderColor: BORDER, color: "#6b7280" }}
@@ -470,6 +525,47 @@ export function StoreSetupForm() {
                       .gomarketi.com
                     </div>
                   </div>
+
+                  {/* Status message */}
+                  {slugStatus === "available" && slugVal && (
+                    <p className="mt-1.5 text-[11px] font-medium flex items-center gap-1" style={{ color: BRAND }}>
+                      <Check className="w-3 h-3" /> {slugVal}.gomarketi.com is available
+                    </p>
+                  )}
+                  {slugStatus === "taken" && (
+                    <div className="mt-1.5 space-y-2">
+                      <p className="text-[11px] font-medium flex items-center gap-1 text-red-500">
+                        <X className="w-3 h-3" /> That name is taken.
+                        {suggestions.length > 0 ? " Try one of these:" : " Try a different name."}
+                      </p>
+                      {suggestions.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {suggestions.map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              onClick={() => applySuggestion(s)}
+                              className="px-2.5 py-1 rounded-[6px] text-[11px] font-semibold border transition-colors"
+                              style={{
+                                borderColor: BRAND,
+                                color: BRAND,
+                                background: BRAND_LIGHT,
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.background = BRAND; e.currentTarget.style.color = "#fff"; }}
+                              onMouseOut={(e) => { e.currentTarget.style.background = BRAND_LIGHT; e.currentTarget.style.color = BRAND; }}
+                            >
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {errors.slug && slugStatus === "idle" && (
+                    <p className="mt-1.5 text-[11px] text-red-500 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" /> {errors.slug.message}
+                    </p>
+                  )}
                 </Field>
               </div>
             </div>
@@ -478,12 +574,17 @@ export function StoreSetupForm() {
               <button
                 type="button"
                 onClick={handleStep1Next}
-                className="flex items-center gap-2 px-8 h-[42px] rounded-[10px] text-white text-[13px] font-bold transition-colors active:scale-[0.98]"
+                disabled={slugStatus === "checking" || slugStatus === "taken"}
+                className="flex items-center gap-2 px-8 h-[42px] rounded-[10px] text-white text-[13px] font-bold transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: BRAND, boxShadow: "0 4px 14px rgba(26,122,66,0.25)" }}
-                onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
+                onMouseOver={(e) => { if (slugStatus !== "checking" && slugStatus !== "taken") e.currentTarget.style.background = "#239452"; }}
                 onMouseOut={(e) => (e.currentTarget.style.background = BRAND)}
               >
-                Next <ArrowRight className="w-4 h-4" />
+                {slugStatus === "checking" ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Checking…</>
+                ) : (
+                  <>Next <ArrowRight className="w-4 h-4" /></>
+                )}
               </button>
             </div>
           </div>
