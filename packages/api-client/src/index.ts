@@ -42,6 +42,7 @@ export interface UpdateStoreReq {
   address?: string;
   city?: string;
   state?: string;
+  theme_config?: string; // raw JSON string stored as JSONB
 }
 
 export interface CreateProductReq {
@@ -110,6 +111,7 @@ export interface StoreResp {
   address?: string;
   city?: string;
   state?: string;
+  theme_config?: string; // raw JSON string
   is_active: boolean;
   created_at: string;
 }

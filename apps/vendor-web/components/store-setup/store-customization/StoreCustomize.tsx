@@ -1,642 +1,680 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
-  Check,
-  ExternalLink,
-  Loader2,
-  Eye,
-  Palette,
-  Type,
-  Layout,
-  Monitor,
-  Smartphone,
-  Tablet,
-  Lock,
-  Info,
+  Check, ExternalLink, Loader2, Monitor, Smartphone, Tablet,
+  ChevronDown, ChevronRight, Eye, EyeOff, Palette, Type, Layout,
+  Globe, Image as ImageIcon, AlignLeft, Megaphone, Package, Link2,
+  Instagram, Phone, ToggleLeft, ToggleRight, Upload, Undo2, Save,
 } from "lucide-react";
 import {
-  LivePreview,
-  TEMPLATES,
-  COLOR_PRESETS,
-  FONT_PRESETS,
-  FONT_FAMILIES,
-  TemplateId,
-  ColorPreset,
-  EkoThumb,
-  LagosThumb,
-  AbujaThumb,
+  LivePreview, COLOR_PRESETS, FONT_PRESETS, FONT_FAMILIES,
+  TemplateId, ColorPreset, EkoThumb, LagosThumb,
 } from "./helpers";
 import { storefrontApi } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 
+// ─── ThemeConfig types ────────────────────────────────────────────────────────
+
+export interface ThemeConfig {
+  template: TemplateId;
+  colors: { primary: string; secondary: string; bg: string; text: string; };
+  font: string;
+  sections: {
+    announcement: { enabled: boolean; text: string; bgColor: string; };
+    hero: { enabled: boolean; headline: string; subheadline: string; ctaText: string; imageUrl?: string; };
+    collections: { enabled: boolean; title: string; };
+    featured: { enabled: boolean; title: string; count: number; };
+    ctaBand: { enabled: boolean; headline: string; text: string; btnText: string; };
+    footer: { tagline: string; whatsapp?: string; instagram?: string; };
+  };
+}
+
+const DEFAULT_CONFIG: ThemeConfig = {
+  template: "eko",
+  colors: COLOR_PRESETS[0],
+  font: "plus-jakarta",
+  sections: {
+    announcement: { enabled: false, text: "🎉 Free delivery on orders above ₦20,000", bgColor: "#1A7A42" },
+    hero: { enabled: false, headline: "Welcome to our store", subheadline: "Discover amazing products curated just for you.", ctaText: "Shop now" },
+    collections: { enabled: false, title: "Shop by collection" },
+    featured: { enabled: false, title: "Featured products", count: 6 },
+    ctaBand: { enabled: false, headline: "Have a question?", text: "Message us on WhatsApp — we reply fast.", btnText: "Chat on WhatsApp" },
+    footer: { tagline: "", whatsapp: "", instagram: "" },
+  },
+};
+
+// ─── Sidebar section definitions ──────────────────────────────────────────────
+
+type SectionKey = keyof ThemeConfig["sections"];
+
+interface SectionDef {
+  key: SectionKey;
+  label: string;
+  icon: React.ElementType;
+  toggleable: boolean;
+}
+
+const SECTION_DEFS: SectionDef[] = [
+  { key: "announcement", label: "Announcement bar", icon: Megaphone, toggleable: true },
+  { key: "hero",         label: "Hero section",      icon: ImageIcon,  toggleable: true },
+  { key: "collections",  label: "Collections strip",  icon: Layout,     toggleable: true },
+  { key: "featured",     label: "Featured products",  icon: Package,    toggleable: true },
+  { key: "ctaBand",      label: "WhatsApp CTA band",  icon: Phone,      toggleable: true },
+  { key: "footer",       label: "Footer",             icon: AlignLeft,  toggleable: false },
+];
+
+// ─── Toggle switch ────────────────────────────────────────────────────────────
+
+function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onChange(); }}
+      className="shrink-0 relative inline-flex h-5 w-9 rounded-full transition-colors duration-200 focus:outline-none"
+      style={{ background: on ? "#1A7A42" : "#cbd5e1" }}
+      aria-checked={on}
+      role="switch"
+    >
+      <span
+        className="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 mt-0.5"
+        style={{ transform: on ? "translateX(18px)" : "translateX(2px)" }}
+      />
+    </button>
+  );
+}
+
+// ─── Input helpers ────────────────────────────────────────────────────────────
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: "#94a3b8" }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function TextInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  return (
+    <input
+      type="text"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className="w-full px-3 py-2 rounded-[8px] border text-[12px] outline-none focus:border-[#1A7A42] transition-colors"
+      style={{ borderColor: "#e2e8f0", color: "#1C1C1C", background: "#f8fafc" }}
+    />
+  );
+}
+
+// ─── Section panels ───────────────────────────────────────────────────────────
+
+function AnnouncementPanel({ s, set }: { s: ThemeConfig["sections"]["announcement"]; set: (v: Partial<ThemeConfig["sections"]["announcement"]>) => void }) {
+  return (
+    <div className="space-y-3 pt-1">
+      <Field label="Bar text">
+        <TextInput value={s.text} onChange={(v) => set({ text: v })} placeholder="🎉 Free delivery on orders above ₦20,000" />
+      </Field>
+      <Field label="Background colour">
+        <div className="flex gap-2 flex-wrap">
+          {["#1A7A42", "#0369a1", "#7c3aed", "#be185d", "#c2410c", "#0f172a"].map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => set({ bgColor: c })}
+              className="w-6 h-6 rounded-full border-2 transition-transform hover:scale-110"
+              style={{ background: c, borderColor: s.bgColor === c ? "#1C1C1C" : "transparent" }}
+            />
+          ))}
+          <input type="color" value={s.bgColor} onChange={(e) => set({ bgColor: e.target.value })}
+            className="w-6 h-6 rounded-full cursor-pointer border-0 p-0 bg-transparent" title="Custom colour" />
+        </div>
+      </Field>
+    </div>
+  );
+}
+
+function HeroPanel({ s, set }: { s: ThemeConfig["sections"]["hero"]; set: (v: Partial<ThemeConfig["sections"]["hero"]>) => void }) {
+  return (
+    <div className="space-y-3 pt-1">
+      <Field label="Headline">
+        <TextInput value={s.headline} onChange={(v) => set({ headline: v })} placeholder="Welcome to our store" />
+      </Field>
+      <Field label="Subheadline">
+        <textarea
+          value={s.subheadline}
+          onChange={(e) => set({ subheadline: e.target.value })}
+          placeholder="A short description of your store..."
+          rows={2}
+          className="w-full px-3 py-2 rounded-[8px] border text-[12px] outline-none focus:border-[#1A7A42] resize-none transition-colors"
+          style={{ borderColor: "#e2e8f0", color: "#1C1C1C", background: "#f8fafc" }}
+        />
+      </Field>
+      <Field label="Button text">
+        <TextInput value={s.ctaText} onChange={(v) => set({ ctaText: v })} placeholder="Shop now" />
+      </Field>
+      <Field label="Hero image">
+        <div
+          className="rounded-[8px] border-2 border-dashed flex flex-col items-center justify-center gap-2 py-4 cursor-pointer transition-colors hover:border-[#1A7A42] hover:bg-[#F0FAF3]"
+          style={{ borderColor: "#e2e8f0" }}
+        >
+          {s.imageUrl ? (
+            <img src={s.imageUrl} alt="" className="w-full h-24 object-cover rounded-[6px]" />
+          ) : (
+            <>
+              <Upload className="w-4 h-4" style={{ color: "#94a3b8" }} />
+              <p className="text-[11px] text-center" style={{ color: "#94a3b8" }}>
+                Upload image or paste URL<br />
+                <span style={{ color: "#cbd5e1" }}>Placeholder shown until uploaded</span>
+              </p>
+            </>
+          )}
+          <input type="text" placeholder="Paste image URL…" value={s.imageUrl ?? ""}
+            onChange={(e) => set({ imageUrl: e.target.value || undefined })}
+            className="w-full mt-1 px-2 py-1.5 rounded-[6px] border text-[11px] outline-none"
+            style={{ borderColor: "#e2e8f0", background: "#fff" }}
+          />
+        </div>
+      </Field>
+    </div>
+  );
+}
+
+function CollectionsPanel({ s, set }: { s: ThemeConfig["sections"]["collections"]; set: (v: Partial<ThemeConfig["sections"]["collections"]>) => void }) {
+  return (
+    <div className="space-y-3 pt-1">
+      <Field label="Section title">
+        <TextInput value={s.title} onChange={(v) => set({ title: v })} placeholder="Shop by collection" />
+      </Field>
+      <p className="text-[11px]" style={{ color: "#94a3b8" }}>Collections appear here once you create them in your product catalogue.</p>
+    </div>
+  );
+}
+
+function FeaturedPanel({ s, set }: { s: ThemeConfig["sections"]["featured"]; set: (v: Partial<ThemeConfig["sections"]["featured"]>) => void }) {
+  return (
+    <div className="space-y-3 pt-1">
+      <Field label="Section title">
+        <TextInput value={s.title} onChange={(v) => set({ title: v })} placeholder="Featured products" />
+      </Field>
+      <Field label="Products to show">
+        <div className="flex gap-2">
+          {[3, 4, 6, 8].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => set({ count: n })}
+              className="flex-1 py-1.5 rounded-[6px] border text-[12px] font-bold transition-colors"
+              style={{
+                borderColor: s.count === n ? "#1A7A42" : "#e2e8f0",
+                background: s.count === n ? "#F0FAF3" : "#fff",
+                color: s.count === n ? "#1A7A42" : "#374151",
+              }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+      </Field>
+      <p className="text-[11px]" style={{ color: "#94a3b8" }}>Products appear here once you add them to your catalogue.</p>
+    </div>
+  );
+}
+
+function CtaBandPanel({ s, set }: { s: ThemeConfig["sections"]["ctaBand"]; set: (v: Partial<ThemeConfig["sections"]["ctaBand"]>) => void }) {
+  return (
+    <div className="space-y-3 pt-1">
+      <Field label="Headline">
+        <TextInput value={s.headline} onChange={(v) => set({ headline: v })} placeholder="Have a question?" />
+      </Field>
+      <Field label="Body text">
+        <TextInput value={s.text} onChange={(v) => set({ text: v })} placeholder="Message us on WhatsApp — we reply fast." />
+      </Field>
+      <Field label="Button text">
+        <TextInput value={s.btnText} onChange={(v) => set({ btnText: v })} placeholder="Chat on WhatsApp" />
+      </Field>
+    </div>
+  );
+}
+
+function FooterPanel({ s, set }: { s: ThemeConfig["sections"]["footer"]; set: (v: Partial<ThemeConfig["sections"]["footer"]>) => void }) {
+  return (
+    <div className="space-y-3 pt-1">
+      <Field label="Store tagline">
+        <TextInput value={s.tagline} onChange={(v) => set({ tagline: v })} placeholder="Quality products, fast delivery" />
+      </Field>
+      <Field label="WhatsApp number">
+        <TextInput value={s.whatsapp ?? ""} onChange={(v) => set({ whatsapp: v || undefined })} placeholder="+2348012345678" />
+      </Field>
+      <Field label="Instagram handle">
+        <TextInput value={s.instagram ?? ""} onChange={(v) => set({ instagram: v || undefined })} placeholder="@yourstorename" />
+      </Field>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function StoreCustomize() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const [activeTemplate, setActiveTemplate] = useState<TemplateId>("eko");
-  const [activeColors, setActiveColors] = useState<ColorPreset>(COLOR_PRESETS[0]);
-  const [activeFont, setActiveFont] = useState("plus-jakarta");
-  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
-  const [storeName, setStoreName] = useState("");
-  const [storeId, setStoreId] = useState<string | null>(null);
-  const [storeSlug, setStoreSlug] = useState<string | null>(null);
-  const [headline, setHeadline] = useState("Fashion that tells your story");
-  const [subheadline, setSubheadline] = useState(
-    "Premium Nigerian fashion for weddings, events, and everyday life.",
-  );
-  const [activePanel, setActivePanel] = useState<"template" | "colors" | "typography" | "content">("template");
+  const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+
+  const [store, setStore] = useState<{ id: string; name: string; slug: string } | null>(null);
+  const [draft, setDraft] = useState<ThemeConfig>(DEFAULT_CONFIG);
+  const [published, setPublished] = useState<ThemeConfig | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+  const [viewport, setViewport] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [activeTab, setActiveTab] = useState<"design" | "sections">("sections");
+  const [expandedSection, setExpandedSection] = useState<SectionKey | null>("hero");
 
+  // Load store + published config
   useEffect(() => {
     if (!accessToken) return;
     storefrontApi.getMyStore(accessToken).then((s) => {
-      setStoreName(s.name);
-      setStoreId(s.id);
-      setStoreSlug(s.slug);
-      if (s.tagline) setHeadline(s.tagline);
+      setStore({ id: s.id, name: s.name, slug: s.slug });
+      if (s.theme_config) {
+        try {
+          const cfg = JSON.parse(s.theme_config) as ThemeConfig;
+          setDraft(cfg);
+          setPublished(cfg);
+        } catch { /* invalid JSON — use defaults */ }
+      }
     }).catch(() => {});
   }, [accessToken]);
 
-  async function handleSave() {
-    if (!accessToken || !storeId) return;
+  // Mark dirty whenever draft changes after initial load
+  const updateDraft = useCallback((updater: (prev: ThemeConfig) => ThemeConfig) => {
+    setDraft((prev) => {
+      const next = updater(prev);
+      setIsDirty(true);
+      return next;
+    });
+  }, []);
+
+  function setColors(colors: ThemeConfig["colors"]) {
+    updateDraft((p) => ({ ...p, colors }));
+  }
+
+  function setTemplate(template: TemplateId) {
+    updateDraft((p) => ({ ...p, template }));
+  }
+
+  function setFont(font: string) {
+    updateDraft((p) => ({ ...p, font }));
+  }
+
+  function setSection<K extends SectionKey>(key: K, value: Partial<ThemeConfig["sections"][K]>) {
+    updateDraft((p) => ({
+      ...p,
+      sections: {
+        ...p.sections,
+        [key]: { ...p.sections[key], ...value },
+      },
+    }));
+  }
+
+  function toggleSection(key: SectionKey) {
+    const sec = draft.sections[key] as { enabled?: boolean };
+    setSection(key, { enabled: !sec.enabled } as Partial<ThemeConfig["sections"][typeof key]>);
+  }
+
+  async function handlePublish() {
+    if (!accessToken || !store) return;
     setIsSaving(true);
     try {
-      await storefrontApi.updateStore(storeId, { tagline: headline }, accessToken);
+      await storefrontApi.updateStore(store.id, { theme_config: JSON.stringify(draft) }, accessToken);
+      setPublished(draft);
+      setIsDirty(false);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
+      setTimeout(() => setSaved(false), 3000);
     } finally {
       setIsSaving(false);
     }
   }
 
+  function handleDiscard() {
+    if (published) {
+      setDraft(published);
+    } else {
+      setDraft(DEFAULT_CONFIG);
+    }
+    setIsDirty(false);
+  }
+
+  const storefrontUrl = store ? `http://${store.slug}.${STORE_DOMAIN}` : null;
   const thumbColors = {
-    eko: { bg: "#F0FAF3", primary: "#1A7A42", card: "#f8fafc" },
-    lagos: { bg: "#f0f9ff", primary: "#0369a1", card: "#f8fafc" },
-    abuja: { bg: "#faf5ff", primary: "#7c3aed", card: "#f8fafc" },
+    eko: { bg: draft.colors.bg, primary: draft.colors.primary, card: "#f8fafc" },
+    lagos: { bg: draft.colors.bg, primary: draft.colors.primary, card: "#f8fafc" },
   };
 
   return (
-    <div
-      className="w-full flex flex-col"
-      style={{ height: "calc(100vh - 60px)" }}
-    >
+    <div className="flex flex-col" style={{ height: "calc(100vh - 60px)" }}>
+
       {/* ── Top toolbar ──────────────────────────────────────── */}
       <div
-        className="shrink-0 px-5 py-3 border-b flex flex-wrap items-center justify-between gap-3"
+        className="shrink-0 px-4 py-2.5 border-b flex items-center justify-between gap-3"
         style={{ background: "#fff", borderColor: "#e2e8f0" }}
       >
-        <div className="flex items-center gap-2">
-          <h1
-            className="text-[16px] font-extrabold"
-            style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}
-          >
-            Store customisation
+        <div className="flex items-center gap-3">
+          <h1 className="text-[14px] font-extrabold" style={{ color: "#1C1C1C" }}>
+            Store Customisation
           </h1>
-          <span
-            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-            style={{ background: "#F0FAF3", color: "#1A7A42" }}
-          >
-            Live preview
-          </span>
+          {isDirty && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#fef3c7", color: "#92400e" }}>
+              Unsaved changes
+            </span>
+          )}
+          {saved && (
+            <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: "#1A7A42" }}>
+              <Check className="w-3 h-3" /> Published!
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Viewport */}
-          <div
-            className="flex items-center rounded-[8px] border overflow-hidden"
-            style={{ borderColor: "#e2e8f0" }}
-          >
-            {[
-              { v: "desktop" as const, Icon: Monitor },
-              { v: "tablet" as const, Icon: Tablet },
-              { v: "mobile" as const, Icon: Smartphone },
-            ].map(({ v, Icon }) => (
+          {/* Viewport switcher */}
+          <div className="flex items-center border rounded-[8px] overflow-hidden" style={{ borderColor: "#e2e8f0" }}>
+            {([
+              { id: "desktop", icon: Monitor },
+              { id: "tablet",  icon: Tablet },
+              { id: "mobile",  icon: Smartphone },
+            ] as const).map(({ id, icon: Icon }) => (
               <button
-                key={v}
+                key={id}
                 type="button"
-                onClick={() => setViewport(v)}
-                className="w-9 h-9 flex items-center justify-center transition-colors"
-                style={{
-                  background: viewport === v ? "#F0FAF3" : "#fff",
-                  color: viewport === v ? "#1A7A42" : "#94a3b8",
-                }}
+                onClick={() => setViewport(id)}
+                className="p-2 transition-colors"
+                style={{ background: viewport === id ? "#F0FAF3" : "#fff", color: viewport === id ? "#1A7A42" : "#94a3b8" }}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5" />
               </button>
             ))}
           </div>
 
-          <a
-            href={storeSlug ? `http://${storeSlug}.${STORE_DOMAIN}` : "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 h-9 px-3.5 rounded-[8px] border text-[12px] font-semibold transition-colors"
-            style={{
-              borderColor: "#e2e8f0",
-              background: "#fff",
-              color: storeSlug ? "#374151" : "#94a3b8",
-              pointerEvents: storeSlug ? "auto" : "none",
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#F0FAF3")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
-          >
-            <ExternalLink className="w-3.5 h-3.5" /> View live
-          </a>
+          {storefrontUrl && (
+            <a
+              href={storefrontUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 h-8 px-3 rounded-[7px] border text-[12px] font-semibold transition-colors"
+              style={{ borderColor: "#e2e8f0", color: "#374151", background: "#fff" }}
+              onMouseOver={(e) => (e.currentTarget.style.background = "#f8fafc")}
+              onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> View live
+            </a>
+          )}
+
+          {isDirty && (
+            <button
+              type="button"
+              onClick={handleDiscard}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-[7px] border text-[12px] font-semibold transition-colors"
+              style={{ borderColor: "#e2e8f0", color: "#6b7280", background: "#fff" }}
+            >
+              <Undo2 className="w-3.5 h-3.5" /> Discard
+            </button>
+          )}
 
           <button
             type="button"
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 h-9 px-4 rounded-[8px] text-white text-[12px] font-bold transition-all disabled:opacity-60"
-            style={{
-              background: "#1A7A42",
-              boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
-            }}
-            onMouseOver={(e) =>
-              !isSaving && (e.currentTarget.style.background = "#239452")
-            }
+            onClick={handlePublish}
+            disabled={isSaving || !isDirty}
+            className="flex items-center gap-1.5 h-8 px-4 rounded-[7px] text-[12px] font-bold text-white transition-colors disabled:opacity-50"
+            style={{ background: "#1A7A42" }}
+            onMouseOver={(e) => { if (!isSaving && isDirty) e.currentTarget.style.background = "#239452"; }}
             onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
           >
-            {isSaving ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : saved ? (
-              <>
-                <Check className="w-3.5 h-3.5" /> Published!
-              </>
-            ) : (
-              "Publish"
-            )}
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            {isSaving ? "Publishing…" : isDirty ? "Publish" : "Published"}
           </button>
         </div>
       </div>
 
-      {/* ── Main area: sidebar + preview ─────────────────────── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* ── LEFT: panel tabs + content ───────────────────── */}
+      {/* ── Body ─────────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* ── Left sidebar ─────────────────────────────────── */}
         <div
-          className="flex shrink-0"
-          style={{ width: "320px", borderRight: "1px solid #e2e8f0" }}
+          className="w-[280px] shrink-0 flex flex-col border-r overflow-hidden"
+          style={{ background: "#fff", borderColor: "#e2e8f0" }}
         >
-          {/* Tab strip */}
-          <div
-            className="flex flex-col border-r shrink-0"
-            style={{
-              width: "56px",
-              borderColor: "#f1f5f9",
-              background: "#fafafa",
-            }}
-          >
-            {[
-              { id: "template" as const, Icon: Layout, label: "Template" },
-              { id: "colors" as const, Icon: Palette, label: "Colors" },
-              { id: "typography" as const, Icon: Type, label: "Fonts" },
-              { id: "content" as const, Icon: Eye, label: "Content" },
-            ].map(({ id, Icon, label }) => (
+          {/* Tab bar */}
+          <div className="flex border-b shrink-0" style={{ borderColor: "#e2e8f0" }}>
+            {(["sections", "design"] as const).map((tab) => (
               <button
-                key={id}
+                key={tab}
                 type="button"
-                onClick={() => setActivePanel(id)}
-                className="flex flex-col items-center gap-1 py-3.5 text-[8px] font-bold uppercase transition-colors"
+                onClick={() => setActiveTab(tab)}
+                className="flex-1 py-2.5 text-[12px] font-bold capitalize transition-colors"
                 style={{
-                  letterSpacing: "0.06em",
-                  color: activePanel === id ? "#1A7A42" : "#94a3b8",
-                  background: activePanel === id ? "#F0FAF3" : "transparent",
-                  borderLeft:
-                    activePanel === id
-                      ? "2px solid #1A7A42"
-                      : "2px solid transparent",
+                  color: activeTab === tab ? "#1A7A42" : "#94a3b8",
+                  borderBottom: activeTab === tab ? "2px solid #1A7A42" : "2px solid transparent",
                 }}
               >
-                <Icon className="w-4 h-4" />
-                {label}
+                {tab}
               </button>
             ))}
           </div>
 
-          {/* Panel content */}
-          <div className="flex-1 overflow-y-auto bg-white p-4 space-y-4">
-            {/* ── Template panel ── */}
-            {activePanel === "template" && (
-              <div className="space-y-3">
-                <div>
-                  <p
-                    className="text-[13px] font-extrabold mb-1"
-                    style={{ color: "#1C1C1C" }}
-                  >
-                    Choose a template
-                  </p>
-                  <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                    Your customers will see this at your store URL.
-                  </p>
+          <div className="flex-1 overflow-y-auto">
+
+            {/* ── SECTIONS tab ─────────────────────────────── */}
+            {activeTab === "sections" && (
+              <div>
+                {/* Header row (always-on) */}
+                <div className="px-4 py-3 border-b" style={{ borderColor: "#f1f5f9" }}>
+                  <div className="flex items-center gap-2.5">
+                    <Globe className="w-3.5 h-3.5 shrink-0" style={{ color: "#94a3b8" }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[12px] font-bold" style={{ color: "#1C1C1C" }}>Header</p>
+                      <p className="text-[10px] truncate" style={{ color: "#94a3b8" }}>{store?.name ?? "Your store name"}</p>
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: "#f1f5f9", color: "#94a3b8" }}>ALWAYS ON</span>
+                  </div>
                 </div>
 
-                {TEMPLATES.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => !t.isPro && setActiveTemplate(t.id)}
-                    className="w-full rounded-[12px] border overflow-hidden text-left transition-all"
-                    style={{
-                      borderColor:
-                        activeTemplate === t.id ? "#1A7A42" : "#e2e8f0",
-                      boxShadow:
-                        activeTemplate === t.id
-                          ? "0 0 0 2px rgba(26,122,66,0.15)"
-                          : "none",
-                      opacity: t.isPro ? 0.7 : 1,
-                    }}
-                  >
-                    {/* Thumbnail */}
-                    <div
-                      className="w-full overflow-hidden"
-                      style={{ aspectRatio: "16/9", background: t.accent }}
-                    >
-                      {t.id === "eko" && <EkoThumb colors={thumbColors.eko} />}
-                      {t.id === "lagos" && (
-                        <LagosThumb colors={thumbColors.lagos} />
-                      )}
-                      {t.id === "abuja" && (
-                        <AbujaThumb colors={thumbColors.abuja} />
-                      )}
-                    </div>
+                {/* Toggleable sections */}
+                {SECTION_DEFS.map((def) => {
+                  const sec = draft.sections[def.key] as { enabled?: boolean };
+                  const isOn = !def.toggleable || (sec.enabled ?? false);
+                  const isExpanded = expandedSection === def.key;
 
-                    <div className="p-3">
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2">
-                          <p
-                            className="text-[13px] font-extrabold"
-                            style={{ color: "#1C1C1C" }}
-                          >
-                            {t.name}
-                          </p>
-                          {t.isPro && (
-                            <span
-                              className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                              style={{
-                                background: "#fef3c7",
-                                color: "#92400e",
-                              }}
-                            >
-                              <Lock className="w-2.5 h-2.5" /> Pro
-                            </span>
-                          )}
-                          {activeTemplate === t.id && (
-                            <span
-                              className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                              style={{
-                                background: "#F0FAF3",
-                                color: "#1A7A42",
-                              }}
-                            >
-                              <Check className="w-2.5 h-2.5" /> Active
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <p
-                        className="text-[11px] leading-relaxed"
-                        style={{ color: "#6b7280" }}
+                  return (
+                    <div key={def.key} className="border-b" style={{ borderColor: "#f1f5f9" }}>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSection(isExpanded ? null : def.key)}
+                        className="w-full flex items-center gap-2.5 px-4 py-3 transition-colors hover:bg-[#fafafa] text-left"
                       >
-                        {t.tagline}
-                      </p>
-                      <div className="flex flex-wrap gap-1 mt-2">
-                        {t.bestFor.map((b) => (
-                          <span
-                            key={b}
-                            className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full"
-                            style={{ background: "#f1f5f9", color: "#374151" }}
-                          >
-                            {b}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* ── Colors panel ── */}
-            {activePanel === "colors" && (
-              <div className="space-y-4">
-                <div>
-                  <p
-                    className="text-[13px] font-extrabold mb-1"
-                    style={{ color: "#1C1C1C" }}
-                  >
-                    Colour scheme
-                  </p>
-                  <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                    Sets your store's primary and background colours.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  {COLOR_PRESETS.map((preset) => (
-                    <button
-                      key={preset.label}
-                      type="button"
-                      onClick={() => setActiveColors(preset)}
-                      className="w-full flex items-center gap-3 p-3 rounded-[10px] border transition-all text-left"
-                      style={{
-                        borderColor:
-                          activeColors.label === preset.label
-                            ? "#1A7A42"
-                            : "#e2e8f0",
-                        background:
-                          activeColors.label === preset.label
-                            ? "rgba(26,122,66,0.04)"
-                            : "#fafafa",
-                      }}
-                    >
-                      {/* Swatch pair */}
-                      <div className="flex gap-1 shrink-0">
-                        <div
-                          className="w-7 h-7 rounded-l-[6px]"
-                          style={{ background: preset.primary }}
+                        <def.icon className="w-3.5 h-3.5 shrink-0" style={{ color: isOn ? "#1A7A42" : "#94a3b8" }} />
+                        <span className="flex-1 text-[12px] font-bold" style={{ color: isOn ? "#1C1C1C" : "#94a3b8" }}>
+                          {def.label}
+                        </span>
+                        {def.toggleable && (
+                          <Toggle on={isOn} onChange={() => toggleSection(def.key)} />
+                        )}
+                        <ChevronDown
+                          className="w-3.5 h-3.5 shrink-0 transition-transform"
+                          style={{ color: "#94a3b8", transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}
                         />
-                        <div
-                          className="w-7 h-7 rounded-r-[6px]"
-                          style={{
-                            background: preset.bg,
-                            border: "1px solid #e2e8f0",
-                          }}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-[12px] font-semibold"
-                          style={{ color: "#1C1C1C" }}
-                        >
-                          {preset.label}
-                        </p>
-                        <p
-                          className="text-[10px] font-mono"
-                          style={{ color: "#94a3b8" }}
-                        >
-                          {preset.primary}
-                        </p>
-                      </div>
-                      {activeColors.label === preset.label && (
-                        <div
-                          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                          style={{ background: "#1A7A42" }}
-                        >
-                          <Check className="w-3 h-3 text-white" />
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-4 pb-4" style={{ background: "#fafafa" }}>
+                          {def.key === "announcement" && (
+                            <AnnouncementPanel
+                              s={draft.sections.announcement}
+                              set={(v) => setSection("announcement", v)}
+                            />
+                          )}
+                          {def.key === "hero" && (
+                            <HeroPanel
+                              s={draft.sections.hero}
+                              set={(v) => setSection("hero", v)}
+                            />
+                          )}
+                          {def.key === "collections" && (
+                            <CollectionsPanel
+                              s={draft.sections.collections}
+                              set={(v) => setSection("collections", v)}
+                            />
+                          )}
+                          {def.key === "featured" && (
+                            <FeaturedPanel
+                              s={draft.sections.featured}
+                              set={(v) => setSection("featured", v)}
+                            />
+                          )}
+                          {def.key === "ctaBand" && (
+                            <CtaBandPanel
+                              s={draft.sections.ctaBand}
+                              set={(v) => setSection("ctaBand", v)}
+                            />
+                          )}
+                          {def.key === "footer" && (
+                            <FooterPanel
+                              s={draft.sections.footer}
+                              set={(v) => setSection("footer", v)}
+                            />
+                          )}
                         </div>
                       )}
-                    </button>
-                  ))}
-                </div>
-
-                <div
-                  className="rounded-[10px] p-3 text-[11px] leading-relaxed"
-                  style={{
-                    background: "#fffbeb",
-                    border: "1px solid rgba(245,158,11,0.2)",
-                    color: "#92400e",
-                  }}
-                >
-                  <strong>Tip:</strong> GoGreen matches your GoMarket dashboard
-                  and is trusted by customers as a Nigerian-native brand colour.
-                </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* ── Typography panel ── */}
-            {activePanel === "typography" && (
-              <div className="space-y-4">
-                <div>
-                  <p
-                    className="text-[13px] font-extrabold mb-1"
-                    style={{ color: "#1C1C1C" }}
-                  >
-                    Font style
-                  </p>
-                  <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                    Applied to all text on your storefront.
-                  </p>
-                </div>
+            {/* ── DESIGN tab ───────────────────────────────── */}
+            {activeTab === "design" && (
+              <div className="p-4 space-y-6">
 
-                <div className="space-y-2">
-                  {FONT_PRESETS.map((f) => (
-                    <button
-                      key={f.value}
-                      type="button"
-                      onClick={() => setActiveFont(f.value)}
-                      className="w-full flex items-center gap-3 p-3 rounded-[10px] border transition-all text-left"
-                      style={{
-                        borderColor:
-                          activeFont === f.value ? "#1A7A42" : "#e2e8f0",
-                        background:
-                          activeFont === f.value
-                            ? "rgba(26,122,66,0.04)"
-                            : "#fafafa",
-                      }}
-                    >
-                      <div
-                        className="w-12 h-10 rounded-[7px] flex items-center justify-center shrink-0 text-[22px] font-bold"
+                {/* Template selection */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3" style={{ color: "#94a3b8" }}>Template</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["eko", "lagos"] as TemplateId[]).map((id) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => setTemplate(id)}
+                        className="relative rounded-[10px] border-2 overflow-hidden transition-all"
                         style={{
-                          background: "#f1f5f9",
-                          color: "#1C1C1C",
-                          fontFamily: FONT_FAMILIES[f.value],
+                          borderColor: draft.template === id ? "#1A7A42" : "#e2e8f0",
+                          boxShadow: draft.template === id ? "0 0 0 1px #1A7A42" : "none",
                         }}
                       >
-                        {f.sample}
-                      </div>
-                      <div className="flex-1">
-                        <p
-                          className="text-[12px] font-semibold"
-                          style={{ color: "#1C1C1C" }}
-                        >
-                          {f.label}
-                        </p>
-                        <p
-                          className="text-[11px]"
-                          style={{
-                            color: "#6b7280",
-                            fontFamily: FONT_FAMILIES[f.value],
-                          }}
-                        >
-                          The quick brown fox
-                        </p>
-                      </div>
-                      {activeFont === f.value && (
-                        <div
-                          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
-                          style={{ background: "#1A7A42" }}
-                        >
-                          <Check className="w-3 h-3 text-white" />
+                        <div className="aspect-[7/5] w-full">
+                          {id === "eko"
+                            ? <EkoThumb colors={thumbColors.eko} />
+                            : <LagosThumb colors={thumbColors.lagos} />
+                          }
                         </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* ── Content panel ── */}
-            {activePanel === "content" && (
-              <div className="space-y-4">
-                <div>
-                  <p
-                    className="text-[13px] font-extrabold mb-1"
-                    style={{ color: "#1C1C1C" }}
-                  >
-                    Storefront content
-                  </p>
-                  <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                    Edit the text customers see on your homepage.
-                  </p>
-                </div>
-
-                {[
-                  {
-                    label: "Store name",
-                    value: storeName,
-                    set: setStoreName,
-                    placeholder: "Eko Fashion House",
-                    hint: "Shown in your nav and page title",
-                  },
-                  {
-                    label: "Hero headline",
-                    value: headline,
-                    set: setHeadline,
-                    placeholder: "Fashion that tells your story",
-                    hint: "The big text on your homepage",
-                  },
-                  {
-                    label: "Hero subheading",
-                    value: subheadline,
-                    set: setSubheadline,
-                    placeholder: "Premium fashion for every occasion",
-                    hint: "Supporting text under the headline",
-                  },
-                ].map((field) => (
-                  <div key={field.label} className="space-y-1.5">
-                    <label
-                      className="text-[10px] font-extrabold uppercase block"
-                      style={{ letterSpacing: "0.1em", color: "#3D6B4F" }}
-                    >
-                      {field.label}
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={field.value}
-                      onChange={(e) => field.set(e.target.value)}
-                      placeholder={field.placeholder}
-                      className="w-full px-3 py-2 rounded-[8px] border text-[13px] resize-none outline-none transition-all"
-                      style={{
-                        borderColor: "#e2e8f0",
-                        background: "#F0FAF3",
-                        color: "#1C1C1C",
-                        lineHeight: "1.5",
-                      }}
-                      onFocus={(e) => {
-                        e.currentTarget.style.background = "#fff";
-                        e.currentTarget.style.borderColor = "#1A7A42";
-                        e.currentTarget.style.outline = "2px solid #1A7A42";
-                        e.currentTarget.style.outlineOffset = "-2px";
-                      }}
-                      onBlur={(e) => {
-                        e.currentTarget.style.background = "#F0FAF3";
-                        e.currentTarget.style.borderColor = "#e2e8f0";
-                        e.currentTarget.style.outline = "none";
-                      }}
-                    />
-                    <p className="text-[10px]" style={{ color: "#94a3b8" }}>
-                      {field.hint}
-                    </p>
+                        <div
+                          className="flex items-center justify-between px-2 py-1.5"
+                          style={{ background: draft.template === id ? "#F0FAF3" : "#f8fafc" }}
+                        >
+                          <span className="text-[11px] font-bold capitalize" style={{ color: draft.template === id ? "#1A7A42" : "#374151" }}>
+                            {id}
+                          </span>
+                          {draft.template === id && <Check className="w-3 h-3" style={{ color: "#1A7A42" }} />}
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                ))}
+                </div>
 
-                <div
-                  className="rounded-[10px] p-3 text-[11px] leading-relaxed flex items-start gap-2"
-                  style={{
-                    background: "#F0FAF3",
-                    border: "1px solid rgba(26,122,66,0.15)",
-                    color: "#3D6B4F",
-                  }}
-                >
-                  <Info
-                    className="w-3.5 h-3.5 shrink-0 mt-0.5"
-                    style={{ color: "#1A7A42" }}
-                  />
-                  Changes here update the live preview instantly. Click
-                  "Publish" to push them to your store.
+                {/* Colour presets */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3" style={{ color: "#94a3b8" }}>Colours</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {COLOR_PRESETS.map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setColors(preset)}
+                        className="flex items-center gap-2 px-2.5 py-2 rounded-[8px] border transition-all text-left"
+                        style={{
+                          borderColor: draft.colors.primary === preset.primary ? "#1A7A42" : "#e2e8f0",
+                          background: draft.colors.primary === preset.primary ? "#F0FAF3" : "#f8fafc",
+                        }}
+                      >
+                        <div className="flex gap-0.5 shrink-0">
+                          <div className="w-3 h-5 rounded-l-sm" style={{ background: preset.primary }} />
+                          <div className="w-3 h-5 rounded-r-sm" style={{ background: preset.bg }} />
+                        </div>
+                        <span className="text-[11px] font-semibold" style={{ color: "#374151" }}>{preset.label}</span>
+                        {draft.colors.primary === preset.primary && (
+                          <Check className="w-3 h-3 ml-auto shrink-0" style={{ color: "#1A7A42" }} />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Font selection */}
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-3" style={{ color: "#94a3b8" }}>Typography</p>
+                  <div className="space-y-1.5">
+                    {FONT_PRESETS.map((fp) => (
+                      <button
+                        key={fp.value}
+                        type="button"
+                        onClick={() => setFont(fp.value)}
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-[8px] border transition-all text-left"
+                        style={{
+                          borderColor: draft.font === fp.value ? "#1A7A42" : "#e2e8f0",
+                          background: draft.font === fp.value ? "#F0FAF3" : "#f8fafc",
+                        }}
+                      >
+                        <span
+                          className="text-[14px]"
+                          style={{ fontFamily: FONT_FAMILIES[fp.value], color: "#1C1C1C" }}
+                        >
+                          {fp.sample} {fp.label}
+                        </span>
+                        {draft.font === fp.value && <Check className="w-3 h-3 shrink-0" style={{ color: "#1A7A42" }} />}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* ── RIGHT: Live preview ───────────────────────────── */}
-        <div className="flex-1 overflow-auto" style={{ background: "#f1f5f9" }}>
-          <div className="p-5 min-h-full">
-            {/* Browser chrome */}
-            <div
-              className="rounded-[12px] overflow-hidden shadow-xl border"
-              style={{ borderColor: "#e2e8f0" }}
-            >
-              {/* Browser bar */}
-              <div
-                className="flex items-center gap-2.5 px-4 py-2.5 border-b"
-                style={{ background: "#fff", borderColor: "#e2e8f0" }}
-              >
-                <div className="flex gap-1.5">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ background: "#fee2e2" }}
-                  />
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ background: "#fef3c7" }}
-                  />
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ background: "#dcfce7" }}
-                  />
-                </div>
-                <div
-                  className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-[6px] text-[11px]"
-                  style={{
-                    background: "#f8fafc",
-                    maxWidth: "320px",
-                    margin: "0 auto",
-                  }}
-                >
-                  <div
-                    className="w-3 h-3 rounded-full shrink-0"
-                    style={{ background: "#1A7A42" }}
-                  />
-                  <span style={{ color: "#6b7280", fontFamily: "monospace" }}>
-                    eko-fashion.gomarketi.com
-                  </span>
-                </div>
-              </div>
-
-              {/* Preview content */}
-              <div
-                style={{
-                  background: "#fff",
-                  maxHeight: "calc(100vh - 240px)",
-                  overflow: "auto",
-                }}
-              >
-                <LivePreview
-                  template={activeTemplate}
-                  colors={activeColors}
-                  font={activeFont}
-                  storeName={storeName}
-                  headline={headline}
-                  subheadline={subheadline}
-                  viewport={viewport}
-                />
-              </div>
-            </div>
+        {/* ── Preview pane ─────────────────────────────────── */}
+        <div
+          className="flex-1 flex flex-col items-center overflow-auto py-4 px-4"
+          style={{ background: "#f1f5f9" }}
+        >
+          <div
+            className="bg-white rounded-[12px] shadow-lg overflow-hidden transition-all duration-300"
+            style={{
+              width: viewport === "desktop" ? "100%" : viewport === "tablet" ? "768px" : "375px",
+              maxWidth: "100%",
+              minHeight: "400px",
+            }}
+          >
+            <LivePreview
+              template={draft.template}
+              colors={draft.colors}
+              font={draft.font}
+              storeName={store?.name ?? "Your Store"}
+              headline={draft.sections.hero.enabled ? draft.sections.hero.headline : ""}
+              subheadline={draft.sections.hero.enabled ? draft.sections.hero.subheadline : ""}
+              viewport={viewport}
+              config={draft}
+            />
           </div>
+          <p className="mt-3 text-[11px]" style={{ color: "#94a3b8" }}>
+            Preview only — click <strong>Publish</strong> to push changes to your live store
+          </p>
         </div>
       </div>
     </div>

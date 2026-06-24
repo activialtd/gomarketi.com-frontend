@@ -12,16 +12,20 @@ import {
 import { STORE_CONFIG } from "@/lib/storeConfig";
 import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
-import type { StoreData } from "@/app/storefront/[slug]/page";
+import type { StoreData, ThemeConfig } from "@/app/storefront/[slug]/page";
 
 interface Props {
   store?: StoreData;
+  themeConfig?: ThemeConfig;
 }
 
-export default function HomePage({ store }: Props) {
+export default function HomePage({ store, themeConfig }: Props) {
   const storeName = store?.name ?? STORE_CONFIG.storeName;
-  const tagline = store?.tagline ?? STORE_CONFIG.hero.headline;
-  const subtagline = store ? `Welcome to ${storeName} — browse our catalogue below.` : STORE_CONFIG.hero.subheadline;
+  const sec = themeConfig?.sections;
+  const colors = themeConfig?.colors ?? { primary: STORE_CONFIG.colors.primary, secondary: STORE_CONFIG.colors.secondary, bg: STORE_CONFIG.colors.bg, text: STORE_CONFIG.colors.text };
+
+  const tagline = sec?.hero.enabled ? (sec.hero.headline || storeName) : storeName;
+  const subtagline = sec?.hero.enabled ? (sec.hero.subheadline || "") : "";
 
   const featured = PRODUCTS.filter(
     (p) => p.featured && p.status === "active",
