@@ -269,6 +269,22 @@ export const authApi = {
   logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
 };
 
+// ── Upload API ─────────────────────────────────────────────────────────────────
+
+export interface PresignResp {
+  upload_url: string;
+  public_url: string;
+  key: string;
+  expires_in: number;
+}
+
+export const uploadApi = {
+  presign: (data: { filename: string; content_type: string; size: number }, token: string) =>
+    request<PresignResp>("/v1/storefront/uploads/presign", {
+      method: "POST", body: JSON.stringify(data),
+    }, token),
+};
+
 // ── Storefront API ─────────────────────────────────────────────────────────────
 
 export const storefrontApi = {

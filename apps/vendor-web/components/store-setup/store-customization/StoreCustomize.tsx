@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Check, ExternalLink, Loader2, Monitor, Smartphone, Tablet,
   ChevronDown, Eye, Palette, Type, Globe, Image as ImageIcon,
@@ -14,6 +14,7 @@ import {
 } from "./helpers";
 import { storefrontApi } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
+import { FileUpload } from "@/components/common/FileUpload";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -172,15 +173,26 @@ function AnnouncementPanel({ s, set }: { s: ThemeConfig["sections"]["announcemen
   );
 }
 
-function HeaderPanel({ s, set }: { s: ThemeConfig["sections"]["header"]; set: (v: Partial<ThemeConfig["sections"]["header"]>) => void }) {
+function HeaderPanel({ s, set, accessToken }: { s: ThemeConfig["sections"]["header"]; set: (v: Partial<ThemeConfig["sections"]["header"]>) => void; accessToken: string }) {
   return (
     <div className="space-y-3 pt-1">
-      <Field label="Logo image URL">
-        <TextInput value={s.logoUrl ?? ""} onChange={(v) => set({ logoUrl: v || undefined })} placeholder="https://…/logo.png" />
-      </Field>
-      <div className="space-y-1">
+      <div>
+        <FieldLabel>Store logo</FieldLabel>
+        <p className="text-[10px] mb-2" style={{ color: "#94a3b8" }}>PNG, JPG, SVG or WebP · Max 2 MB · Transparent PNGs work best</p>
+        <FileUpload
+          value={s.logoUrl}
+          onChange={(url) => set({ logoUrl: url })}
+          label="Upload logo"
+          hint="Drag & drop or click · PNG/SVG recommended"
+          accessToken={accessToken}
+          shape="square"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          maxMB={2}
+        />
+      </div>
+      <div className="space-y-1 pt-1 border-t" style={{ borderColor: "#f1f5f9" }}>
         <SwitchRow label="Sticky header" sub="Stays at top when scrolling" on={s.sticky} onChange={() => set({ sticky: !s.sticky })} />
-        <SwitchRow label="Show store name" sub="Text logo next to/instead of image" on={s.showStoreName} onChange={() => set({ showStoreName: !s.showStoreName })} />
+        <SwitchRow label="Show store name" sub="Text name beside logo" on={s.showStoreName} onChange={() => set({ showStoreName: !s.showStoreName })} />
         <SwitchRow label="Show search icon" on={s.showSearch} onChange={() => set({ showSearch: !s.showSearch })} />
         <SwitchRow label="Transparent over hero" sub="Header blends into hero on homepage" on={s.transparentOnHero} onChange={() => set({ transparentOnHero: !s.transparentOnHero })} />
       </div>
@@ -727,7 +739,7 @@ export default function StoreCustomize() {
                       {isExpanded && (
                         <div className="px-3 pb-4" style={{ background: "#fafafa" }}>
                           {def.key === "announcement" && <AnnouncementPanel s={draft.sections.announcement} set={(v) => setSection("announcement", v)} />}
-                          {def.key === "header" && <HeaderPanel s={draft.sections.header} set={(v) => setSection("header", v)} />}
+                          {def.key === "header" && <HeaderPanel s={draft.sections.header} set={(v) => setSection("header", v)} accessToken={accessToken ?? ""} />}
                           {def.key === "nav" && <NavBuilder items={draft.sections.nav.items} onChange={(items) => setSection("nav", { items })} />}
                           {def.key === "hero" && <HeroPanel s={draft.sections.hero} set={(v) => setSection("hero", v)} />}
                           {def.key === "collections" && <CollectionsPanel s={draft.sections.collections} set={(v) => setSection("collections", v)} />}
