@@ -1,6 +1,10 @@
-import { Product } from "@/lib/data/products";
+import { type ProductResp } from "@gomarket/api-client";
 import { fmt } from "@gomarket/shared-utils";
-import { Package, Star, X, Upload } from "lucide-react";
+import { Package, Star, X } from "lucide-react";
+import { FileUpload } from "@/components/common/FileUpload";
+
+// Alias so existing usages of Product still compile
+type Product = ProductResp;
 
 export function ProductPickerRow({
   product,
@@ -72,7 +76,7 @@ export function ProductPickerRow({
           >
             {product.name}
           </p>
-          {product.featured && (
+          {false && (
             <Star
               className="w-3 h-3 shrink-0"
               style={{ color: "#f59e0b" }}
@@ -81,7 +85,7 @@ export function ProductPickerRow({
           )}
         </div>
         <p className="text-[10px] truncate" style={{ color: "#6b7280" }}>
-          {product.category}
+          {product.category_id ?? ""}
           {product.hasVariants && ` · ${product.variants?.length} variants`}
         </p>
       </div>
@@ -158,64 +162,24 @@ export function CoverImageUpload({
   image,
   onSet,
   onClear,
+  accessToken,
 }: {
   image: string | null;
   onSet: (url: string) => void;
   onClear: () => void;
+  accessToken: string;
 }) {
   return (
-    <div>
-      {image ? (
-        <div className="relative rounded-[10px] overflow-hidden aspect-video">
-          <img src={image} alt="" className="w-full h-full object-cover" />
-          <button
-            type="button"
-            onClick={onClear}
-            className="absolute top-2 right-2 w-7 h-7 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(0,0,0,0.6)" }}
-          >
-            <X className="w-4 h-4 text-white" />
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="w-full rounded-[10px] border-2 border-dashed py-8 flex flex-col items-center gap-2 transition-all"
-          style={{ borderColor: "#d1fae5" }}
-          onMouseOver={(e) => {
-            e.currentTarget.style.borderColor = "#1A7A42";
-            e.currentTarget.style.background = "#F0FAF3";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.borderColor = "#d1fae5";
-            e.currentTarget.style.background = "transparent";
-          }}
-          onClick={() => {
-            // Demo: use a placeholder
-            onSet(
-              "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
-            );
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-[10px] flex items-center justify-center"
-            style={{ background: "#F0FAF3" }}
-          >
-            <Upload className="w-5 h-5" style={{ color: "#1A7A42" }} />
-          </div>
-          <div className="text-center">
-            <p
-              className="text-[13px] font-semibold"
-              style={{ color: "#1C1C1C" }}
-            >
-              Upload a cover image
-            </p>
-            <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
-              PNG, JPG · Recommended 1200×630px
-            </p>
-          </div>
-        </button>
-      )}
-    </div>
+    <FileUpload
+      value={image ?? undefined}
+      onChange={(url) => (url ? onSet(url) : onClear())}
+      label="Upload cover image"
+      hint="PNG, JPG · Recommended 1200×630px · Max 10 MB"
+      accessToken={accessToken}
+      purpose="collections"
+      accept="image/png,image/jpeg,image/webp"
+      maxMB={10}
+      shape="square"
+    />
   );
 }

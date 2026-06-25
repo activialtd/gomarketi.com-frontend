@@ -6,12 +6,13 @@ import { Upload, X, Check, Loader2, Image as ImageIcon } from "lucide-react";
 interface Props {
   value?: string;           // current CDN URL
   onChange: (url: string | undefined) => void;
-  accept?: string;          // e.g. "image/*" or "image/png,image/jpeg"
+  accept?: string;
   maxMB?: number;
   label?: string;
   hint?: string;
   accessToken: string;
-  shape?: "square" | "circle"; // preview shape
+  shape?: "square" | "circle";
+  purpose?: string;         // "products" | "collections" | "logo" | "banners"
 }
 
 interface PresignResp {
@@ -30,6 +31,7 @@ export function FileUpload({
   hint,
   accessToken,
   shape = "square",
+  purpose = "files",
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -55,7 +57,7 @@ export function FileUpload({
       const presignRes = await fetch(`${API_BASE}/v1/storefront/uploads/presign`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size }),
+        body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size, purpose }),
       });
 
       if (!presignRes.ok) {

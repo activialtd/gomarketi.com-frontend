@@ -20,7 +20,6 @@ import {
   SelectValue,
 } from "@gomarket/ui";
 import { ROUTES } from "@/lib/config/routes";
-import { COLLECTIONS } from "@/lib/data/products";
 import {
   CreateProductFormValues,
   createProductSchema,
@@ -34,12 +33,16 @@ import {
   VariantOptionBuilder,
   Section,
 } from "./helpers";
+import { catalogueApi, ApiError } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function CreateProductPage() {
   const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [images, setImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const {
     register,
@@ -76,12 +79,31 @@ export default function CreateProductPage() {
     data: CreateProductFormValues,
     status: "draft" | "active",
   ) {
+    if (!accessToken) return;
     const setter = status === "draft" ? setIsSaving : setIsPublishing;
     setter(true);
-    setValue("status", status);
-    await new Promise((r) => setTimeout(r, 1000));
-    setter(false);
-    router.push(ROUTES.MERCHANT.PRODUCTS);
+    setSubmitError(null);
+    try {
+      const product = await catalogueApi.createProduct({
+        name: data.name,
+        description: data.description || undefined,
+        category_id: data.category || undefined,
+        price_kobo: Math.round((data.price ?? 0) * 100),
+        stock: data.trackInventory ? (data.stock ?? 0) : 9999,
+        sku: data.sku || undefined,
+        images,
+        tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        is_digital: false,
+      }, accessToken);
+      if (status === "active") {
+        await catalogueApi.publishProduct(product.id, accessToken);
+      }
+      router.push(ROUTES.MERCHANT.PRODUCTS);
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : "Failed to save product. Please try again.");
+    } finally {
+      setter(false);
+    }
   }
 
   return (
@@ -108,6 +130,9 @@ export default function CreateProductPage() {
           {nameVal || "New product"}
         </h1>
         <div className="flex items-center gap-2">
+          {submitError && (
+            <span className="text-[12px] font-semibold text-red-500 max-w-[200px] truncate">{submitError}</span>
+          )}
           <button
             type="button"
             onClick={handleSubmit((d) => onSubmit(d, "draft"))}
@@ -250,9 +275,8 @@ export default function CreateProductPage() {
               <ImageUpload
                 images={images}
                 onAdd={(url) => setImages((p) => [...p, url])}
-                onRemove={(i) =>
-                  setImages((p) => p.filter((_, idx) => idx !== i))
-                }
+                onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))}
+                accessToken={accessToken ?? ""}
               />
             </Section>
 

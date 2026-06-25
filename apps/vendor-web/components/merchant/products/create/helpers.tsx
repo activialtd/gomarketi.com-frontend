@@ -190,71 +190,168 @@ export function Toggle({
 
 // ─── Image upload area ────────────────────────────────────────────────────────
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const MAX_FILE_MB = 10;
+const MAX_IMAGES = 8;
+const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
+
+interface UploadState {
+  id: string;
+  name: string;
+  progress: number; // 0–100, -1 = error
+  error?: string;
+  retries: number;
+}
+
+async function uploadToR2(
+  file: File,
+  accessToken: string,
+  onProgress: (p: number) => void,
+  retries = 3,
+): Promise<string> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const presignRes = await fetch(`${API_BASE}/v1/storefront/uploads/presign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size, purpose: "products" }),
+      });
+      if (!presignRes.ok) {
+        const body = await presignRes.json().catch(() => ({})) as { error?: string };
+        throw new Error(body.error ?? "Could not get upload URL");
+      }
+      const { upload_url, public_url } = await presignRes.json() as { upload_url: string; public_url: string };
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", upload_url);
+        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
+        xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+        xhr.onerror = () => reject(new Error("Network error"));
+        xhr.send(file);
+      });
+
+      return public_url;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, attempt * 1200)); // 1.2s, 2.4s backoff
+    }
+  }
+  throw new Error("Upload failed after retries");
+}
+
 export function ImageUpload({
   images,
   onAdd,
   onRemove,
+  accessToken,
 }: {
   images: string[];
   onAdd: (url: string) => void;
   onRemove: (i: number) => void;
+  accessToken: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState<UploadState[]>([]);
+  const [dragging, setDragging] = useState(false);
+
+  const remaining = MAX_IMAGES - images.length;
+  const isAtLimit = images.length >= MAX_IMAGES;
+
+  async function processFiles(files: File[]) {
+    const toUpload = files
+      .filter((f) => f.type.startsWith("image/") && f.size <= MAX_FILE_MB * 1024 * 1024)
+      .slice(0, remaining);
+
+    const states: UploadState[] = toUpload.map((f) => ({
+      id: `${f.name}-${Date.now()}-${Math.random()}`,
+      name: f.name,
+      progress: 0,
+      retries: 0,
+    }));
+    setUploading((prev) => [...prev, ...states]);
+
+    await Promise.all(
+      toUpload.map(async (file, idx) => {
+        const id = states[idx].id;
+        try {
+          const url = await uploadToR2(
+            file,
+            accessToken,
+            (p) => setUploading((prev) => prev.map((u) => u.id === id ? { ...u, progress: p } : u)),
+          );
+          onAdd(url);
+          setUploading((prev) => prev.filter((u) => u.id !== id));
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Upload failed";
+          setUploading((prev) => prev.map((u) => u.id === id ? { ...u, progress: -1, error: msg } : u));
+        }
+      })
+    );
+  }
+
+  function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    if (e.target.files) processFiles(Array.from(e.target.files));
+    e.target.value = "";
+  }
+
   return (
     <div className="space-y-3">
-      {/* Upload zone */}
-      <button
-        type="button"
-        onClick={() => fileRef.current?.click()}
-        className="w-full rounded-[10px] border-2 border-dashed py-8 flex flex-col items-center gap-2 transition-all"
-        style={{ borderColor: "#d1fae5" }}
-        onMouseOver={(e) => {
-          e.currentTarget.style.borderColor = "#1A7A42";
-          e.currentTarget.style.background = "#F0FAF3";
-        }}
-        onMouseOut={(e) => {
-          e.currentTarget.style.borderColor = "#d1fae5";
-          e.currentTarget.style.background = "transparent";
-        }}
-      >
+      {/* Drop zone */}
+      {!isAtLimit && (
         <div
-          className="w-10 h-10 rounded-[10px] flex items-center justify-center"
-          style={{ background: "#F0FAF3" }}
+          role="button"
+          tabIndex={0}
+          onClick={() => fileRef.current?.click()}
+          onKeyDown={(e) => e.key === "Enter" && fileRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => { e.preventDefault(); setDragging(false); processFiles(Array.from(e.dataTransfer.files)); }}
+          className="w-full rounded-[10px] border-2 border-dashed py-8 flex flex-col items-center gap-2 cursor-pointer transition-all select-none"
+          style={{ borderColor: dragging ? "#1A7A42" : "#d1fae5", background: dragging ? "#F0FAF3" : "transparent" }}
         >
-          <Upload className="w-5 h-5" style={{ color: "#1A7A42" }} />
+          <div className="w-10 h-10 rounded-[10px] flex items-center justify-center" style={{ background: "#F0FAF3" }}>
+            <Upload className="w-5 h-5" style={{ color: "#1A7A42" }} />
+          </div>
+          <div className="text-center">
+            <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>Drag & drop or click to upload</p>
+            <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
+              PNG, JPG, WEBP · Max {MAX_FILE_MB} MB each · Up to {MAX_IMAGES} images · {remaining} slot{remaining !== 1 ? "s" : ""} left
+            </p>
+          </div>
         </div>
-        <div className="text-center">
-          <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>
-            Click to upload images
-          </p>
-          <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
-            PNG, JPG, WEBP · Max 5MB each · Up to 8 images
-          </p>
+      )}
+      <input ref={fileRef} type="file" accept={ACCEPT} multiple className="hidden" onChange={handleFileInput} />
+
+      {/* Uploading progress items */}
+      {uploading.map((u) => (
+        <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-[8px] border" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold truncate" style={{ color: "#374151" }}>{u.name}</p>
+            {u.progress >= 0 ? (
+              <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#f1f5f9" }}>
+                <div className="h-full rounded-full transition-all" style={{ width: `${u.progress}%`, background: "#1A7A42" }} />
+              </div>
+            ) : (
+              <p className="text-[10px] mt-0.5" style={{ color: "#ef4444" }}>{u.error}</p>
+            )}
+          </div>
+          {u.progress >= 0
+            ? <span className="text-[10px] font-bold shrink-0" style={{ color: "#94a3b8" }}>{u.progress}%</span>
+            : <button type="button" onClick={() => { setUploading((p) => p.filter((x) => x.id !== u.id)); }} className="text-[10px] font-bold shrink-0" style={{ color: "#ef4444" }}>✕</button>
+          }
         </div>
-      </button>
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-      />
+      ))}
 
       {/* Preview grid */}
       {images.length > 0 && (
         <div className="grid grid-cols-4 gap-2">
           {images.map((src, i) => (
-            <div
-              key={i}
-              className="relative aspect-square rounded-[8px] overflow-hidden group border"
-              style={{ borderColor: "#e2e8f0" }}
-            >
+            <div key={i} className="relative aspect-square rounded-[8px] overflow-hidden group border" style={{ borderColor: "#e2e8f0" }}>
               <img src={src} alt="" className="w-full h-full object-cover" />
               {i === 0 && (
-                <div
-                  className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                  style={{ background: "#1A7A42", color: "#fff" }}
-                >
+                <div className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#1A7A42", color: "#fff" }}>
                   Main
                 </div>
               )}
@@ -268,20 +365,14 @@ export function ImageUpload({
               </button>
             </div>
           ))}
-          {images.length < 8 && (
+          {!isAtLimit && (
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
               className="aspect-square rounded-[8px] border-2 border-dashed flex items-center justify-center transition-colors"
               style={{ borderColor: "#e2e8f0" }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = "#1A7A42";
-                e.currentTarget.style.background = "#F0FAF3";
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = "#e2e8f0";
-                e.currentTarget.style.background = "transparent";
-              }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = "#1A7A42"; e.currentTarget.style.background = "#F0FAF3"; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.background = "transparent"; }}
             >
               <Plus className="w-5 h-5" style={{ color: "#94a3b8" }} />
             </button>

@@ -278,8 +278,33 @@ export interface PresignResp {
   expires_in: number;
 }
 
+export interface CollectionResp {
+  id: string;
+  store_id: string;
+  name: string;
+  description?: string;
+  image_url?: string;
+  is_published: boolean;
+  product_ids: string[];
+  created_at: string;
+}
+
+export interface CreateCollectionReq {
+  name: string;
+  description?: string;
+  image_url?: string;
+  product_ids?: string[];
+}
+
+export interface UpdateCollectionReq {
+  name?: string;
+  description?: string;
+  image_url?: string;
+  product_ids?: string[];
+}
+
 export const uploadApi = {
-  presign: (data: { filename: string; content_type: string; size: number }, token: string) =>
+  presign: (data: { filename: string; content_type: string; size: number; purpose?: string }, token: string) =>
     request<PresignResp>("/v1/storefront/uploads/presign", {
       method: "POST", body: JSON.stringify(data),
     }, token),
@@ -389,6 +414,24 @@ export const catalogueApi = {
       { method: "DELETE" },
       token,
     ),
+
+  listCollections: (token: string) =>
+    request<{ collections: CollectionResp[] }>("/v1/catalogue/collections", {}, token),
+
+  createCollection: (data: CreateCollectionReq, token: string) =>
+    request<CollectionResp>("/v1/catalogue/collections", { method: "POST", body: JSON.stringify(data) }, token),
+
+  updateCollection: (id: string, data: UpdateCollectionReq, token: string) =>
+    request<CollectionResp>(`/v1/catalogue/collections/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
+
+  deleteCollection: (id: string, token: string) =>
+    request<void>(`/v1/catalogue/collections/${id}`, { method: "DELETE" }, token),
+
+  publishCollection: (id: string, token: string) =>
+    request<CollectionResp>(`/v1/catalogue/collections/${id}/publish`, { method: "POST" }, token),
+
+  unpublishCollection: (id: string, token: string) =>
+    request<CollectionResp>(`/v1/catalogue/collections/${id}/unpublish`, { method: "POST" }, token),
 };
 
 // ── Orders API ─────────────────────────────────────────────────────────────────
