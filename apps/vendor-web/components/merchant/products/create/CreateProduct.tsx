@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -26,14 +26,12 @@ import {
 } from "@/lib/validations/schemas";
 import {
   Field,
-  CATEGORIES,
-  CATEGORY_LABELS,
   ImageUpload,
   Toggle,
   VariantOptionBuilder,
   Section,
 } from "./helpers";
-import { catalogueApi, ApiError } from "@gomarket/api-client";
+import { catalogueApi, ApiError, type CollectionResp, type CategoryResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function CreateProductPage() {
@@ -43,6 +41,18 @@ export default function CreateProductPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [collections, setCollections] = useState<CollectionResp[]>([]);
+  const [categories, setCategories] = useState<CategoryResp[]>([]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    catalogueApi.listCollections(accessToken)
+      .then((r) => setCollections(r.collections))
+      .catch(() => {});
+    catalogueApi.listCategories(accessToken)
+      .then((cats) => setCategories(cats))
+      .catch(() => {});
+  }, [accessToken]);
 
   const {
     register,
@@ -243,11 +253,17 @@ export default function CreateProductPage() {
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                           <SelectContent>
-                            {CATEGORIES.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {CATEGORY_LABELS[c]}
+                            {categories.length === 0 ? (
+                              <SelectItem value="__none" disabled>
+                                No categories yet — add from Categories page
                               </SelectItem>
-                            ))}
+                            ) : (
+                              categories.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       )}
@@ -696,7 +712,12 @@ export default function CreateProductPage() {
                 name="collectionIds"
                 render={({ field }) => (
                   <div className="space-y-1.5">
-                    {COLLECTIONS.map((col) => {
+                    {collections.length === 0 && (
+                      <p className="text-[12px] py-2" style={{ color: "#94a3b8" }}>
+                        No collections yet — create one from the Products page.
+                      </p>
+                    )}
+                    {collections.map((col) => {
                       const isChecked = (field.value ?? []).includes(col.id);
                       return (
                         <label
