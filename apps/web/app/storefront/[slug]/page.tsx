@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import EkoHome from "@/components/storefront/eko/EkoHome";
 import LagosHome from "@/components/storefront/lagos/LagosHome";
@@ -45,10 +46,9 @@ export interface StoreData {
 }
 
 async function getStore(slug: string): Promise<StoreData | null> {
+  noStore(); // opt out of Next.js Data Cache without triggering Turbopack perf bug
   try {
-    const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`, {
-      cache: "no-store", // always fresh — CDN handles edge caching in production
-    });
+    const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`);
     if (res.status === 404) return null;
     if (!res.ok) return null; // surface as not-found; real errors logged server-side
     const data = await res.json();
