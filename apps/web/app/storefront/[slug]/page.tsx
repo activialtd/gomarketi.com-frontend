@@ -6,6 +6,10 @@ import StoreSkeleton from "@/components/storefront/StoreSkeleton";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// Always re-render so vendors see their published changes immediately.
+// Vercel's edge network handles caching at CDN level in production.
+export const dynamic = "force-dynamic";
+
 export interface ThemeSections {
   announcement?: { enabled?: boolean; text?: string; bgColor?: string; textColor?: string; dismissible?: boolean };
   header?: { logoUrl?: string; sticky?: boolean; showSearch?: boolean; showStoreName?: boolean };
@@ -47,7 +51,7 @@ export interface StoreData {
 async function getStore(slug: string): Promise<StoreData | null> {
   try {
     const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`, {
-      next: { revalidate: 60 },
+      cache: "no-store", // always fresh — CDN handles edge caching in production
     });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`API error ${res.status}`);
