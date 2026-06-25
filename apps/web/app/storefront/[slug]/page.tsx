@@ -45,6 +45,30 @@ export interface StoreData {
   is_active: boolean;
 }
 
+export interface StorefrontProduct {
+  id: string;
+  name: string;
+  description?: string;
+  price_kobo: number;
+  images: string[];
+  tags: string[];
+  is_digital: boolean;
+  category_id?: string;
+}
+
+async function getProducts(storeId: string): Promise<StorefrontProduct[]> {
+  try {
+    const res = await fetch(
+      `${API_URL}/v1/catalogue/public/stores/${storeId}/products?per_page=20`,
+    );
+    if (!res.ok) return [];
+    const data = await res.json() as { products?: StorefrontProduct[] };
+    return data.products ?? [];
+  } catch {
+    return [];
+  }
+}
+
 async function getStore(slug: string): Promise<StoreData | null> {
   noStore(); // opt out of Next.js Data Cache without triggering Turbopack perf bug
   try {
@@ -90,19 +114,22 @@ export default async function StorefrontPage({
     } catch { /* invalid JSON — treat as no config */ }
   }
 
+  // Fetch published products in parallel with the config parse
+  const products = await getProducts(store.id);
+
   // No published config → show skeleton
   if (!themeConfig) {
-    return <StoreSkeleton store={store} />;
+    return <StoreSkeleton store={store} products={products} />;
   }
 
   const template = themeConfig.template ?? "eko";
 
   switch (template) {
     case "lagos":
-    case "abuja": // Abuja layout coming — uses Lagos as base until its own component is built
-      return <LagosHome store={store} themeConfig={themeConfig} />;
+    case "abuja":
+      return <LagosHome store={store} themeConfig={themeConfig} products={products} />;
     case "eko":
     default:
-      return <EkoHome store={store} themeConfig={themeConfig} />;
+      return <EkoHome store={store} themeConfig={themeConfig} products={products} />;
   }
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import type { StoreData } from "@/app/storefront/[slug]/page";
+import type { StoreData, StorefrontProduct } from "@/app/storefront/[slug]/page";
 
-export default function StoreSkeleton({ store }: { store: StoreData }) {
+export default function StoreSkeleton({ store, products = [] }: { store: StoreData; products?: StorefrontProduct[] }) {
   return (
     <div style={{ fontFamily: "'Inter', sans-serif", minHeight: "100vh", background: "#fff" }}>
 

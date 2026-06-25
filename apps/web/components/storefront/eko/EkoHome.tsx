@@ -9,18 +9,18 @@ import {
   Sparkles,
   Package,
 } from "lucide-react";
-import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
 import { STORE_CONFIG } from "@/lib/storeConfig";
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
 import EkoLayout from "@/components/storefront/eko/EkoLayout";
-import type { StoreData, ThemeConfig } from "@/app/storefront/[slug]/page";
+import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
 
 interface Props {
   store?: StoreData;
   themeConfig?: ThemeConfig;
+  products?: StorefrontProduct[];
 }
 
-export default function HomePage({ store, themeConfig }: Props) {
+export default function HomePage({ store, themeConfig, products = [] }: Props) {
   const storeName = store?.name ?? STORE_CONFIG.storeName;
   const sec = themeConfig?.sections;
   const colors = themeConfig?.colors ?? {
@@ -32,14 +32,7 @@ export default function HomePage({ store, themeConfig }: Props) {
 
   const tagline = sec?.hero?.enabled ? (sec.hero?.headline || storeName) : storeName;
   const subtagline = sec?.hero?.enabled ? (sec.hero?.subheadline || "") : "";
-
-  const featured = PRODUCTS.filter(
-    (p) => p.featured && p.status === "active",
-  ).slice(0, 6);
-  const displayProducts =
-    featured.length >= 3
-      ? featured
-      : PRODUCTS.filter((p) => p.status === "active").slice(0, 6);
+  const displayProducts = products.slice(0, sec?.featured?.count ?? 6);
 
   return (
     <EkoLayout
@@ -144,8 +137,8 @@ export default function HomePage({ store, themeConfig }: Props) {
         </div>
       </section>
 
-      {/* ── Collections strip ────────────────────────────── */}
-      {COLLECTIONS.length > 0 && (
+      {/* ── Collections strip — only shows when collections are loaded from API ── */}
+      {false && (
         <section className="mx-auto max-w-6xl px-5 py-16">
           <div className="mb-7 flex items-baseline justify-between">
             <div>
