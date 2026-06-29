@@ -6,7 +6,10 @@ export default function SetupLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#f8fafc" }}>
+    <div
+      className="min-h-screen flex flex-col"
+      style={{ background: "#f8fafc" }}
+    >
       <div
         className="flex items-center gap-2.5 px-6 shrink-0"
         style={{
@@ -17,7 +20,7 @@ export default function SetupLayout({
       >
         <div
           className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0"
-          style={{ background: "#1A7A42" }}
+          style={{ background: "#0a2e1a" }}
         >
           <Store className="w-4 h-4 text-white" />
         </div>
