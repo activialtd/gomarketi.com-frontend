@@ -203,6 +203,17 @@ export class ApiError extends Error {
   }
 }
 
+// ── Token refresh callback ─────────────────────────────────────────────────────
+// Components can register a callback that the request() wrapper calls when it
+// gets a 401, so the token is refreshed transparently and the call is retried.
+
+type RefreshCallback = () => Promise<string | null>;
+let _onTokenExpired: RefreshCallback | null = null;
+
+export function setTokenRefreshCallback(cb: RefreshCallback) {
+  _onTokenExpired = cb;
+}
+
 // ── Fetch wrapper ──────────────────────────────────────────────────────────────
 
 async function request<T>(
@@ -223,6 +234,25 @@ async function request<T>(
     credentials: "include",
     headers,
   });
+
+  // Auto-refresh: if 401 and a refresh callback is registered, retry once
+  if (res.status === 401 && _onTokenExpired) {
+    const newToken = await _onTokenExpired().catch(() => null);
+    if (newToken) {
+      const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` };
+      const retry = await fetch(`${API_BASE}${path}`, {
+        ...init,
+        credentials: "include",
+        headers: retryHeaders,
+      });
+      if (retry.ok) {
+        if (retry.status === 204) return undefined as T;
+        return retry.json() as Promise<T>;
+      }
+      const retryBody = (await retry.json().catch(() => ({}))) as { error?: string; fields?: Array<{ field: string; message: string }> };
+      throw new ApiError(retry.status, retryBody.error ?? retry.statusText, retryBody.fields);
+    }
+  }
 
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as {

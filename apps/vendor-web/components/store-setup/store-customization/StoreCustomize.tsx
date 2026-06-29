@@ -12,7 +12,7 @@ import {
   LivePreview, COLOR_PRESETS, FONT_PRESETS, FONT_FAMILIES,
   TemplateId, ColorPreset, EkoThumb, LagosThumb, AbujaThumb,
 } from "./helpers";
-import { storefrontApi } from "@gomarket/api-client";
+import { storefrontApi, authApi } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { FileUpload } from "@/components/common/FileUpload";
 
@@ -540,6 +540,7 @@ const SECTION_DEFS: SectionDef[] = [
 
 export default function StoreCustomize() {
   const accessToken = useAuthStore((s) => s.accessToken);
+  const setAuth = useAuthStore((s) => s.setAuth);
   const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
   const [store, setStore] = useState<{ id: string; name: string; slug: string } | null>(null);
@@ -610,8 +611,26 @@ export default function StoreCustomize() {
     }
     setSaveError(null);
     setIsSaving(true);
+
+    // Helper: attempt the update, auto-refresh token on 401 and retry once
+    async function doUpdate(token: string): Promise<void> {
+      try {
+        await storefrontApi.updateStore(store!.id, { theme_config: JSON.stringify(draft) }, token);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "";
+        // 401 = token expired → refresh and retry
+        if (msg.toLowerCase().includes("401") || msg.toLowerCase().includes("authentication") || msg.toLowerCase().includes("unauthorized")) {
+          const fresh = await authApi.refreshTokens();
+          setAuth(fresh.user, fresh.access_token);
+          await storefrontApi.updateStore(store!.id, { theme_config: JSON.stringify(draft) }, fresh.access_token);
+        } else {
+          throw e;
+        }
+      }
+    }
+
     try {
-      await storefrontApi.updateStore(store.id, { theme_config: JSON.stringify(draft) }, accessToken);
+      await doUpdate(accessToken ?? "");
       setPublished(draft);
       setIsDirty(false);
       setSaved(true);
