@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { STORE_CONFIG } from "@/lib/storeConfig";
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
-import EkoLayout from "@/components/storefront/eko/EkoLayout";
+// EkoLayout is now provided by app/storefront/[slug]/layout.tsx — no import needed here
 import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
 
 interface Props {
@@ -35,14 +35,7 @@ export default function HomePage({ store, themeConfig, products = [] }: Props) {
   const displayProducts = products.slice(0, sec?.featured?.count ?? 6);
 
   return (
-    <EkoLayout
-      storeName={storeName}
-      primary={colors.primary}
-      secondary={colors.secondary}
-      tagline={sec?.footer?.tagline}
-      whatsapp={sec?.footer?.contact?.whatsapp}
-      instagram={sec?.footer?.social?.instagram}
-    >
+    <div>
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-[var(--store-bg)]">
         {/* Ambient blob — purely decorative, sits behind content */}
@@ -250,6 +243,6 @@ export default function HomePage({ store, themeConfig, products = [] }: Props) {
           </div>
         </section>
       )}
-    </EkoLayout>
+    </div>
   );
 }

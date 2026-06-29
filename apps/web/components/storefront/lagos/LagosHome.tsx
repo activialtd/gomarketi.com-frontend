@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowUpRight, MessageCircle, Package } from "lucide-react";
 import { LagosProductCard } from "./LagosProductCard";
-import LagosLayout from "./LagosLayout";
+// LagosLayout is now provided by app/storefront/[slug]/layout.tsx — no import needed here
 import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
 
 interface Props {
@@ -25,14 +25,7 @@ export default function LagosHome({ store, themeConfig, products = [] }: Props) 
   const displayProducts = products.slice(0, sec?.featured?.count ?? 7);
 
   return (
-    <LagosLayout
-      storeName={storeName}
-      primary={accent}
-      tagline={sec?.footer?.tagline}
-      whatsapp={sec?.footer?.contact?.whatsapp}
-      instagram={sec?.footer?.social?.instagram}
-      navItems={sec?.nav?.items?.map((i) => ({ label: i.label, url: i.url }))}
-    >
+    <div>
       {/* ── Announcement ─────────────────────────────── */}
       {sec?.announcement?.enabled && (
         <div style={{ background: sec.announcement.bgColor ?? "#1A1A1A", color: sec.announcement.textColor ?? "#fff" }}
@@ -134,6 +127,6 @@ export default function LagosHome({ store, themeConfig, products = [] }: Props) 
           )}
         </section>
       )}
-    </LagosLayout>
+    </div>
   );
 }

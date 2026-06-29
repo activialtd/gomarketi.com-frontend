@@ -14,6 +14,7 @@ interface EkoLayoutProps {
   tagline?: string;
   whatsapp?: string;
   instagram?: string;
+  navItems?: Array<{ label: string; url: string }>;
 }
 
 export default function EkoLayout({
@@ -24,15 +25,15 @@ export default function EkoLayout({
   tagline,
   whatsapp,
   instagram,
+  navItems,
 }: EkoLayoutProps) {
   const { itemCount } = useCart();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const navLinks = [
-    { label: "Shop", href: "/shop" },
-    { label: "Collections", href: "/collections" },
-  ];
+  const navLinks = navItems?.length
+    ? navItems.map((i) => ({ label: i.label, href: i.url }))
+    : [{ label: "Shop", href: "/shop" }, { label: "Collections", href: "/collections" }];
 
   return (
     <div className="flex min-h-screen flex-col bg-white antialiased">
