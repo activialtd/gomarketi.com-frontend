@@ -2,30 +2,27 @@
 
 import Link from "next/link";
 import { ArrowUpRight, MessageCircle, Package } from "lucide-react";
-import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
 import { LagosProductCard } from "./LagosProductCard";
 import LagosLayout from "./LagosLayout";
-import type { StoreData, ThemeConfig } from "@/app/storefront/[slug]/page";
+import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
 
 interface Props {
   store?: StoreData;
   themeConfig?: ThemeConfig;
+  products?: StorefrontProduct[];
 }
 
-export default function LagosHome({ store, themeConfig }: Props) {
+export default function LagosHome({ store, themeConfig, products = [] }: Props) {
   const storeName = store?.name ?? "Our Store";
   const sec = themeConfig?.sections;
-  const accent = themeConfig?.colors.primary ?? "#C75D3A";
+  const accent = themeConfig?.colors?.primary ?? "#C75D3A";
 
-  const headline  = sec?.hero?.enabled ? (sec.hero.headline  || storeName) : storeName;
-  const subline   = sec?.hero?.enabled ? (sec.hero.subheadline || "") : "";
+  const headline = sec?.hero?.enabled ? (sec.hero.headline || storeName) : storeName;
+  const subline  = sec?.hero?.enabled ? (sec.hero.subheadline || "") : "";
   const heroImage = sec?.hero?.imageUrl;
-  const ctaText   = sec?.hero?.ctaText || "Explore the edit";
+  const ctaText  = sec?.hero?.ctaText || "Explore the edit";
 
-  const featured = PRODUCTS.filter((p) => p.featured && p.status === "active").slice(0, 7);
-  const displayProducts = featured.length >= 5
-    ? featured
-    : PRODUCTS.filter((p) => p.status === "active").slice(0, 7);
+  const displayProducts = products.slice(0, sec?.featured?.count ?? 7);
 
   return (
     <LagosLayout
@@ -38,19 +35,19 @@ export default function LagosHome({ store, themeConfig }: Props) {
     >
       {/* ── Announcement ─────────────────────────────── */}
       {sec?.announcement?.enabled && (
-        <div style={{ background: sec.announcement?.bgColor ?? "#1A1A1A", color: sec.announcement?.textColor ?? "#fff" }}
+        <div style={{ background: sec.announcement.bgColor ?? "#1A1A1A", color: sec.announcement.textColor ?? "#fff" }}
           className="py-2 px-6 text-center text-[11px] font-semibold">
-          {sec.announcement?.text}
+          {sec.announcement.text}
         </div>
       )}
 
       {/* ── Hero ─────────────────────────────────────── */}
-      {sec?.hero?.enabled !== false && (
+      {(sec ? sec.hero?.enabled : true) && (
         <section className="relative mx-auto grid max-w-7xl grid-cols-1 gap-0 px-6 pb-0 pt-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch lg:gap-10 lg:pt-16">
           <div className="flex flex-col justify-center">
             {sec?.hero?.eyebrow && (
               <p className="text-[11px] font-bold uppercase tracking-[0.22em]" style={{ color: accent }}>
-                {sec.hero?.eyebrow}
+                {sec.hero.eyebrow}
               </p>
             )}
             <h1 className="mt-5 text-[clamp(2.6rem,7vw,5rem)] font-semibold leading-[0.95] tracking-tight text-[#F7F4EE]"
@@ -67,7 +64,7 @@ export default function LagosHome({ store, themeConfig }: Props) {
               {sec?.hero?.secondaryCtaText && (
                 <Link href="/collections"
                   className="text-[12px] font-semibold uppercase tracking-[0.1em] text-white/50 no-underline hover:text-white transition-colors">
-                  {sec.hero?.secondaryCtaText}
+                  {sec.hero.secondaryCtaText}
                 </Link>
               )}
             </div>
@@ -88,38 +85,9 @@ export default function LagosHome({ store, themeConfig }: Props) {
         </section>
       )}
 
-      {/* ── Collections ──────────────────────────────── */}
-      {sec?.collections?.enabled !== false && COLLECTIONS.length > 0 && (
-        <section className="mx-auto max-w-7xl px-6 py-20">
-          <div className="mb-8 flex items-baseline justify-between">
-            <h2 className="text-[28px] font-semibold tracking-tight text-[#F7F4EE]"
-              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-              {sec?.collections?.title || "The collections"}
-            </h2>
-            <Link href="/shop" className="text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50 no-underline hover:text-[#C75D3A]">
-              View all →
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-            {COLLECTIONS.slice(0, 3).map((col, i) => (
-              <Link key={col.id} href={`/collections/${col.slug}`}
-                className={`group relative block overflow-hidden ${i === 0 ? "sm:col-span-2 sm:row-span-2 aspect-[4/3] sm:aspect-auto sm:h-full" : "aspect-[4/3]"}`}
-                style={{ animation: `fadeUp 0.6s ease forwards ${i * 100}ms`, minHeight: i === 0 ? "420px" : undefined }}>
-                <img src={col.coverImage} alt={col.name} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 p-6">
-                  <p className="text-[22px] font-semibold leading-tight text-white" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{col.name}</p>
-                  <p className="mt-1 text-[11px] uppercase tracking-[0.1em] text-white/60">{col.productIds.length} pieces</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
       {/* ── Featured products ─────────────────────────── */}
-      {sec?.featured?.enabled !== false && (
-        <section className="mx-auto max-w-7xl px-6 pb-24">
+      {(sec ? sec.featured?.enabled : true) && (
+        <section className="mx-auto max-w-7xl px-6 pb-24 pt-16">
           <div className="mb-8 flex items-baseline justify-between">
             <h2 className="text-[28px] font-semibold tracking-tight text-[#F7F4EE]"
               style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
@@ -132,7 +100,7 @@ export default function LagosHome({ store, themeConfig }: Props) {
 
           {displayProducts.length > 0 ? (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {displayProducts.slice(0, sec?.featured?.count ?? 7).map((product, i) => (
+              {displayProducts.map((product, i) => (
                 <div key={product.id} className={i % 5 === 0 ? "lg:row-span-2" : ""}>
                   <LagosProductCard product={product} index={i} tall={i % 5 === 0} />
                 </div>
@@ -153,14 +121,15 @@ export default function LagosHome({ store, themeConfig }: Props) {
         <section className="border-t border-white/10 px-6 py-20 text-center">
           <h3 className="mx-auto mt-3 max-w-md text-[26px] font-semibold leading-tight text-[#F7F4EE]"
             style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
-            {sec?.ctaBand?.headline || `${storeName} replies on WhatsApp, usually within minutes.`}
+            {sec.ctaBand.headline || `${storeName} replies on WhatsApp, usually within minutes.`}
           </h3>
           {sec?.footer?.contact?.whatsapp && (
-            <a href={`https://wa.me/${sec?.footer?.contact?.whatsapp?.replace(/\D/g, "")}`}
+            <a href={`https://wa.me/${sec.footer.contact.whatsapp.replace(/\D/g, "")}`}
               target="_blank" rel="noopener noreferrer"
               className="mt-7 inline-flex items-center gap-2 px-7 py-3.5 text-[12px] font-semibold uppercase tracking-[0.1em] text-white no-underline transition-transform duration-200 hover:-translate-y-0.5"
               style={{ background: accent }}>
-              <MessageCircle className="h-4 w-4" /> {sec?.ctaBand?.btnText || "Message us"}
+              <MessageCircle className="h-4 w-4" />
+              {sec.ctaBand.btnText || "Message us"}
             </a>
           )}
         </section>
