@@ -15,9 +15,12 @@ import {
   AlertCircle,
   MapPin,
 } from "lucide-react";
-import { STORE_CONFIG } from "@/lib/storeConfig";
 import { useCart, type CustomerInfo } from "@/lib/cartContext";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { PaystackModal } from "@/components/storefront/PaystackModal";
+
+function fmtNaira(kobo: number) {
+  return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
+}
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 // Email, phone, and address are required before an order can be created.
@@ -135,27 +138,30 @@ function inputStyle(hasError?: boolean): React.CSSProperties {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const c = STORE_CONFIG.colors;
+  const c = { primary: "var(--store-primary, #1A7A42)", bg: "var(--store-bg, #F0FAF3)", text: "#1C1C1C", secondary: "var(--store-secondary, #0A4D2A)" };
   const { lines, subtotal, setCustomer, clearCart } = useCart();
   const [isPlacing, setIsPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
+  const [showPaystack, setShowPaystack] = useState(false);
+  const [pendingCustomer, setPendingCustomer] = useState<CustomerInfo | null>(null);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
   });
 
-  const shipping = subtotal > 5000000 ? 0 : 150000; // free shipping over ₦50,000
+  const emailVal = watch("email") ?? "";
+  const allDigital = lines.every((l) => l.isDigital);
+  const shipping = allDigital ? 0 : subtotal > 5000000 ? 0 : 150000;
   const total = subtotal + shipping;
 
   async function onSubmit(data: CheckoutValues) {
     if (lines.length === 0) return;
-    setIsPlacing(true);
-
     const customerInfo: CustomerInfo = {
       fullName: data.fullName,
       email: data.email,
@@ -166,13 +172,14 @@ export default function CheckoutPage() {
       note: data.note,
     };
     setCustomer(customerInfo);
+    setPendingCustomer(customerInfo);
+    setShowPaystack(true);
+  }
 
-    // Simulate order creation (Paystack init + order record in production)
-    await new Promise((r) => setTimeout(r, 1300));
-
+  function handlePaystackSuccess(ref: string) {
+    setShowPaystack(false);
     const newOrderNumber = `#ORD-${Math.floor(4000 + Math.random() * 999)}`;
     setOrderNumber(newOrderNumber);
-    setIsPlacing(false);
     setOrderPlaced(true);
     clearCart();
   }
@@ -225,7 +232,7 @@ export default function CheckoutPage() {
           has been received.
         </p>
         <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "28px" }}>
-          We've sent a confirmation to your email. {STORE_CONFIG.storeName} will
+          We&apos;ve sent a confirmation to your email. The store will
           reach out shortly to confirm delivery details.
         </p>
         <Link
@@ -780,6 +787,17 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Paystack modal */}
+      {showPaystack && pendingCustomer && (
+        <PaystackModal
+          amount={total}
+          email={pendingCustomer.email}
+          storeName="GoMarketi Store"
+          onSuccess={handlePaystackSuccess}
+          onClose={() => setShowPaystack(false)}
+        />
+      )}
     </div>
   );
 }
