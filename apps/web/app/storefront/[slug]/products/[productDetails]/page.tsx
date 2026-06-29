@@ -1,15 +1,16 @@
 import { notFound } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
 import type { Metadata } from "next";
 import EkoProductDetails from "@/components/storefront/eko/EkoProductDetails";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// noStore() must only be called once at the page level, not inside helper functions —
+// calling it inside nested async functions triggers a Turbopack performance bug.
 async function getStoreId(slug: string): Promise<string | null> {
-  noStore();
   try {
-    const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`);
+    const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`,
+      { cache: "no-store" });
     if (!res.ok) return null;
     const d = await res.json();
     return (d.id as string) ?? null;
@@ -20,6 +21,7 @@ async function getProduct(storeId: string, productId: string): Promise<Storefron
   try {
     const res = await fetch(
       `${API_URL}/v1/catalogue/public/stores/${storeId}/products/${productId}`,
+      { cache: "no-store" },
     );
     if (!res.ok) return null;
     return await res.json() as StorefrontProduct;
@@ -30,6 +32,7 @@ async function getRelated(storeId: string, excludeId: string): Promise<Storefron
   try {
     const res = await fetch(
       `${API_URL}/v1/catalogue/public/stores/${storeId}/products?per_page=5`,
+      { cache: "no-store" },
     );
     if (!res.ok) return [];
     const d = await res.json() as { products?: StorefrontProduct[] };
