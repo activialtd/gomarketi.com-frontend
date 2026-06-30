@@ -422,7 +422,8 @@ export const catalogueApi = {
     ),
 
   listCategories: (token: string) =>
-    request<CategoryResp[]>("/v1/catalogue/categories", {}, token),
+    request<{ categories: CategoryResp[] }>("/v1/catalogue/categories", {}, token)
+      .then((r) => r.categories),
 
   createCategory: (data: CategoryReq, token: string) =>
     request<CategoryResp>(
