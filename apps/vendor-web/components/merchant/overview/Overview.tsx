@@ -2,15 +2,6 @@
 
 import { useState, useEffect } from "react";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
-import {
   Copy,
   Check,
   TrendingUp,
@@ -32,7 +23,6 @@ import {
   ArrowUpRight,
   CheckCircle2,
 } from "lucide-react";
-import { CustomTooltip } from "./helpers";
 import {
   analyticsApi,
   ordersApi,
@@ -58,21 +48,6 @@ function getGreeting() {
 }
 
 // ─── Static data ──────────────────────────────────────────────────────────────
-
-const CHART_DATA = [
-  { month: "Jan", online: 0, offline: 0 },
-  { month: "Feb", online: 12400, offline: 4200 },
-  { month: "Mar", online: 18700, offline: 6100 },
-  { month: "Apr", online: 14200, offline: 8900 },
-  { month: "May", online: 31500, offline: 11200 },
-  { month: "Jun", online: 28900, offline: 9400 },
-  { month: "Jul", online: 0, offline: 0 },
-  { month: "Aug", online: 0, offline: 0 },
-  { month: "Sep", online: 0, offline: 0 },
-  { month: "Oct", online: 0, offline: 0 },
-  { month: "Nov", online: 0, offline: 0 },
-  { month: "Dec", online: 0, offline: 0 },
-];
 
 const QUICK_ACTIONS = [
   {
@@ -553,110 +528,77 @@ export default function OverviewPage() {
           icon={TrendingUp}
           iconColor="#1A7A42"
           iconBg="#F0FAF3"
-          trend="+18.4%"
           loading={loading}
         />
       </div>
 
       {/* ── ROW 3: Chart + Recent orders ───────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-5">
-        {/* Revenue chart */}
+        {/* Revenue overview */}
         <div
-          className="rounded-[16px] border p-5"
+          className="rounded-[16px] border p-5 flex flex-col"
           style={{ background: "#fff", borderColor: "#e2e8f0" }}
         >
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-            <div>
+          <div className="mb-5">
+            <p
+              className="text-[15px] font-extrabold"
+              style={{ color: "#1C1C1C" }}
+            >
+              Revenue overview
+            </p>
+            <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
+              All-time revenue from your storefront
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-5">
+            <div
+              className="rounded-[12px] p-4"
+              style={{ background: "#F0FAF3" }}
+            >
               <p
-                className="text-[15px] font-extrabold"
-                style={{ color: "#1C1C1C" }}
+                className="text-[24px] font-extrabold leading-tight"
+                style={{ color: "#1A7A42", letterSpacing: "-0.5px" }}
               >
-                Revenue overview
+                {loading ? "—" : koboToNaira(analytics?.total_revenue_kobo ?? 0)}
               </p>
-              <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
-                Your performance across all channels this year
+              <p
+                className="text-[11px] font-semibold uppercase tracking-wide mt-1"
+                style={{ color: "#3D6B4F" }}
+              >
+                Total revenue
               </p>
             </div>
             <div
-              className="flex items-center gap-4 px-3.5 py-2 rounded-[9px] border text-[12px]"
-              style={{ borderColor: "#e2e8f0", background: "#fafafa" }}
+              className="rounded-[12px] p-4"
+              style={{ background: "#fafafa" }}
             >
-              {[
-                { label: "Online", value: "₦105,700", color: "#1A7A42" },
-                { label: "Offline", value: "₦39,800", color: "#22c55e" },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center gap-1.5">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: s.color }}
-                  />
-                  <span style={{ color: "#6b7280" }}>{s.label}</span>
-                  <span className="font-bold" style={{ color: "#1C1C1C" }}>
-                    {s.value}
-                  </span>
-                </div>
-              ))}
+              <p
+                className="text-[24px] font-extrabold leading-tight"
+                style={{ color: "#1C1C1C", letterSpacing: "-0.5px" }}
+              >
+                {loading ? "—" : (analytics?.total_orders ?? 0)}
+              </p>
+              <p
+                className="text-[11px] font-semibold uppercase tracking-wide mt-1"
+                style={{ color: "#94a3b8" }}
+              >
+                Total orders
+              </p>
             </div>
           </div>
 
-          <div style={{ height: "210px" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={CHART_DATA}
-                margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="onlineGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1A7A42" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#1A7A42" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="offlineGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f1f5f9"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 500 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) =>
-                    v === 0 ? "0" : `₦${(v / 1000).toFixed(0)}k`
-                  }
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="online"
-                  name="Online Sales"
-                  stroke="#1A7A42"
-                  strokeWidth={2.5}
-                  fill="url(#onlineGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#1A7A42", strokeWidth: 0 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="offline"
-                  name="Offline Sales"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  fill="url(#offlineGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#22c55e", strokeWidth: 0 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div
+            className="flex-1 flex flex-col items-center justify-center text-center gap-1.5 py-6 rounded-[12px]"
+            style={{ background: "#fafafa", border: "1px dashed #e2e8f0" }}
+          >
+            <BarChart3 className="w-5 h-5" style={{ color: "#94a3b8" }} />
+            <p className="text-[12px] font-semibold" style={{ color: "#374151" }}>
+              Revenue trends coming soon
+            </p>
+            <p className="text-[11px]" style={{ color: "#94a3b8" }}>
+              We're collecting more order history to power this chart.
+            </p>
           </div>
         </div>
 
