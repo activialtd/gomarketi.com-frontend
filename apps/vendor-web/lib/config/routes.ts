@@ -17,6 +17,7 @@ export const ROUTES = {
     // Products
     PRODUCTS: "/merchant/products",
     PRODUCTS_NEW: "/merchant/products/create-product",
+    PRODUCTS_EDIT: (id: string) => `/merchant/products/edit/${id}`,
     CATEGORIES: "/merchant/products/categories",
     COLLECTIONS_NEW: "/merchant/products/create-collection",
 

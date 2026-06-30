@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -15,7 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { type Product } from "@/lib/data/products";
-import { catalogueApi, type CollectionResp } from "@gomarket/api-client";
+import { catalogueApi, storefrontApi, type CollectionResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 import {
@@ -43,65 +43,67 @@ export default function ProductsPage() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [collections, setCollections] = useState<CollectionResp[]>([]);
   const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!accessToken) return;
+    setLoadingProducts(true);
+    try {
+      const [productsResp, categoriesResp, collectionsResp] = await Promise.allSettled([
+        catalogueApi.listProducts({ per_page: 100 }, accessToken),
+        catalogueApi.listCategories(accessToken),
+        catalogueApi.listCollections(accessToken),
+      ]);
+
+      const catMap: Record<string, string> = {};
+      if (categoriesResp.status === "fulfilled") {
+        categoriesResp.value.forEach((c) => { catMap[c.id] = c.name; });
+        setCategoryNames(catMap);
+      }
+      if (collectionsResp.status === "fulfilled") {
+        setCollections(collectionsResp.value.collections);
+      }
+
+      if (productsResp.status === "fulfilled") {
+        const mapped: Product[] = productsResp.value.products.map((p) => ({
+          id: p.id,
+          name: p.name,
+          slug: p.id,
+          category: p.category_id ? (catMap[p.category_id] ?? "Uncategorised") : "Uncategorised",
+          collectionIds: [],
+          description: p.description ?? "",
+          images: p.images ?? [],
+          price: p.price_kobo / 100,
+          currency: "NGN",
+          hasVariants: false,
+          stock: p.stock,
+          sold: 0,
+          status:
+            p.stock === 0
+              ? "out_of_stock"
+              : p.is_published
+                ? "active"
+                : "draft",
+          featured: false,
+          createdAt: p.created_at,
+          tags: p.tags ?? [],
+        }));
+        setProducts(mapped);
+      } else {
+        setProducts([]);
+      }
+    } finally {
+      setLoadingProducts(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   useEffect(() => {
     if (!accessToken) return;
-    let cancelled = false;
-    async function load() {
-      setLoadingProducts(true);
-      try {
-        const [productsResp, categoriesResp, collectionsResp] = await Promise.allSettled([
-          catalogueApi.listProducts({ per_page: 100 }, accessToken!),
-          catalogueApi.listCategories(accessToken!),
-          catalogueApi.listCollections(accessToken!),
-        ]);
-        if (cancelled) return;
-
-        const catMap: Record<string, string> = {};
-        if (categoriesResp.status === "fulfilled") {
-          categoriesResp.value.forEach((c) => { catMap[c.id] = c.name; });
-          setCategoryNames(catMap);
-        }
-        if (collectionsResp.status === "fulfilled") {
-          setCollections(collectionsResp.value.collections);
-        }
-
-        if (productsResp.status === "fulfilled") {
-          const mapped: Product[] = productsResp.value.products.map((p) => ({
-            id: p.id,
-            name: p.name,
-            slug: p.id,
-            category: p.category_id ? (catMap[p.category_id] ?? "Uncategorised") : "Uncategorised",
-            collectionIds: [],
-            description: p.description ?? "",
-            images: p.images ?? [],
-            price: p.price_kobo / 100,
-            currency: "NGN",
-            hasVariants: false,
-            stock: p.stock,
-            sold: 0,
-            status:
-              p.stock === 0
-                ? "out_of_stock"
-                : p.is_published
-                  ? "active"
-                  : "draft",
-            featured: false,
-            createdAt: p.created_at,
-            tags: p.tags ?? [],
-          }));
-          setProducts(mapped);
-        } else {
-          setProducts([]);
-        }
-      } finally {
-        if (!cancelled) setLoadingProducts(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
+    storefrontApi.getMyStore(accessToken).then((s) => setStoreSlug(s.slug)).catch(() => {});
   }, [accessToken]);
 
   const toggleSelect = (id: string) => {
@@ -460,6 +462,8 @@ export default function ProductsPage() {
                     product={product}
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
+                    storeSlug={storeSlug}
+                    onChanged={load}
                   />
                 ))}
               </div>
@@ -471,6 +475,8 @@ export default function ProductsPage() {
                     product={product}
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
+                    storeSlug={storeSlug}
+                    onChanged={load}
                   />
                 ))}
               </div>

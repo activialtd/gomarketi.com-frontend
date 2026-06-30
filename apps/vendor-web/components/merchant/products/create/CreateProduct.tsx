@@ -34,15 +34,18 @@ import {
 import { catalogueApi, ApiError, type CollectionResp, type CategoryResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 
-export default function CreateProductPage() {
+export default function CreateProductPage({ productId }: { productId?: string }) {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
+  const isEditing = !!productId;
   const [images, setImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [collections, setCollections] = useState<CollectionResp[]>([]);
   const [categories, setCategories] = useState<CategoryResp[]>([]);
+  const [loadingProduct, setLoadingProduct] = useState(isEditing);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -60,6 +63,7 @@ export default function CreateProductPage() {
     control,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<CreateProductFormValues>({
     resolver: zodResolver(createProductSchema) as any,
@@ -70,6 +74,39 @@ export default function CreateProductPage() {
       featured: false,
     },
   });
+
+  useEffect(() => {
+    if (!productId || !accessToken) return;
+    let cancelled = false;
+    catalogueApi
+      .getProduct(productId, accessToken)
+      .then((p) => {
+        if (cancelled) return;
+        setImages(p.images ?? []);
+        reset({
+          name: p.name,
+          description: p.description ?? "",
+          category: p.category_id ?? "",
+          tags: (p.tags ?? []).join(", "),
+          price: p.price_kobo / 100,
+          stock: p.stock,
+          sku: p.sku ?? "",
+          status: p.is_published ? "active" : "draft",
+          trackInventory: true,
+          hasVariants: false,
+          featured: false,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError("Could not load this product. It may have been deleted.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProduct(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, accessToken, reset]);
 
   const { onBlur: descriptionOnBlur, ...descriptionRegister } =
     register("description");
@@ -94,7 +131,7 @@ export default function CreateProductPage() {
     setter(true);
     setSubmitError(null);
     try {
-      const product = await catalogueApi.createProduct({
+      const payload = {
         name: data.name,
         description: data.description || undefined,
         category_id: data.category || undefined,
@@ -103,10 +140,16 @@ export default function CreateProductPage() {
         sku: data.sku || undefined,
         images,
         tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
-        is_digital: false,
-      }, accessToken);
+      };
+
+      const productIdForPublish = isEditing
+        ? (await catalogueApi.updateProduct(productId!, payload, accessToken)).id
+        : (await catalogueApi.createProduct({ ...payload, is_digital: false }, accessToken)).id;
+
       if (status === "active") {
-        await catalogueApi.publishProduct(product.id, accessToken);
+        await catalogueApi.publishProduct(productIdForPublish, accessToken);
+      } else if (isEditing) {
+        await catalogueApi.unpublishProduct(productIdForPublish, accessToken);
       }
       router.push(ROUTES.MERCHANT.PRODUCTS);
     } catch (err) {
@@ -114,6 +157,31 @@ export default function CreateProductPage() {
     } finally {
       setter(false);
     }
+  }
+
+  if (loadingProduct) {
+    return (
+      <div className="w-full flex items-center justify-center py-32 gap-2" style={{ color: "#94a3b8" }}>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span className="text-[13px]">Loading product…</span>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-32 gap-3">
+        <p className="text-[13px] font-semibold" style={{ color: "#374151" }}>{loadError}</p>
+        <button
+          type="button"
+          onClick={() => router.push(ROUTES.MERCHANT.PRODUCTS)}
+          className="text-[12px] font-bold"
+          style={{ color: "#1A7A42" }}
+        >
+          Back to products
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -137,7 +205,7 @@ export default function CreateProductPage() {
           className="text-[18px] font-extrabold flex-1"
           style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}
         >
-          {nameVal || "New product"}
+          {nameVal || (isEditing ? "Edit product" : "New product")}
         </h1>
         <div className="flex items-center gap-2">
           {submitError && (
@@ -157,7 +225,7 @@ export default function CreateProductPage() {
             onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
           >
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            Save draft
+            {isEditing ? "Save as draft" : "Save draft"}
           </button>
           <button
             type="button"
@@ -176,7 +244,7 @@ export default function CreateProductPage() {
             {isPublishing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : null}
-            Publish product
+            {isEditing ? "Save & publish" : "Publish product"}
           </button>
         </div>
       </div>

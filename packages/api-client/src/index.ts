@@ -478,6 +478,9 @@ export const catalogueApi = {
       token,
     ),
 
+  getProduct: (id: string, token: string) =>
+    request<ProductResp>(`/v1/catalogue/products/${id}`, {}, token),
+
   updateProduct: (id: string, data: UpdateProductReq, token: string) =>
     request<ProductResp>(
       `/v1/catalogue/products/${id}`,
