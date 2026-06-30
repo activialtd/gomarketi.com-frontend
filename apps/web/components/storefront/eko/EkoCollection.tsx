@@ -31,12 +31,25 @@ export default function CollectionPage({
     );
   }
 
+  // Adapt legacy mock Product shape to the real StorefrontProduct shape
+  // the live ProductCard expects. This page is pending rewiring to the
+  // real collections API — until then it renders from mock catalogue data.
   const products = collection.productIds
     .map((id) => PRODUCTS.find((p) => p.id === id))
     .filter(
       (p): p is NonNullable<typeof p> =>
         !!p && (p.status === "active" || p.status === "out_of_stock"),
-    );
+    )
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      price_kobo: Math.round(p.price * 100),
+      images: p.images,
+      tags: p.tags,
+      is_digital: false,
+      category_id: undefined as string | undefined,
+    }));
 
   return (
     <div>

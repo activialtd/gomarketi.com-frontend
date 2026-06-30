@@ -211,7 +211,9 @@ export function SignupForm() {
       setStep("VERIFY_EMAIL");
     } catch (err) {
       setApiError(
-        err instanceof ApiError ? err.message : "Something went wrong. Please try again."
+        err instanceof ApiError
+          ? err.message
+          : "Something went wrong. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -235,7 +237,9 @@ export function SignupForm() {
       router.push(ROUTES.ONBOARDING.WELCOME);
     } catch (err) {
       setOtpError(
-        err instanceof ApiError ? err.message : "Invalid code. Please try again."
+        err instanceof ApiError
+          ? err.message
+          : "Invalid code. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -256,7 +260,9 @@ export function SignupForm() {
       setTimeout(() => setResendSuccess(false), 4000);
     } catch (err) {
       setOtpError(
-        err instanceof ApiError ? err.message : "Failed to resend. Please try again."
+        err instanceof ApiError
+          ? err.message
+          : "Failed to resend. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -523,7 +529,11 @@ export function SignupForm() {
           {apiError && (
             <p
               className="text-[12px] rounded-[8px] px-3 py-2 border"
-              style={{ color: "#dc2626", background: "#fef2f2", borderColor: "#fecaca" }}
+              style={{
+                color: "#dc2626",
+                background: "#fef2f2",
+                borderColor: "#fecaca",
+              }}
             >
               {apiError}
             </p>
@@ -637,7 +647,11 @@ export function SignupForm() {
           {resendSuccess && (
             <p
               className="text-center text-[12px] rounded-[8px] px-3 py-2 border"
-              style={{ color: "#15803d", background: "#f0fdf4", borderColor: "#bbf7d0" }}
+              style={{
+                color: "#15803d",
+                background: "#f0fdf4",
+                borderColor: "#bbf7d0",
+              }}
             >
               A new code was sent to {signupEmail}
             </p>
@@ -646,7 +660,10 @@ export function SignupForm() {
           <p className="text-center text-[11px]" style={{ color: "#3D6B4F" }}>
             Didn&apos;t receive it?{" "}
             {resendCooldown > 0 ? (
-              <span className="font-semibold" style={{ color: "rgba(61,107,79,0.5)" }}>
+              <span
+                className="font-semibold"
+                style={{ color: "rgba(61,107,79,0.5)" }}
+              >
                 Resend in {resendCooldown}s
               </span>
             ) : (
@@ -1015,19 +1032,19 @@ const COUNTRIES = [
   { code: "+234", flag: "🇳🇬", name: "Nigeria" },
   { code: "+233", flag: "🇬🇭", name: "Ghana" },
   { code: "+254", flag: "🇰🇪", name: "Kenya" },
-  { code: "+27",  flag: "🇿🇦", name: "South Africa" },
+  { code: "+27", flag: "🇿🇦", name: "South Africa" },
   { code: "+251", flag: "🇪🇹", name: "Ethiopia" },
   { code: "+255", flag: "🇹🇿", name: "Tanzania" },
   { code: "+256", flag: "🇺🇬", name: "Uganda" },
   { code: "+237", flag: "🇨🇲", name: "Cameroon" },
   { code: "+225", flag: "🇨🇮", name: "Côte d'Ivoire" },
   { code: "+221", flag: "🇸🇳", name: "Senegal" },
-  { code: "+44",  flag: "🇬🇧", name: "United Kingdom" },
-  { code: "+1",   flag: "🇺🇸", name: "United States" },
-  { code: "+1",   flag: "🇨🇦", name: "Canada" },
-  { code: "+33",  flag: "🇫🇷", name: "France" },
-  { code: "+49",  flag: "🇩🇪", name: "Germany" },
-  { code: "+91",  flag: "🇮🇳", name: "India" },
+  { code: "+44", flag: "🇬🇧", name: "United Kingdom" },
+  { code: "+1", flag: "🇺🇸", name: "United States" },
+  { code: "+1", flag: "🇨🇦", name: "Canada" },
+  { code: "+33", flag: "🇫🇷", name: "France" },
+  { code: "+49", flag: "🇩🇪", name: "Germany" },
+  { code: "+91", flag: "🇮🇳", name: "India" },
   { code: "+971", flag: "🇦🇪", name: "UAE" },
 ];
 
@@ -1045,13 +1062,18 @@ function PhoneInput({
   return (
     <div
       className="flex rounded-[10px] border overflow-hidden transition-all focus-within:outline focus-within:outline-2 focus-within:outline-offset-[-2px]"
-      style={{
-        borderColor: "#e2e8f0",
-        outlineColor: "#1A7A42",
-      } as React.CSSProperties}
+      style={
+        {
+          borderColor: "#e2e8f0",
+          outlineColor: "#1A7A42",
+        } as React.CSSProperties
+      }
     >
       {/* Country selector */}
-      <div className="relative shrink-0 border-r" style={{ borderColor: "#e2e8f0" }}>
+      <div
+        className="relative shrink-0 border-r"
+        style={{ borderColor: "#e2e8f0" }}
+      >
         <select
           value={dialCode}
           onChange={(e) => onDialCodeChange(e.target.value)}
@@ -1066,7 +1088,10 @@ function PhoneInput({
           ))}
         </select>
         {/* Chevron icon */}
-        <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px]" style={{ color: "#9ca3af" }}>
+        <span
+          className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[10px]"
+          style={{ color: "#9ca3af" }}
+        >
           ▾
         </span>
       </div>
@@ -1102,14 +1127,14 @@ function PrimaryButton({
       disabled={loading || disabled}
       className="w-full h-[42px] rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       style={{
-        background: "#1A7A42",
+        background: "#0A2E1A",
         letterSpacing: "0.04em",
         boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
       }}
       onMouseOver={(e) =>
         !(loading || disabled) && (e.currentTarget.style.background = "#239452")
       }
-      onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+      onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
     >
       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : label}
     </button>

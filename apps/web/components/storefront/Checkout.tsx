@@ -651,9 +651,9 @@ export default function CheckoutPage() {
                     >
                       {line.productName}
                     </p>
-                    {line.variantLabel && (
+                    {line.isDigital && (
                       <p style={{ fontSize: "10px", color: "#94a3b8" }}>
-                        {line.variantLabel}
+                        Digital download
                       </p>
                     )}
                   </div>

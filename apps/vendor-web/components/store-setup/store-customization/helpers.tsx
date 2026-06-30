@@ -508,7 +508,7 @@ export function LivePreview({
   config,
 }: {
   template: TemplateId;
-  colors: ColorPreset;
+  colors: Omit<ColorPreset, "label"> & { label?: string };
   font: string;
   storeName: string;
   headline: string;
@@ -624,7 +624,7 @@ export function LivePreview({
             </nav>
 
             {/* Hero — shown only when enabled in config, or always in legacy mode */}
-            {(sec ? sec.hero.enabled : true) && (
+            {(sec ? sec.hero?.enabled : true) && (
               <div style={{
                 background: colors.bg,
                 padding: isMobile ? "32px 20px" : "52px 40px",
@@ -637,18 +637,18 @@ export function LivePreview({
                     {storeName}
                   </p>
                   <h1 style={{ fontSize: isMobile ? "26px" : "36px", fontWeight: 900, letterSpacing: "-0.5px", color: colors.text, margin: "0 0 12px", lineHeight: 1.1 }}>
-                    {sec?.hero.headline || headline || "Welcome to our store"}
+                    {sec?.hero?.headline || headline || "Welcome to our store"}
                   </h1>
                   <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "20px", maxWidth: "340px", lineHeight: 1.6 }}>
-                    {sec?.hero.subheadline || subheadline || "Discover amazing products."}
+                    {sec?.hero?.subheadline || subheadline || "Discover amazing products."}
                   </p>
                   <button style={{ background: colors.primary, color: "#fff", border: "none", borderRadius: "10px", padding: "12px 24px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 14px ${colors.primary}44` }}>
-                    {sec?.hero.ctaText || "Shop now"} →
+                    {sec?.hero?.ctaText || "Shop now"} →
                   </button>
                 </div>
                 {!isMobile && (
                   <div style={{ width: "240px", height: "200px", borderRadius: "16px", overflow: "hidden", flexShrink: 0, background: `${colors.primary}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {sec?.hero.imageUrl
+                    {sec?.hero?.imageUrl
                       ? <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       : <div style={{ textAlign: "center", color: colors.primary, opacity: 0.5 }}>
                           <div style={{ fontSize: "32px", marginBottom: "4px" }}>🖼</div>
@@ -659,17 +659,17 @@ export function LivePreview({
                 )}
               </div>
             )}
-            {sec && !sec.hero.enabled && (
+            {sec && !sec.hero?.enabled && (
               <div style={{ background: "#f8fafc", borderBottom: "1px dashed #e2e8f0", padding: "12px 40px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <span style={{ fontSize: "11px", color: "#94a3b8" }}>🖼 Hero section — enable it in the Sections panel</span>
               </div>
             )}
 
             {/* Featured products */}
-            {(sec ? sec.featured.enabled : true) && (
+            {(sec ? sec.featured?.enabled : true) && (
             <div style={{ padding: isMobile ? "24px 16px" : "40px 40px" }}>
               <h2 style={{ fontSize: "18px", fontWeight: 800, color: colors.text, marginBottom: "20px", letterSpacing: "-0.3px" }}>
-                {sec?.featured.title || "Featured products"}
+                {sec?.featured?.title || "Featured products"}
               </h2>
               <div
                 style={{
@@ -736,7 +736,7 @@ export function LivePreview({
               </div>
             </div>
             )}
-            {sec && !sec.featured.enabled && (
+            {sec && !sec.featured?.enabled && (
               <div style={{ background: "#f8fafc", borderTop: "1px dashed #e2e8f0", padding: "12px 40px" }}>
                 <span style={{ fontSize: "11px", color: "#94a3b8" }}>📦 Featured products — enable in Sections panel</span>
               </div>

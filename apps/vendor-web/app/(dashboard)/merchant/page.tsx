@@ -1,4 +1,4 @@
-import OverviewPage from "@/components/merchant/Overview";
+import OverviewPage from "@/components/merchant/overview/Overview";
 import { Suspense } from "react";
 import OverviewSkeleton from "@/components/skeletons/OverviewSkeleton";
 

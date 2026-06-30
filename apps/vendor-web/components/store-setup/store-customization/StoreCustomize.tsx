@@ -6,7 +6,7 @@ import {
   ChevronDown, Eye, Palette, Type, Globe, Image as ImageIcon,
   AlignLeft, Megaphone, Package, Phone, Save, Undo2, Plus, Trash2,
   GripVertical, Layout, Link2, Search, Layers, Mail, MapPin,
-  AtSign, Youtube, Music2, Facebook, Share2, Settings, Hash,
+  Share2,
 } from "lucide-react";
 import {
   LivePreview, COLOR_PRESETS, FONT_PRESETS, FONT_FAMILIES,

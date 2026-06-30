@@ -130,53 +130,7 @@ export default function HomePage({ store, themeConfig, products = [] }: Props) {
         </div>
       </section>
 
-      {/* ── Collections strip — only shows when collections are loaded from API ── */}
-      {false && (
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="mb-7 flex items-baseline justify-between">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--store-primary)]">
-                Curated for you
-              </p>
-              <h2 className="mt-1 text-[22px] font-extrabold tracking-tight text-[var(--store-text)]">
-                Shop by collection
-              </h2>
-            </div>
-            <Link
-              href="/shop"
-              className="text-[13px] font-bold text-[var(--store-primary)] hover:underline"
-            >
-              View all →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {COLLECTIONS.slice(0, 4).map((col, i) => (
-              <Link
-                key={col.id}
-                href={`/collections/${col.slug}`}
-                className="group relative block aspect-[4/5] overflow-hidden rounded-2xl opacity-0 [animation-fill-mode:forwards]"
-                style={{ animation: `fadeUp 0.5s ease forwards ${i * 80}ms` }}
-              >
-                <img
-                  src={col.coverImage}
-                  alt={col.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent transition-opacity duration-300 group-hover:from-black/75" />
-                <div className="absolute inset-x-0 bottom-0 p-4">
-                  <p className="text-[14px] font-bold leading-tight text-white">
-                    {col.name}
-                  </p>
-                  <p className="mt-0.5 text-[10.5px] text-white/70">
-                    {col.productIds.length} items
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Collections strip — re-enable once real collections are wired to this page */}
 
       {/* ── Featured products ────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-16">

@@ -1,5 +1,5 @@
 import { type ProductResp } from "@gomarket/api-client";
-import { fmt } from "@gomarket/shared-utils";
+import { fmtNaira } from "@gomarket/shared-utils";
 import { Package, Star, X } from "lucide-react";
 import { FileUpload } from "@/components/common/FileUpload";
 
@@ -86,14 +86,13 @@ export function ProductPickerRow({
         </div>
         <p className="text-[10px] truncate" style={{ color: "#6b7280" }}>
           {product.category_id ?? ""}
-          {product.hasVariants && ` · ${product.variants?.length} variants`}
         </p>
       </div>
 
       {/* Price + stock */}
       <div className="text-right shrink-0">
         <p className="text-[12px] font-bold" style={{ color: "#1A7A42" }}>
-          {fmt(product.price)}
+          {fmtNaira(product.price_kobo)}
         </p>
         <p
           className="text-[10px]"
@@ -142,7 +141,7 @@ export function SelectedProductPill({
           {product.name}
         </p>
         <p className="text-[10px]" style={{ color: "#6b7280" }}>
-          {fmt(product.price)}
+          {fmtNaira(product.price_kobo)}
         </p>
       </div>
       <button

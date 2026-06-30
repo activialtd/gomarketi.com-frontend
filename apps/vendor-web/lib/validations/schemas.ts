@@ -143,6 +143,18 @@ export const storeInfoSchema = z.object({
   returnPolicy: z.string().optional(),
 });
 
+export const ninSchema = z.object({
+  nin: z
+    .string()
+    .length(11, "NIN must be exactly 11 digits")
+    .regex(/^\d{11}$/, "NIN must contain only numbers"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+});
+
+export type NINValues = z.infer<typeof ninSchema>;
+
 export type BusinessFormValues = z.infer<typeof businessSchema>;
 export type StoreFormValues = z.infer<typeof storeSchema>;
 export type StoreSetupFormValues = z.infer<typeof storeSetupSchema>;

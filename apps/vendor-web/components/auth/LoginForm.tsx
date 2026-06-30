@@ -41,12 +41,19 @@ export function LoginForm() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const resp = await authApi.login({ email: data.email, password: data.password });
+      const resp = await authApi.login({
+        email: data.email,
+        password: data.password,
+      });
       setAuth(resp.user, resp.access_token);
       setAuthSession();
       router.push(ROUTES.MERCHANT.OVERVIEW);
     } catch (err) {
-      setApiError(err instanceof ApiError ? err.message : "Login failed. Please try again.");
+      setApiError(
+        err instanceof ApiError
+          ? err.message
+          : "Login failed. Please try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -166,7 +173,11 @@ export function LoginForm() {
         {apiError && (
           <p
             className="text-[12px] rounded-[8px] px-3 py-2 border"
-            style={{ color: "#dc2626", background: "#fef2f2", borderColor: "#fecaca" }}
+            style={{
+              color: "#dc2626",
+              background: "#fef2f2",
+              borderColor: "#fecaca",
+            }}
           >
             {apiError}
           </p>
@@ -178,14 +189,14 @@ export function LoginForm() {
           disabled={busy}
           className="w-full h-[42px] rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           style={{
-            background: "#1A7A42",
+            background: "#0A2E1A",
             letterSpacing: "0.04em",
             boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
           }}
           onMouseOver={(e) =>
             !busy && (e.currentTarget.style.background = "#239452")
           }
-          onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+          onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
         >
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Sign in"}
         </button>

@@ -1,11 +1,17 @@
 import { Check } from "lucide-react";
 
-export const BRAND = "#1A7A42";
+export const BRAND = "#0A2E1A";
 export const BRAND_LIGHT = "rgba(26,122,66,0.07)";
 export const BORDER = "#e2e8f0";
 
 export const CURRENCIES = [
-  { code: "NGN", symbol: "₦", name: "Nigerian Naira", flag: "🇳🇬", active: true },
+  {
+    code: "NGN",
+    symbol: "₦",
+    name: "Nigerian Naira",
+    flag: "🇳🇬",
+    active: true,
+  },
   { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸", active: true },
 ] as const;
 
@@ -169,4 +175,3 @@ export function FieldLabel({ children }: { children: React.ReactNode }) {
 export function FieldError({ children }: { children: React.ReactNode }) {
   return <p className="text-[11px] text-red-500">{children}</p>;
 }
-

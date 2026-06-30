@@ -5,13 +5,10 @@ import {
   Users,
   BarChart3,
   Wallet,
-  Megaphone,
-  Puzzle,
   Tag,
   RotateCcw,
   UserCheck,
   Globe,
-  CreditCard,
   Receipt,
   Building2,
   Layers,
@@ -106,38 +103,6 @@ export const NAV: NavSection[] = [
     ],
   },
   {
-    title: "Operations",
-    items: [
-      {
-        label: "Sales & Marketing",
-        href: ROUTES.MERCHANT.MARKETING,
-        icon: Megaphone,
-      },
-      {
-        label: "Extensions",
-        href: ROUTES.MERCHANT.EXTENSIONS,
-        icon: Puzzle,
-      },
-    ],
-  },
-  {
-    title: "Finance",
-    items: [
-      {
-        label: "Payouts",
-        href: ROUTES.MERCHANT.PAYOUTS,
-        icon: CreditCard,
-        badge: "New",
-        badgeVariant: "green",
-      },
-      {
-        label: "Invoices",
-        href: ROUTES.MERCHANT.INVOICES,
-        icon: Receipt,
-      },
-    ],
-  },
-  {
     title: "Store Setup",
     items: [
       {
@@ -154,11 +119,6 @@ export const NAV: NavSection[] = [
         label: "Staff & Roles",
         href: ROUTES.MERCHANT.STAFF,
         icon: UserCheck,
-      },
-      {
-        label: "More",
-        href: ROUTES.MERCHANT.MORE,
-        icon: Layers,
       },
     ],
   },
