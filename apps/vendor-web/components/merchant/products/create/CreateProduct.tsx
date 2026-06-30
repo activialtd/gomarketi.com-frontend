@@ -78,10 +78,22 @@ export default function CreateProductPage({ productId }: { productId?: string })
   useEffect(() => {
     if (!productId || !accessToken) return;
     let cancelled = false;
-    catalogueApi
-      .getProduct(productId, accessToken)
-      .then((p) => {
-        if (cancelled) return;
+    (async () => {
+      let p;
+      try {
+        p = await catalogueApi.getProduct(productId, accessToken);
+      } catch (err) {
+        if (!cancelled) {
+          const message = err instanceof ApiError ? err.message : "Could not load this product. It may have been deleted.";
+          // eslint-disable-next-line no-console
+          console.error("Failed to load product for editing:", err);
+          setLoadError(message);
+          setLoadingProduct(false);
+        }
+        return;
+      }
+      if (cancelled) return;
+      try {
         setImages(p.images ?? []);
         reset({
           name: p.name,
@@ -96,13 +108,14 @@ export default function CreateProductPage({ productId }: { productId?: string })
           hasVariants: false,
           featured: false,
         });
-      })
-      .catch(() => {
-        if (!cancelled) setLoadError("Could not load this product. It may have been deleted.");
-      })
-      .finally(() => {
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Product loaded but failed to populate the form:", err);
+        if (!cancelled) setLoadError("This product loaded but couldn't be displayed. Please try again.");
+      } finally {
         if (!cancelled) setLoadingProduct(false);
-      });
+      }
+    })();
     return () => {
       cancelled = true;
     };
