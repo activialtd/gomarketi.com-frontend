@@ -775,296 +775,182 @@ export function LivePreview({
         )}
 
         {template === "lagos" && (
-          <div style={{ background: "#fff", minHeight: "600px" }}>
-            {/* Minimal nav */}
-            <nav
-              style={{
-                padding: "0 32px",
-                height: "52px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderBottom: "1px solid #f1f5f9",
-              }}
-            >
-              <span
-                style={{
-                  fontWeight: 900,
-                  fontSize: "20px",
-                  letterSpacing: "-0.5px",
-                  color: colors.primary,
-                }}
-              >
+          <div style={{ background: "#0E0E0E", color: "#F7F4EE", minHeight: "600px" }}>
+            {/* Nav — matches LagosLayout exactly */}
+            <nav style={{
+              padding: "0 32px", height: "56px",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+            }}>
+              <span style={{
+                fontWeight: 600, fontSize: "16px", letterSpacing: "-0.3px",
+                color: "#F7F4EE", fontFamily: "'Playfair Display', Georgia, serif",
+              }}>
                 {storeName}
               </span>
               {!isMobile && (
-                <div style={{ display: "flex", gap: "28px" }}>
-                  {["Women", "Men", "Kids", "Sale"].map((l) => (
-                    <span
-                      key={l}
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "#374151",
-                        cursor: "pointer",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      {l}
+                <div style={{ display: "flex", gap: "24px" }}>
+                  {(sec?.nav?.items?.length ? sec.nav.items : [{ label: "Shop" }, { label: "Collections" }]).slice(0, 4).map((item) => (
+                    <span key={item.label} style={{
+                      fontSize: "11px", fontWeight: 500, color: "rgba(247,244,238,0.6)",
+                      cursor: "pointer", letterSpacing: "0.08em", textTransform: "uppercase",
+                    }}>
+                      {item.label}
                     </span>
                   ))}
                 </div>
               )}
-              <button
-                style={{
-                  background: colors.primary,
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "7px 16px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Bag (0)
+              <button style={{
+                background: "transparent", color: "#F7F4EE",
+                border: "1px solid rgba(247,244,238,0.2)", borderRadius: 0,
+                padding: "7px 14px", fontSize: "10px", fontWeight: 600,
+                letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer",
+              }}>
+                Bag
               </button>
             </nav>
 
-            {/* Full-bleed hero */}
-            <div style={{ position: "relative", overflow: "hidden" }}>
-              <img
-                src={mockProducts[1].img}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: isMobile ? "220px" : "320px",
-                  objectFit: "cover",
-                  objectPosition: "center 30%",
-                  display: "block",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.45)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "20px",
-                }}
-              >
-                <p
-                  style={{
-                    color: "rgba(255,255,255,0.7)",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    letterSpacing: "0.2em",
-                    textTransform: "uppercase",
-                    marginBottom: "10px",
-                  }}
-                >
-                  Now available
-                </p>
-                <h1
-                  style={{
-                    fontSize: isMobile ? "24px" : "40px",
-                    fontWeight: 900,
-                    color: "#fff",
-                    letterSpacing: "-0.5px",
-                    textAlign: "center",
-                    marginBottom: "16px",
-                    lineHeight: 1.1,
-                    textShadow: "0 2px 12px rgba(0,0,0,0.4)",
-                  }}
-                >
-                  {headline}
-                </h1>
-                <button
-                  style={{
-                    background: "#fff",
-                    color: colors.primary,
-                    border: "none",
-                    borderRadius: "10px",
-                    padding: "12px 32px",
-                    fontSize: "13px",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
-                >
-                  Explore collection
-                </button>
-              </div>
-            </div>
-
-            {/* Collections strip */}
-            {!isMobile && (
-              <div
-                style={{
-                  padding: "32px 32px 0",
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "12px",
-                }}
-              >
-                {[
-                  { label: "Women's wear", img: mockProducts[0].img },
-                  { label: "Men's wear", img: mockProducts[3].img },
-                  { label: "Accessories", img: mockProducts[4].img },
-                ].map((c) => (
-                  <div
-                    key={c.label}
-                    style={{
-                      position: "relative",
-                      borderRadius: "10px",
-                      overflow: "hidden",
-                      aspectRatio: "4/3",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <img
-                      src={c.img}
-                      alt=""
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "rgba(0,0,0,0.3)",
-                        display: "flex",
-                        alignItems: "flex-end",
-                        padding: "14px",
-                      }}
-                    >
-                      <p
-                        style={{
-                          color: "#fff",
-                          fontWeight: 800,
-                          fontSize: "14px",
-                        }}
-                      >
-                        {c.label}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            {/* Announcement bar */}
+            {sec?.announcement?.enabled && (
+              <div style={{
+                background: sec.announcement.bgColor || "#1A1A1A",
+                color: sec.announcement.textColor || "#fff",
+                padding: "7px 24px", fontSize: "11px", fontWeight: 600, textAlign: "center",
+              }}>
+                {sec.announcement.text || "Free delivery on orders above ₦20,000"}
               </div>
             )}
 
-            {/* Products */}
-            <div style={{ padding: isMobile ? "24px 16px" : "32px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "20px",
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 800,
-                    color: colors.text,
-                    letterSpacing: "-0.3px",
-                  }}
-                >
-                  New arrivals
-                </h2>
-                <span
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: colors.primary,
-                    cursor: "pointer",
-                  }}
-                >
-                  See all →
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile
-                    ? "repeat(2, 1fr)"
-                    : "repeat(4, 1fr)",
-                  gap: "12px",
-                }}
-              >
-                {mockProducts.slice(0, 4).map((p) => (
-                  <div
-                    key={p.name}
-                    style={{
-                      borderRadius: "10px",
-                      overflow: "hidden",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div
-                      style={{
-                        aspectRatio: "3/4",
-                        overflow: "hidden",
-                        background: colors.bg,
-                      }}
-                    >
-                      <img
-                        src={p.img}
-                        alt=""
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    </div>
-                    <p
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: colors.text,
-                        marginTop: "8px",
-                      }}
-                    >
-                      {p.name}
+            {/* Hero — split layout, matches LagosHome exactly */}
+            {(sec ? sec.hero?.enabled : true) && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr",
+                gap: isMobile ? "20px" : "32px",
+                padding: isMobile ? "32px 20px" : "48px 32px",
+                alignItems: "stretch",
+              }}>
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  {sec?.hero?.eyebrow && (
+                    <p style={{
+                      fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em",
+                      textTransform: "uppercase", color: colors.primary, marginBottom: "10px",
+                    }}>
+                      {sec.hero.eyebrow}
                     </p>
-                    <p
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: 800,
-                        color: colors.primary,
-                      }}
-                    >
-                      {p.price}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  )}
+                  <h1 style={{
+                    fontSize: isMobile ? "30px" : "44px", fontWeight: 600,
+                    lineHeight: 0.98, letterSpacing: "-0.5px", color: "#F7F4EE",
+                    fontFamily: "'Playfair Display', Georgia, serif", marginBottom: "16px",
+                  }}>
+                    {sec?.hero?.headline || headline || "Welcome to our store"}
+                  </h1>
+                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(247,244,238,0.55)", marginBottom: "22px", maxWidth: "320px" }}>
+                    {sec?.hero?.subheadline || subheadline || "Discover amazing products."}
+                  </p>
+                  <button style={{
+                    background: "transparent", color: "#F7F4EE",
+                    border: "1px solid #F7F4EE", borderRadius: 0,
+                    padding: "12px 24px", fontSize: "11px", fontWeight: 600,
+                    letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", alignSelf: "flex-start",
+                  }}>
+                    {sec?.hero?.ctaText || "Explore the edit"} →
+                  </button>
+                </div>
 
-            {/* Footer */}
-            <div
-              style={{
-                background: colors.bg,
-                padding: "20px 32px",
-                marginTop: "12px",
-                borderTop: "1px solid #f1f5f9",
-              }}
-            >
-              <p
-                style={{
-                  color: "#94a3b8",
-                  fontSize: "11px",
-                  textAlign: "center",
-                }}
-              >
-                © 2026 {storeName} · Powered by GoMarket
+                <div style={{ position: "relative", aspectRatio: "4/5", overflow: "hidden" }}>
+                  {sec?.hero?.imageUrl ? (
+                    <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{
+                      width: "100%", height: "100%", background: "#1a1a1a",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px",
+                    }}>
+                      <span style={{ fontSize: "28px", opacity: 0.2 }}>🖼</span>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Hero image</p>
+                    </div>
+                  )}
+                  <div style={{ position: "absolute", inset: "10px", border: "1px solid rgba(255,255,255,0.2)", pointerEvents: "none" }} />
+                </div>
+              </div>
+            )}
+            {sec && !sec.hero?.enabled && (
+              <div style={{ padding: "12px 32px", textAlign: "center" }}>
+                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>🖼 Hero section — enable it in the Sections panel</span>
+              </div>
+            )}
+
+            {/* Featured products — matches LagosProductCard styling */}
+            {(sec ? sec.featured?.enabled : true) && (
+              <div style={{ padding: isMobile ? "8px 20px 32px" : "8px 32px 48px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "20px" }}>
+                  <h2 style={{
+                    fontSize: "20px", fontWeight: 600, color: "#F7F4EE",
+                    fontFamily: "'Playfair Display', Georgia, serif", letterSpacing: "-0.3px",
+                  }}>
+                    {sec?.featured?.title || "New arrivals"}
+                  </h2>
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: "rgba(247,244,238,0.5)", textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}>
+                    Shop all →
+                  </span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "10px" }}>
+                  {mockProducts.slice(0, 4).map((p) => (
+                    <div key={p.name} style={{ position: "relative", aspectRatio: "3/4", overflow: "hidden", background: "#1A1A1A", cursor: "pointer" }}>
+                      <img src={p.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <div style={{ position: "absolute", top: "10px", right: "10px" }}>
+                        <span style={{ background: "#F7F4EE", color: "#0E0E0E", padding: "4px 9px", fontSize: "10px", fontWeight: 700 }}>
+                          {p.price}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {sec && !sec.featured?.enabled && (
+              <div style={{ padding: "12px 32px 32px", textAlign: "center" }}>
+                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>📦 Featured products — enable in Sections panel</span>
+              </div>
+            )}
+
+            {/* WhatsApp CTA band — matches LagosHome */}
+            {sec?.ctaBand?.enabled && (
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "40px 32px", textAlign: "center" }}>
+                <h3 style={{
+                  fontSize: "18px", fontWeight: 600, color: "#F7F4EE",
+                  fontFamily: "'Playfair Display', Georgia, serif", marginBottom: "14px", maxWidth: "320px", margin: "0 auto 14px",
+                }}>
+                  {sec.ctaBand.headline || `${storeName} replies on WhatsApp, usually within minutes.`}
+                </h3>
+                <button style={{
+                  background: colors.primary, color: "#fff", border: "none",
+                  padding: "11px 22px", fontSize: "11px", fontWeight: 700,
+                  letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer",
+                }}>
+                  {sec.ctaBand.btnText || "Message us"}
+                </button>
+              </div>
+            )}
+
+            {/* Footer — matches LagosLayout footer */}
+            <div style={{ background: "#0A0A0A", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "28px 32px" }}>
+              <p style={{
+                fontSize: "16px", fontWeight: 600, color: "#F7F4EE",
+                fontFamily: "'Playfair Display', Georgia, serif", marginBottom: sec?.footer?.tagline ? "6px" : "0",
+              }}>
+                {storeName}
+              </p>
+              {sec?.footer?.tagline && (
+                <p style={{ fontSize: "11px", color: "rgba(247,244,238,0.45)", maxWidth: "240px", marginBottom: "14px" }}>
+                  {sec.footer.tagline}
+                </p>
+              )}
+              <p style={{ fontSize: "10px", color: "rgba(247,244,238,0.3)", marginTop: "14px" }}>
+                {sec?.footer?.copyright || `© 2026 ${storeName}`}
+                {sec?.footer?.showPoweredBy !== false && " · Powered by GoMarketi"}
               </p>
             </div>
           </div>
