@@ -161,13 +161,15 @@ export interface OrderItem {
   price_kobo: number;
 }
 
+export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+
 export interface OrderResp {
   id: string;
   store_id: string;
   customer_id: string;
   customer_name: string;
   customer_email: string;
-  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+  status: OrderStatus;
   items: OrderItem[];
   total_kobo: number;
   delivery_address: string;
@@ -188,6 +190,85 @@ export interface AnalyticsOverviewResp {
   total_customers: number;
   pending_orders: number;
   low_stock_products: number;
+}
+
+export interface CreateOrderItem {
+  product_id: string;
+  name: string;
+  image_url?: string;
+  quantity: number;
+  price_kobo: number;
+}
+
+export interface CreateOrderReq {
+  store_id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  delivery_address?: string;
+  items: CreateOrderItem[];
+  payment_reference: string;
+}
+
+export interface AbandonedCartResp {
+  id: string;
+  store_id: string;
+  customer_id?: string;
+  customer_email?: string;
+  items: OrderItem[];
+  total_kobo: number;
+  abandoned_at: string;
+}
+
+export interface CustomerResp {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  total_orders: number;
+  total_spent_kobo: number;
+  last_order_at?: string;
+}
+
+export interface CustomerListResp {
+  customers: CustomerResp[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export interface WalletTransactionResp {
+  id: string;
+  type: "credit" | "debit";
+  amount_kobo: number;
+  description: string;
+  reference?: string;
+  status: string;
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
+  created_at: string;
+}
+
+export interface WalletResp {
+  balance_kobo: number;
+  total_earned_kobo: number;
+  transactions: WalletTransactionResp[];
+}
+
+export interface WithdrawReq {
+  amount_kobo: number;
+  bank_name: string;
+  account_number: string;
+  account_name: string;
+}
+
+export interface TopProductResp {
+  product_id: string;
+  name: string;
+  image_url?: string;
+  units_sold: number;
+  revenue_kobo: number;
 }
 
 // ── Error class ────────────────────────────────────────────────────────────────
@@ -476,16 +557,30 @@ export const ordersApi = {
     if (params.page) qs.set("page", String(params.page));
     if (params.per_page) qs.set("per_page", String(params.per_page));
     if (params.status) qs.set("status", params.status);
-    if (params.q) qs.set("q", params.q);
+    if (params.q) qs.set("search", params.q); // backend query param is `search`, not `q`
     return request<OrderListResp>(`/v1/orders?${qs}`, {}, token);
   },
 
-  updateOrderStatus: (id: string, status: string, token: string) =>
+  getOrder: (id: string, token: string) =>
+    request<OrderResp>(`/v1/orders/${id}`, {}, token),
+
+  updateOrderStatus: (id: string, status: OrderStatus, token: string) =>
     request<OrderResp>(
       `/v1/orders/${id}/status`,
       { method: "PATCH", body: JSON.stringify({ status }) },
       token,
     ),
+
+  // No auth — called directly from the storefront checkout after payment succeeds.
+  createOrder: (data: CreateOrderReq) =>
+    request<OrderResp>("/v1/orders/public", { method: "POST", body: JSON.stringify(data) }),
+
+  listAbandonedCarts: (params: { page?: number; per_page?: number }, token: string) => {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set("page", String(params.page));
+    if (params.per_page) qs.set("per_page", String(params.per_page));
+    return request<{ carts: AbandonedCartResp[] }>(`/v1/orders/abandoned?${qs}`, {}, token);
+  },
 };
 
 // ── Analytics API ──────────────────────────────────────────────────────────────
@@ -493,4 +588,33 @@ export const ordersApi = {
 export const analyticsApi = {
   getOverview: (token: string) =>
     request<AnalyticsOverviewResp>("/v1/analytics/overview", {}, token),
+
+  getTopProducts: (limit: number, token: string) =>
+    request<{ products: TopProductResp[] }>(`/v1/analytics/top-products?limit=${limit}`, {}, token)
+      .then((r) => r.products),
+};
+
+// ── CRM / Customers API ───────────────────────────────────────────────────────
+
+export const crmApi = {
+  listCustomers: (params: { page?: number; per_page?: number; q?: string }, token: string) => {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set("page", String(params.page));
+    if (params.per_page) qs.set("per_page", String(params.per_page));
+    if (params.q) qs.set("search", params.q);
+    return request<CustomerListResp>(`/v1/crm/customers?${qs}`, {}, token);
+  },
+
+  getCustomer: (id: string, token: string) =>
+    request<CustomerResp>(`/v1/crm/customers/${id}`, {}, token),
+};
+
+// ── Wallet API ─────────────────────────────────────────────────────────────────
+
+export const walletApi = {
+  getBalance: (token: string) =>
+    request<WalletResp>("/v1/wallet/balance", {}, token),
+
+  withdraw: (data: WithdrawReq, token: string) =>
+    request<WalletResp>("/v1/wallet/withdraw", { method: "POST", body: JSON.stringify(data) }, token),
 };

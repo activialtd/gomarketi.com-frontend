@@ -1,4 +1,4 @@
-import { Product, COLLECTIONS, PRODUCTS } from "@/lib/data/products";
+import { Product } from "@/lib/data/products";
 import { PRODUCTS_STATUS_CONFIG, fmt } from "@gomarket/shared-utils";
 import {
   MoreHorizontal,
@@ -11,8 +11,12 @@ import {
   Download,
   Plus,
   Layers,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
+import { type CollectionResp } from "@gomarket/api-client";
+import { ROUTES } from "@/lib/config/routes";
 
 export function StatCard({
   label,
@@ -335,18 +339,19 @@ export function ProductRow({
 
       {/* Thumbnail */}
       <div
-        className="w-10 h-10 rounded-[8px] overflow-hidden shrink-0"
-        style={{ background: "#F0FAF3" }}
+        className="w-12 h-12 rounded-[8px] overflow-hidden shrink-0 border"
+        style={{ background: "#F0FAF3", borderColor: "#e2e8f0" }}
       >
         {product.images[0] ? (
           <img
             src={product.images[0]}
-            alt=""
+            alt={product.name}
+            loading="lazy"
             className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Package className="w-4 h-4" style={{ color: "#a7f3d0" }} />
+            <Package className="w-5 h-5" style={{ color: "#a7f3d0" }} />
           </div>
         )}
       </div>
@@ -473,10 +478,25 @@ export function EmptyProducts() {
 
 // ─── Collections Tab ──────────────────────────────────────────────────────────
 
-export function CollectionsTab() {
+export function CollectionsTab({
+  collections,
+  loading,
+}: {
+  collections: CollectionResp[];
+  loading: boolean;
+}) {
   const [hovered, setHovered] = useState<string | null>(null);
 
-  if (COLLECTIONS.length === 0) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 gap-2" style={{ color: "#94a3b8" }}>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span className="text-[13px]">Loading collections…</span>
+      </div>
+    );
+  }
+
+  if (collections.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div
@@ -491,12 +511,13 @@ export function CollectionsTab() {
         <p className="text-[13px] mb-5" style={{ color: "#6b7280" }}>
           Group products together for easier browsing.
         </p>
-        <button
+        <Link
+          href={ROUTES.MERCHANT.COLLECTIONS_NEW}
           className="flex items-center gap-2 px-5 h-10 rounded-[10px] text-white text-[13px] font-bold"
           style={{ background: "#1A7A42" }}
         >
           <Plus className="w-4 h-4" /> Create collection
-        </button>
+        </Link>
       </div>
     );
   }
@@ -505,10 +526,11 @@ export function CollectionsTab() {
     <div>
       <div className="flex items-center justify-between mb-5">
         <p className="text-[13px]" style={{ color: "#6b7280" }}>
-          <strong style={{ color: "#1C1C1C" }}>{COLLECTIONS.length}</strong>{" "}
-          collections
+          <strong style={{ color: "#1C1C1C" }}>{collections.length}</strong>{" "}
+          collection{collections.length !== 1 ? "s" : ""}
         </p>
-        <button
+        <Link
+          href={ROUTES.MERCHANT.COLLECTIONS_NEW}
           className="flex items-center gap-2 px-4 h-9 rounded-[8px] text-white text-[12px] font-bold transition-all"
           style={{
             background: "#1A7A42",
@@ -518,16 +540,12 @@ export function CollectionsTab() {
           onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
         >
           <Plus className="w-3.5 h-3.5" /> New collection
-        </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {COLLECTIONS.map((col) => {
-          const productCount = col.productIds.length;
-          const previews = col.productIds
-            .slice(0, 3)
-            .map((id) => PRODUCTS.find((p) => p.id === id))
-            .filter(Boolean) as typeof PRODUCTS;
+        {collections.map((col) => {
+          const productCount = col.product_ids?.length ?? 0;
 
           return (
             <div
@@ -542,42 +560,18 @@ export function CollectionsTab() {
             >
               {/* Cover image */}
               <div
-                className="relative h-[120px] overflow-hidden"
+                className="relative h-[120px] overflow-hidden flex items-center justify-center"
                 style={{ background: "#F0FAF3" }}
               >
-                {col.coverImage ? (
+                {col.image_url ? (
                   <img
-                    src={col.coverImage}
+                    src={col.image_url}
                     alt={col.name}
                     className="w-full h-full object-cover"
                   />
-                ) : null}
-                {/* Product thumbnail strip */}
-                <div className="absolute bottom-2 left-2 flex gap-1">
-                  {previews.map((p) => (
-                    <div
-                      key={p.id}
-                      className="w-8 h-8 rounded-[6px] overflow-hidden border-2 border-white"
-                      style={{ background: "#e2e8f0" }}
-                    >
-                      {p.images[0] && (
-                        <img
-                          src={p.images[0]}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                      )}
-                    </div>
-                  ))}
-                  {productCount > 3 && (
-                    <div
-                      className="w-8 h-8 rounded-[6px] border-2 border-white flex items-center justify-center text-[9px] font-bold"
-                      style={{ background: "#1A7A42", color: "#fff" }}
-                    >
-                      +{productCount - 3}
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <Layers className="w-7 h-7" style={{ color: "#a7f3d0" }} />
+                )}
               </div>
 
               {/* Info */}
@@ -590,19 +584,15 @@ export function CollectionsTab() {
                     >
                       {col.name}
                     </p>
-                    <p
-                      className="text-[11px] mt-0.5 line-clamp-2 leading-relaxed"
-                      style={{ color: "#6b7280" }}
-                    >
-                      {col.description}
-                    </p>
+                    {col.description && (
+                      <p
+                        className="text-[11px] mt-0.5 line-clamp-2 leading-relaxed"
+                        style={{ color: "#6b7280" }}
+                      >
+                        {col.description}
+                      </p>
+                    )}
                   </div>
-                  <button className="p-1 rounded-[5px] hover:bg-[#F0FAF3] transition-colors ml-1 shrink-0">
-                    <MoreHorizontal
-                      className="w-3.5 h-3.5"
-                      style={{ color: "#94a3b8" }}
-                    />
-                  </button>
                 </div>
                 <div
                   className="flex items-center justify-between mt-2.5 pt-2 border-t"
@@ -616,9 +606,12 @@ export function CollectionsTab() {
                   </span>
                   <span
                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: "#F0FAF3", color: "#1A7A42" }}
+                    style={{
+                      background: col.is_published ? "#F0FAF3" : "#fef3c7",
+                      color: col.is_published ? "#1A7A42" : "#92400e",
+                    }}
                   >
-                    Active
+                    {col.is_published ? "Published" : "Draft"}
                   </span>
                 </div>
               </div>

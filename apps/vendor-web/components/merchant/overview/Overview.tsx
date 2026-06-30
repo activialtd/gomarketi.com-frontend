@@ -37,9 +37,11 @@ import {
   analyticsApi,
   ordersApi,
   storefrontApi,
+  walletApi,
   type AnalyticsOverviewResp,
   type OrderResp,
   type StoreResp,
+  type WalletResp,
 } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ORDER_STATUS_CONFIG } from "@gomarket/shared-utils";
@@ -206,6 +208,7 @@ export default function OverviewPage() {
   const [recentOrders, setRecentOrders] = useState<OrderResp[]>([]);
   const [loading, setLoading] = useState(true);
   const [store, setStore] = useState<StoreResp | null>(null);
+  const [wallet, setWallet] = useState<WalletResp | null>(null);
 
   const accountNumber = "9740176746";
   const storefrontUrl = store ? `http://${store.slug}.${STORE_DOMAIN}` : null;
@@ -216,15 +219,17 @@ export default function OverviewPage() {
     async function load() {
       setLoading(true);
       try {
-        const [ov, ol, st] = await Promise.allSettled([
+        const [ov, ol, st, wl] = await Promise.allSettled([
           analyticsApi.getOverview(accessToken!),
           ordersApi.listOrders({ per_page: 5 }, accessToken!),
           storefrontApi.getMyStore(accessToken!),
+          walletApi.getBalance(accessToken!),
         ]);
         if (cancelled) return;
         if (ov.status === "fulfilled") setAnalytics(ov.value);
         if (ol.status === "fulfilled") setRecentOrders(ol.value.orders);
         if (st.status === "fulfilled") setStore(st.value);
+        if (wl.status === "fulfilled") setWallet(wl.value);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -407,12 +412,13 @@ export default function OverviewPage() {
                   GoMarket Wallet
                 </span>
               </div>
-              <span
-                className="text-[10px] font-bold px-2 py-1 rounded-full"
-                style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24" }}
+              <Link
+                href={ROUTES.MERCHANT.WALLET}
+                className="text-[10px] font-bold px-2 py-1 rounded-full no-underline"
+                style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}
               >
-                Coming soon
-              </span>
+                View wallet
+              </Link>
             </div>
 
             <div>
@@ -424,18 +430,10 @@ export default function OverviewPage() {
               </p>
               <p
                 className="text-[30px] font-extrabold text-white leading-none"
-                style={{ letterSpacing: "-0.8px", opacity: 0.4 }}
+                style={{ letterSpacing: "-0.8px" }}
               >
-                ₦ — —
+                {wallet ? koboToNaira(wallet.balance_kobo) : "₦ — —"}
               </p>
-              <div className="flex items-center gap-1.5 mt-2">
-                <span
-                  className="text-[11px]"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
-                >
-                  Wallet payouts launch soon
-                </span>
-              </div>
             </div>
 
             {/* Total earnings stat */}
@@ -455,20 +453,8 @@ export default function OverviewPage() {
                     className="text-[18px] font-extrabold text-white mt-0.5"
                     style={{ letterSpacing: "-0.4px" }}
                   >
-                    {analytics
-                      ? koboToNaira(analytics.total_revenue_kobo)
-                      : "—"}
+                    {wallet ? koboToNaira(wallet.total_earned_kobo) : "—"}
                   </p>
-                </div>
-                <div
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                  style={{
-                    background: "rgba(34,197,94,0.15)",
-                    color: "#86efac",
-                  }}
-                >
-                  <TrendingUp className="w-3 h-3" />
-                  +18.4%
                 </div>
               </div>
             </div>
