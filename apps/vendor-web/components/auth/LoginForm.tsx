@@ -13,6 +13,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
+import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -28,6 +29,7 @@ export function LoginForm() {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const { signIn: googleSignIn, configured: googleConfigured } = useGoogleAuth();
 
   const {
     register,
@@ -61,9 +63,26 @@ export function LoginForm() {
 
   async function handleOAuth(provider: string) {
     setOauthLoading(provider);
-    await new Promise((r) => setTimeout(r, 800));
-    setOauthLoading(null);
-    router.push(ROUTES.MERCHANT.OVERVIEW);
+    setApiError(null);
+    try {
+      if (provider === "google") {
+        const result = await googleSignIn();
+        const resp = await authApi.googleAuth(result.credential);
+        setAuth(resp.user, resp.access_token);
+        setAuthSession();
+        router.push(ROUTES.MERCHANT.OVERVIEW);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message !== "one_tap_unavailable") {
+        setApiError(
+          err instanceof ApiError
+            ? err.message
+            : `${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`
+        );
+      }
+    } finally {
+      setOauthLoading(null);
+    }
   }
 
   return (

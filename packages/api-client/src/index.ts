@@ -378,6 +378,19 @@ export const authApi = {
     request<AuthResp>("/v1/auth/token/refresh", { method: "POST" }),
 
   logout: () => request<void>("/v1/auth/logout", { method: "POST" }),
+
+  // OAuth — backend validates the id_token against Google/Apple JWKS
+  googleAuth: (id_token: string) =>
+    request<AuthResp>("/v1/auth/oauth/google", {
+      method: "POST",
+      body: JSON.stringify({ id_token }),
+    }),
+
+  appleAuth: (id_token: string, first_name?: string, last_name?: string) =>
+    request<AuthResp>("/v1/auth/oauth/apple", {
+      method: "POST",
+      body: JSON.stringify({ id_token, first_name, last_name }),
+    }),
 };
 
 // ── Upload API ─────────────────────────────────────────────────────────────────
