@@ -317,9 +317,10 @@ export function AnimatedShield({ filled }: { filled: boolean }) {
 
 // ─── Step NIN ─────────────────────────────────────────────────────────────────
 
-export function StepNIN({ onNext }: { onNext: () => void }) {
+export function StepNIN({ onNext, onVerify }: { onNext: () => void; onVerify?: (nin: string) => Promise<void> }) {
   const formRef = useRef<HTMLDivElement>(null);
   const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
   const [ninVisible, setNinVisible] = useState(false);
   const {
     register,
@@ -343,11 +344,21 @@ export function StepNIN({ onNext }: { onNext: () => void }) {
     );
   }, []);
 
-  async function onSubmit() {
+  async function onSubmit(data: NINValues) {
     setVerifying(true);
-    await new Promise((r) => setTimeout(r, 1800));
-    setVerifying(false);
-    onNext();
+    setVerifyError("");
+    try {
+      if (onVerify) {
+        await onVerify(data.nin);
+      } else {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+      onNext();
+    } catch {
+      setVerifyError("Verification failed. Please check your NIN and try again.");
+    } finally {
+      setVerifying(false);
+    }
   }
 
   return (
@@ -465,6 +476,9 @@ export function StepNIN({ onNext }: { onNext: () => void }) {
           )}
         </button>
       </div>
+      {verifyError && (
+        <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>{verifyError}</p>
+      )}
       <p
         data-field
         className="text-center text-[11px]"
@@ -479,9 +493,10 @@ export function StepNIN({ onNext }: { onNext: () => void }) {
 
 // ─── Step CAC ─────────────────────────────────────────────────────────────────
 
-export function StepCAC({ onNext }: { onNext: () => void }) {
+export function StepCAC({ onNext, onVerify }: { onNext: () => void; onVerify?: (cac_number: string) => Promise<void> }) {
   const formRef = useRef<HTMLDivElement>(null);
   const [verifying, setVerifying] = useState(false);
+  const [verifyError, setVerifyError] = useState("");
   const {
     register,
     handleSubmit,
@@ -504,11 +519,21 @@ export function StepCAC({ onNext }: { onNext: () => void }) {
     );
   }, []);
 
-  async function onSubmit() {
+  async function onSubmit(data: CACValues) {
     setVerifying(true);
-    await new Promise((r) => setTimeout(r, 1600));
-    setVerifying(false);
-    onNext();
+    setVerifyError("");
+    try {
+      if (onVerify) {
+        await onVerify(data.rcNumber);
+      } else {
+        await new Promise((r) => setTimeout(r, 1600));
+      }
+      onNext();
+    } catch {
+      setVerifyError("CAC verification failed. Please check your RC number.");
+    } finally {
+      setVerifying(false);
+    }
   }
 
   return (
@@ -866,14 +891,15 @@ export function StepSuccess({
             ),
           )}
         </div>
-        <div data-line className="pt-4">
-          <Link
-            href={ROUTES.MERCHANT.SETTINGS}
+        <div data-line className="pt-4 flex gap-3 justify-center">
+          <button
+            type="button"
+            onClick={onDone}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-[10px] text-white text-[13px] font-bold hover:opacity-90 transition-all"
             style={{ background: "#0A2E1A" }}
           >
-            Back to settings <ChevronRight className="w-4 h-4" />
-          </Link>
+            Continue to dashboard <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

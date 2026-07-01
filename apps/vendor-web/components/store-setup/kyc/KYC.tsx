@@ -13,6 +13,9 @@ import {
   Building2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { identityApi } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 import {
   StepIndicator,
@@ -177,11 +180,37 @@ const TIER2_STEPS = ["NIN", "Complete"];
 const TIER3_STEPS = ["CAC", "Bank Statement", "Complete"];
 
 export default function KYCPage() {
-  // In production, fetch the actual completed tiers from the API.
-  // completedTiers: [1] = only free tier done, [1,2] = identity verified, etc.
+  const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   const [completedTiers, setCompletedTiers] = useState<KycTier[]>([1]);
   const [activeTier, setActiveTier] = useState<KycTier | null>(null);
   const [step, setStep] = useState(0);
+
+  // Load current KYC status
+  useEffect(() => {
+    if (!accessToken) return;
+    identityApi.getVendorProfile(accessToken).then((p) => {
+      const done: KycTier[] = [1];
+      if (p.has_nin || p.has_bvn) done.push(2);
+      if (p.cac_number) done.push(3);
+      setCompletedTiers(done);
+    }).catch(() => {});
+  }, [accessToken]);
+
+  async function verifyNIN(nin: string) {
+    if (!accessToken) return;
+    await identityApi.submitKYC({ nin }, accessToken);
+  }
+
+  async function verifyCAC(cac_number: string) {
+    if (!accessToken) return;
+    await identityApi.submitKYC({ cac_number }, accessToken);
+  }
+
+  function skipKYC() {
+    router.push(ROUTES.MERCHANT.OVERVIEW);
+  }
 
   const tiers = getTiers(completedTiers);
 
@@ -261,6 +290,8 @@ export default function KYCPage() {
       setCompletedTiers((prev) => [...prev, activeTier] as KycTier[]);
     setActiveTier(null);
     setStep(0);
+    // Redirect to dashboard after completing any tier
+    router.push(ROUTES.MERCHANT.OVERVIEW);
     // Animate tiers back in
     setTimeout(() => {
       if (tiersRef.current) {
@@ -321,6 +352,21 @@ export default function KYCPage() {
               <TierCard tier={tier} onStart={handleStartTier} />
             </div>
           ))}
+
+          {/* Skip KYC */}
+          <button
+            type="button"
+            onClick={skipKYC}
+            className="w-full py-3 text-[13px] font-semibold transition-colors rounded-[10px] border"
+            style={{ borderColor: "#e2e8f0", color: "#6b7280", background: "#fafafa" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#fafafa")}
+          >
+            Skip verification for now — go to dashboard →
+          </button>
+          <p className="text-center text-[11px]" style={{ color: "#94a3b8" }}>
+            You can always complete verification later from Settings.
+          </p>
         </div>
       )}
 
@@ -370,7 +416,7 @@ export default function KYCPage() {
                 <p className="text-[12.5px] mb-5" style={{ color: "#6b7280" }}>
                   Verify your identity with the NIMC database in real time.
                 </p>
-                <StepNIN onNext={nextStep} />
+                <StepNIN onNext={nextStep} onVerify={verifyNIN} />
               </>
             )}
             {activeTier === 2 && isSuccessStep && (
@@ -390,7 +436,7 @@ export default function KYCPage() {
                   Verify your business registration with the Corporate Affairs
                   Commission.
                 </p>
-                <StepCAC onNext={nextStep} />
+                <StepCAC onNext={nextStep} onVerify={verifyCAC} />
               </>
             )}
             {activeTier === 3 && step === 1 && (

@@ -63,6 +63,13 @@ export const storeSetupSchema = z.object({
   teamSize: z.string().optional(),
 
   businessPhone: z.string().optional(),
+
+  // Address (optional — can be set later in Store Information)
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 const variantOptionSchema = z.object({

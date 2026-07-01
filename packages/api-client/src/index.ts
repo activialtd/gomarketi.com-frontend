@@ -621,3 +621,88 @@ export const walletApi = {
   withdraw: (data: WithdrawReq, token: string) =>
     request<WalletResp>("/v1/wallet/withdraw", { method: "POST", body: JSON.stringify(data) }, token),
 };
+
+// ── Identity / Plans API ───────────────────────────────────────────────────────
+
+export interface PlanResp {
+  id: string;
+  slug: string;
+  display_name: string;
+  description: string;
+  price_kobo: number;
+  billing_cycle: string;
+  product_limit: number;
+  store_limit: number;
+  team_limit: number;
+  features: string[];
+  sort_order: number;
+}
+
+export interface SubscriptionResp {
+  id: string;
+  plan_id: string;
+  plan: PlanResp;
+  status: string;
+  payment_reference?: string;
+  current_period_start: string;
+  current_period_end?: string;
+}
+
+export const identityApi = {
+  listPlans: (token: string) =>
+    request<{ plans: PlanResp[] }>("/v1/identity/plans", {}, token)
+      .then((r) => r.plans),
+
+  selectPlan: (data: { plan_id: string; payment_reference?: string }, token: string) =>
+    request<SubscriptionResp>("/v1/identity/vendor/plan", { method: "POST", body: JSON.stringify(data) }, token),
+
+  getSubscription: (token: string) =>
+    request<SubscriptionResp>("/v1/identity/vendor/subscription", {}, token),
+
+  startOnboarding: (token: string) =>
+    request<{ id: string; onboarding_step: string }>("/v1/identity/vendor/onboard", { method: "POST" }, token),
+
+  updateBusiness: (data: {
+    business_name: string;
+    business_type: string;
+    employee_range?: string;
+    year_established?: number;
+    social_url?: string;
+  }, token: string) =>
+    request<{ onboarding_step: string }>("/v1/identity/vendor/onboard/business", { method: "PATCH", body: JSON.stringify(data) }, token),
+
+  submitKYC: (data: {
+    bvn?: string;
+    nin?: string;
+    cac_number?: string;
+    cac_document_url?: string;
+    id_type?: string;
+    id_number?: string;
+    id_document_url?: string;
+    selfie_url?: string;
+  }, token: string) =>
+    request<{ kyc_status: string; onboarding_step: string }>("/v1/identity/vendor/onboard/kyc", { method: "POST", body: JSON.stringify(data) }, token),
+
+  getVendorProfile: (token: string) =>
+    request<{
+      id: string;
+      business_name?: string;
+      business_type?: string;
+      has_bvn: boolean;
+      has_nin: boolean;
+      cac_number?: string;
+      id_type?: string;
+      kyc_status: string;
+      onboarding_step: string;
+      is_active: boolean;
+    }>("/v1/identity/vendor/profile", {}, token),
+
+  getMe: (token: string) =>
+    request<{
+      id: string;
+      email?: string;
+      full_name?: string;
+      is_email_verified: boolean;
+      vendor?: { id: string; onboarding_step: string; kyc_status: string; is_active: boolean };
+    }>("/v1/identity/me", {}, token),
+};

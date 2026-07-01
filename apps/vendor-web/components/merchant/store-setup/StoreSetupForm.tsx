@@ -41,6 +41,7 @@ import {
   BRAND,
   BRAND_LIGHT,
 } from "./helpers";
+import AddressSearch from "@/components/merchant/onboarding/AddressSearch";
 
 // ─── Lightweight progress bar (no framer-motion) ──────────────────────────────
 
@@ -211,7 +212,7 @@ export function StoreSetupForm() {
     setIsLoading(true);
     setSubmitError(null);
     try {
-      await storefrontApi.createStore(
+      const store = await storefrontApi.createStore(
         {
           name: data.businessName,
           slug: data.slug,
@@ -222,6 +223,14 @@ export function StoreSetupForm() {
         },
         accessToken,
       );
+      // Save address if provided
+      if (data.address && store?.id) {
+        await storefrontApi.updateStore(store.id, {
+          address: data.address,
+          city: data.city,
+          state: data.state,
+        }, accessToken).catch(() => {/* non-fatal */});
+      }
       try {
         const fresh = await authApi.refreshTokens();
         setAuth(fresh.user, fresh.access_token);
@@ -355,7 +364,7 @@ export function StoreSetupForm() {
           <div className="space-y-2.5">
             <button
               type="button"
-              onClick={() => { setKycLoading(true); router.push(ROUTES.MERCHANT.OVERVIEW); }}
+              onClick={() => { setKycLoading(true); router.push(ROUTES.ONBOARDING.KYC); }}
               disabled={kycLoading}
               className="w-full flex items-center justify-center gap-2 h-[46px] rounded-[12px] text-white text-[13px] font-bold transition-colors active:scale-[0.98] disabled:opacity-60"
               style={{ background: BRAND, boxShadow: "0 4px 14px rgba(26,122,66,0.25)" }}
@@ -594,6 +603,26 @@ export function StoreSetupForm() {
         {step === 2 && (
           <div key="step2" className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-200">
             <div className="space-y-6">
+              {/* Business address */}
+              <div className="space-y-2">
+                <FieldLabel>Business address <span className="text-[11px] font-normal" style={{color:"#94a3b8"}}>(optional — helps with local SEO)</span></FieldLabel>
+                <AddressSearch
+                  defaultValue={watch("address") ?? ""}
+                  onSelect={(r) => {
+                    setValue("address", r.fullAddress);
+                    setValue("city", r.city);
+                    setValue("state", r.state);
+                    if (r.lat) setValue("latitude", r.lat);
+                    if (r.lng) setValue("longitude", r.lng);
+                  }}
+                />
+                {watch("address") && (
+                  <p className="text-[12px] flex items-center gap-1.5" style={{color:"#1A7A42"}}>
+                    <span>📍</span> {watch("city")}, {watch("state")}
+                  </p>
+                )}
+              </div>
+
               {/* Team size */}
               <div className="space-y-2">
                 <FieldLabel>Team size</FieldLabel>
