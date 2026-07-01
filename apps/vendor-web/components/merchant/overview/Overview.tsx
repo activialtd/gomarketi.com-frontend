@@ -2,17 +2,6 @@
 
 import { useState, useEffect } from "react";
 import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-} from "recharts";
-import {
-  Eye,
-  EyeOff,
   Copy,
   Check,
   TrendingUp,
@@ -34,34 +23,31 @@ import {
   ArrowUpRight,
   CheckCircle2,
 } from "lucide-react";
-import { CustomTooltip } from "./helpers";
 import {
   analyticsApi,
   ordersApi,
+  storefrontApi,
+  walletApi,
   type AnalyticsOverviewResp,
   type OrderResp,
+  type StoreResp,
+  type WalletResp,
 } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ORDER_STATUS_CONFIG } from "@gomarket/shared-utils";
 import Link from "next/link";
 import { ROUTES } from "@/lib/config/routes";
 
-// ─── Static data ──────────────────────────────────────────────────────────────
+const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
-const CHART_DATA = [
-  { month: "Jan", online: 0, offline: 0 },
-  { month: "Feb", online: 12400, offline: 4200 },
-  { month: "Mar", online: 18700, offline: 6100 },
-  { month: "Apr", online: 14200, offline: 8900 },
-  { month: "May", online: 31500, offline: 11200 },
-  { month: "Jun", online: 28900, offline: 9400 },
-  { month: "Jul", online: 0, offline: 0 },
-  { month: "Aug", online: 0, offline: 0 },
-  { month: "Sep", online: 0, offline: 0 },
-  { month: "Oct", online: 0, offline: 0 },
-  { month: "Nov", online: 0, offline: 0 },
-  { month: "Dec", online: 0, offline: 0 },
-];
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+// ─── Static data ──────────────────────────────────────────────────────────────
 
 const QUICK_ACTIONS = [
   {
@@ -84,6 +70,7 @@ const QUICK_ACTIONS = [
     sub: "See customer view",
     href: "#",
     color: "#8b5cf6",
+    external: true,
   },
   {
     icon: BarChart3,
@@ -189,17 +176,17 @@ function StatCard({
 
 export default function OverviewPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const [balanceVisible, setBalanceVisible] = useState(false);
   const [copied, setCopied] = useState(false);
   const [analytics, setAnalytics] = useState<AnalyticsOverviewResp | null>(
     null,
   );
   const [recentOrders, setRecentOrders] = useState<OrderResp[]>([]);
   const [loading, setLoading] = useState(true);
+  const [store, setStore] = useState<StoreResp | null>(null);
+  const [wallet, setWallet] = useState<WalletResp | null>(null);
 
   const accountNumber = "9740176746";
-  const balance = "₦248,500.00";
-  const pendingSettlement = "₦18,300.00";
+  const storefrontUrl = store ? `http://${store.slug}.${STORE_DOMAIN}` : null;
 
   useEffect(() => {
     if (!accessToken) return;
@@ -207,13 +194,17 @@ export default function OverviewPage() {
     async function load() {
       setLoading(true);
       try {
-        const [ov, ol] = await Promise.allSettled([
+        const [ov, ol, st, wl] = await Promise.allSettled([
           analyticsApi.getOverview(accessToken!),
           ordersApi.listOrders({ per_page: 5 }, accessToken!),
+          storefrontApi.getMyStore(accessToken!),
+          walletApi.getBalance(accessToken!),
         ]);
         if (cancelled) return;
         if (ov.status === "fulfilled") setAnalytics(ov.value);
         if (ol.status === "fulfilled") setRecentOrders(ol.value.orders);
+        if (st.status === "fulfilled") setStore(st.value);
+        if (wl.status === "fulfilled") setWallet(wl.value);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -247,7 +238,7 @@ export default function OverviewPage() {
                   className="text-[20px] font-extrabold text-white leading-tight"
                   style={{ letterSpacing: "-0.3px" }}
                 >
-                  Good morning, Akachi 👋
+                  {getGreeting()}{store ? `, ${store.name}` : ""} 👋
                 </p>
                 <p
                   className="text-[13px] mt-1.5"
@@ -299,10 +290,10 @@ export default function OverviewPage() {
                   className="text-[14px] font-extrabold"
                   style={{ color: "#1C1C1C" }}
                 >
-                  Eko Fashion House
+                  {store?.name ?? "Your store"}
                 </p>
                 <p className="text-[11px]" style={{ color: "#94a3b8" }}>
-                  eko-fashion.gomarketi.com
+                  {store ? `${store.slug}.${STORE_DOMAIN}` : "Set up your store to get a URL"}
                 </p>
               </div>
             </div>
@@ -315,13 +306,15 @@ export default function OverviewPage() {
                 Active
               </span>
               <a
-                href="https://eko-fashion.gomarketi.com"
-                target="_blank"
+                href={storefrontUrl ?? "#"}
+                target={storefrontUrl ? "_blank" : undefined}
                 rel="noopener noreferrer"
+                aria-disabled={!storefrontUrl}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[12px] font-bold text-white transition-all hover:opacity-90"
                 style={{
-                  background: "#1A7A42",
-                  boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
+                  background: storefrontUrl ? "#1A7A42" : "#cbd5e1",
+                  boxShadow: storefrontUrl ? "0 2px 8px rgba(26,122,66,0.25)" : "none",
+                  pointerEvents: storefrontUrl ? "auto" : "none",
                 }}
               >
                 <Globe className="w-3.5 h-3.5" />
@@ -343,9 +336,15 @@ export default function OverviewPage() {
               {QUICK_ACTIONS.map((action) => (
                 <Link
                   key={action.label}
-                  href={action.href}
+                  href={action.external ? (storefrontUrl ?? "#") : action.href}
+                  target={action.external && storefrontUrl ? "_blank" : undefined}
+                  rel={action.external ? "noopener noreferrer" : undefined}
                   className="flex items-center gap-2.5 p-3 rounded-[10px] border transition-all hover:border-[#1A7A42] hover:bg-[#F0FAF3] group"
-                  style={{ borderColor: "#e9eef3", background: "#fafafa" }}
+                  style={{
+                    borderColor: "#e9eef3", background: "#fafafa",
+                    opacity: action.external && !storefrontUrl ? 0.5 : 1,
+                    pointerEvents: action.external && !storefrontUrl ? "none" : "auto",
+                  }}
                 >
                   <div
                     className="w-7 h-7 rounded-[7px] flex items-center justify-center shrink-0"
@@ -388,17 +387,13 @@ export default function OverviewPage() {
                   GoMarket Wallet
                 </span>
               </div>
-              <button
-                onClick={() => setBalanceVisible((v) => !v)}
-                className="p-1.5 rounded-[6px] transition-colors"
-                style={{ background: "rgba(255,255,255,0.08)" }}
+              <Link
+                href={ROUTES.MERCHANT.WALLET}
+                className="text-[10px] font-bold px-2 py-1 rounded-full no-underline"
+                style={{ background: "rgba(34,197,94,0.15)", color: "#86efac" }}
               >
-                {balanceVisible ? (
-                  <Eye className="w-3.5 h-3.5 text-white" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5 text-white" />
-                )}
-              </button>
+                View wallet
+              </Link>
             </div>
 
             <div>
@@ -412,19 +407,8 @@ export default function OverviewPage() {
                 className="text-[30px] font-extrabold text-white leading-none"
                 style={{ letterSpacing: "-0.8px" }}
               >
-                {balanceVisible ? balance : "₦ ••••••"}
+                {wallet ? koboToNaira(wallet.balance_kobo) : "₦ — —"}
               </p>
-              <div className="flex items-center gap-1.5 mt-2">
-                <span
-                  className="text-[11px]"
-                  style={{ color: "rgba(255,255,255,0.4)" }}
-                >
-                  Pending:{" "}
-                  <span style={{ color: "rgba(255,255,255,0.65)" }}>
-                    {balanceVisible ? pendingSettlement : "•••"}
-                  </span>
-                </span>
-              </div>
             </div>
 
             {/* Total earnings stat */}
@@ -444,20 +428,8 @@ export default function OverviewPage() {
                     className="text-[18px] font-extrabold text-white mt-0.5"
                     style={{ letterSpacing: "-0.4px" }}
                   >
-                    {analytics
-                      ? koboToNaira(analytics.total_revenue_kobo)
-                      : "—"}
+                    {wallet ? koboToNaira(wallet.total_earned_kobo) : "—"}
                   </p>
-                </div>
-                <div
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold"
-                  style={{
-                    background: "rgba(34,197,94,0.15)",
-                    color: "#86efac",
-                  }}
-                >
-                  <TrendingUp className="w-3 h-3" />
-                  +18.4%
                 </div>
               </div>
             </div>
@@ -556,110 +528,77 @@ export default function OverviewPage() {
           icon={TrendingUp}
           iconColor="#1A7A42"
           iconBg="#F0FAF3"
-          trend="+18.4%"
           loading={loading}
         />
       </div>
 
       {/* ── ROW 3: Chart + Recent orders ───────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] gap-5">
-        {/* Revenue chart */}
+        {/* Revenue overview */}
         <div
-          className="rounded-[16px] border p-5"
+          className="rounded-[16px] border p-5 flex flex-col"
           style={{ background: "#fff", borderColor: "#e2e8f0" }}
         >
-          <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-            <div>
+          <div className="mb-5">
+            <p
+              className="text-[15px] font-extrabold"
+              style={{ color: "#1C1C1C" }}
+            >
+              Revenue overview
+            </p>
+            <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
+              All-time revenue from your storefront
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-5">
+            <div
+              className="rounded-[12px] p-4"
+              style={{ background: "#F0FAF3" }}
+            >
               <p
-                className="text-[15px] font-extrabold"
-                style={{ color: "#1C1C1C" }}
+                className="text-[24px] font-extrabold leading-tight"
+                style={{ color: "#1A7A42", letterSpacing: "-0.5px" }}
               >
-                Revenue overview
+                {loading ? "—" : koboToNaira(analytics?.total_revenue_kobo ?? 0)}
               </p>
-              <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
-                Your performance across all channels this year
+              <p
+                className="text-[11px] font-semibold uppercase tracking-wide mt-1"
+                style={{ color: "#3D6B4F" }}
+              >
+                Total revenue
               </p>
             </div>
             <div
-              className="flex items-center gap-4 px-3.5 py-2 rounded-[9px] border text-[12px]"
-              style={{ borderColor: "#e2e8f0", background: "#fafafa" }}
+              className="rounded-[12px] p-4"
+              style={{ background: "#fafafa" }}
             >
-              {[
-                { label: "Online", value: "₦105,700", color: "#1A7A42" },
-                { label: "Offline", value: "₦39,800", color: "#22c55e" },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center gap-1.5">
-                  <div
-                    className="w-2 h-2 rounded-full"
-                    style={{ background: s.color }}
-                  />
-                  <span style={{ color: "#6b7280" }}>{s.label}</span>
-                  <span className="font-bold" style={{ color: "#1C1C1C" }}>
-                    {s.value}
-                  </span>
-                </div>
-              ))}
+              <p
+                className="text-[24px] font-extrabold leading-tight"
+                style={{ color: "#1C1C1C", letterSpacing: "-0.5px" }}
+              >
+                {loading ? "—" : (analytics?.total_orders ?? 0)}
+              </p>
+              <p
+                className="text-[11px] font-semibold uppercase tracking-wide mt-1"
+                style={{ color: "#94a3b8" }}
+              >
+                Total orders
+              </p>
             </div>
           </div>
 
-          <div style={{ height: "210px" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={CHART_DATA}
-                margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="onlineGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1A7A42" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#1A7A42" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="offlineGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.12} />
-                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#f1f5f9"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="month"
-                  tick={{ fontSize: 11, fill: "#94a3b8", fontWeight: 500 }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) =>
-                    v === 0 ? "0" : `₦${(v / 1000).toFixed(0)}k`
-                  }
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Area
-                  type="monotone"
-                  dataKey="online"
-                  name="Online Sales"
-                  stroke="#1A7A42"
-                  strokeWidth={2.5}
-                  fill="url(#onlineGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#1A7A42", strokeWidth: 0 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="offline"
-                  name="Offline Sales"
-                  stroke="#22c55e"
-                  strokeWidth={2}
-                  fill="url(#offlineGrad)"
-                  dot={false}
-                  activeDot={{ r: 4, fill: "#22c55e", strokeWidth: 0 }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div
+            className="flex-1 flex flex-col items-center justify-center text-center gap-1.5 py-6 rounded-[12px]"
+            style={{ background: "#fafafa", border: "1px dashed #e2e8f0" }}
+          >
+            <BarChart3 className="w-5 h-5" style={{ color: "#94a3b8" }} />
+            <p className="text-[12px] font-semibold" style={{ color: "#374151" }}>
+              Revenue trends coming soon
+            </p>
+            <p className="text-[11px]" style={{ color: "#94a3b8" }}>
+              We're collecting more order history to power this chart.
+            </p>
           </div>
         </div>
 

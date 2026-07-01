@@ -7,18 +7,24 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import type { Product, Variant } from "./data/products";
+
+// Minimal type for our real API products — no mock dependency
+export type StorefrontCartProduct = {
+  id: string;
+  name: string;
+  price_kobo: number;
+  images: string[];
+  is_digital: boolean;
+};
 
 export type CartLine = {
-  lineId: string; 
+  lineId: string;
   productId: string;
   productName: string;
   productImage: string;
-  variantId?: string;
-  variantLabel?: string;
   unitPrice: number; // kobo
   quantity: number;
-  maxStock: number;
+  isDigital: boolean;
 };
 
 export type CustomerInfo = {
@@ -34,11 +40,7 @@ export type CustomerInfo = {
 type CartContextValue = {
   lines: CartLine[];
   customer: CustomerInfo | null;
-  addToCart: (
-    product: Product,
-    variant: Variant | undefined,
-    quantity: number,
-  ) => void;
+  addToCart: (product: StorefrontCartProduct, quantity?: number) => void;
   updateQuantity: (lineId: string, quantity: number) => void;
   removeLine: (lineId: string) => void;
   clearCart: () => void;
@@ -53,57 +55,40 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
   const [customer, setCustomerState] = useState<CustomerInfo | null>(null);
 
-  const addToCart = useCallback(
-    (product: Product, variant: Variant | undefined, quantity: number) => {
-      const lineId = variant ? `${product.id}__${variant.id}` : product.id;
-      const unitPrice = variant?.price ?? product.price;
-      const maxStock = variant?.stock ?? product.stock;
-      const variantLabel = variant
-        ? Object.entries(variant.options)
-            .map(([k, v]) => `${k}: ${v}`)
-            .join(" / ")
-        : undefined;
-
-      setLines((prev) => {
-        const existing = prev.find((l) => l.lineId === lineId);
-        if (existing) {
-          const newQty = Math.min(existing.quantity + quantity, maxStock);
-          return prev.map((l) =>
-            l.lineId === lineId ? { ...l, quantity: newQty } : l,
-          );
-        }
-        return [
-          ...prev,
-          {
-            lineId,
-            productId: product.id,
-            productName: product.name,
-            productImage: product.images[0] ?? "",
-            variantId: variant?.id,
-            variantLabel,
-            unitPrice,
-            quantity: Math.min(quantity, maxStock),
-            maxStock,
-          },
-        ];
-      });
-    },
-    [],
-  );
+  const addToCart = useCallback((product: StorefrontCartProduct, quantity = 1) => {
+    setLines((prev) => {
+      const existing = prev.find((l) => l.lineId === product.id);
+      if (existing) {
+        return prev.map((l) =>
+          l.lineId === product.id ? { ...l, quantity: l.quantity + quantity } : l,
+        );
+      }
+      return [
+        ...prev,
+        {
+          lineId: product.id,
+          productId: product.id,
+          productName: product.name,
+          productImage: product.images[0] ?? "",
+          unitPrice: product.price_kobo,
+          quantity,
+          isDigital: product.is_digital,
+        },
+      ];
+    });
+  }, []);
 
   const updateQuantity = useCallback((lineId: string, quantity: number) => {
+    if (quantity < 1) return;
     setLines((prev) =>
-      prev.map((l) =>
-        l.lineId === lineId
-          ? { ...l, quantity: Math.max(1, Math.min(quantity, l.maxStock)) }
-          : l,
-      ),
+      prev.map((l) => (l.lineId === lineId ? { ...l, quantity } : l)),
     );
   }, []);
 
-  const removeLine = useCallback((lineId: string) => {
-    setLines((prev) => prev.filter((l) => l.lineId !== lineId));
-  }, []);
+  const removeLine = useCallback(
+    (lineId: string) => setLines((prev) => prev.filter((l) => l.lineId !== lineId)),
+    [],
+  );
 
   const clearCart = useCallback(() => setLines([]), []);
 
@@ -123,17 +108,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <CartContext.Provider
-      value={{
-        lines,
-        customer,
-        addToCart,
-        updateQuantity,
-        removeLine,
-        clearCart,
-        setCustomer,
-        subtotal,
-        itemCount,
-      }}
+      value={{ lines, customer, addToCart, updateQuantity, removeLine, clearCart, setCustomer, subtotal, itemCount }}
     >
       {children}
     </CartContext.Provider>

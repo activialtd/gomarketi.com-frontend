@@ -1,13 +1,11 @@
-import CreateProductForm from "@/components/merchant/products/create/CreateProduct";
 import { Suspense } from "react";
-import OverviewSkeleton from "@/components/skeletons/OverviewSkeleton";
+import CreateProductForm from "@/components/merchant/products/create/CreateProduct";
+import CreateProductSkeleton from "@/components/skeletons/CreateProductSkeleton";
 
-const page = () => {
-  return (
-    <Suspense fallback={<OverviewSkeleton />}>
-      <CreateProductForm />
-    </Suspense>
-  );
-};
+const page = () => (
+  <Suspense fallback={<CreateProductSkeleton />}>
+    <CreateProductForm />
+  </Suspense>
+);
 
 export default page;

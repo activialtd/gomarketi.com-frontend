@@ -1,27 +1,23 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   Plus,
-  Download,
   Search,
   LayoutGrid,
   LayoutList,
-  Tag,
   Package,
-  ChevronDown,
   Trash2,
   AlertTriangle,
   ArrowUpDown,
   Layers,
   Loader2,
 } from "lucide-react";
-import { type Product, COLLECTIONS } from "@/lib/data/products";
-import { catalogueApi } from "@gomarket/api-client";
+import { type Product } from "@/lib/data/products";
+import { catalogueApi, storefrontApi, type CollectionResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
-import { fmt } from "@gomarket/shared-utils";
 import {
   CollectionsTab,
   EmptyProducts,
@@ -45,23 +41,35 @@ export default function ProductsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [collections, setCollections] = useState<CollectionResp[]>([]);
+  const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!accessToken) return;
-    let cancelled = false;
-    async function load() {
-      setLoadingProducts(true);
-      try {
-        const resp = await catalogueApi.listProducts(
-          { per_page: 100 },
-          accessToken!,
-        );
-        if (cancelled) return;
-        const mapped: Product[] = resp.products.map((p) => ({
+    setLoadingProducts(true);
+    try {
+      const [productsResp, categoriesResp, collectionsResp] = await Promise.allSettled([
+        catalogueApi.listProducts({ per_page: 100 }, accessToken),
+        catalogueApi.listCategories(accessToken),
+        catalogueApi.listCollections(accessToken),
+      ]);
+
+      const catMap: Record<string, string> = {};
+      if (categoriesResp.status === "fulfilled") {
+        categoriesResp.value.forEach((c) => { catMap[c.id] = c.name; });
+        setCategoryNames(catMap);
+      }
+      if (collectionsResp.status === "fulfilled") {
+        setCollections(collectionsResp.value.collections);
+      }
+
+      if (productsResp.status === "fulfilled") {
+        const mapped: Product[] = productsResp.value.products.map((p) => ({
           id: p.id,
           name: p.name,
           slug: p.id,
-          category: p.category_id ?? "Uncategorised",
+          category: p.category_id ? (catMap[p.category_id] ?? "Uncategorised") : "Uncategorised",
           collectionIds: [],
           description: p.description ?? "",
           images: p.images ?? [],
@@ -81,16 +89,21 @@ export default function ProductsPage() {
           tags: p.tags ?? [],
         }));
         setProducts(mapped);
-      } catch {
-        if (!cancelled) setProducts([]);
-      } finally {
-        if (!cancelled) setLoadingProducts(false);
+      } else {
+        setProducts([]);
       }
+    } finally {
+      setLoadingProducts(false);
     }
+  }, [accessToken]);
+
+  useEffect(() => {
     load();
-    return () => {
-      cancelled = true;
-    };
+  }, [load]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    storefrontApi.getMyStore(accessToken).then((s) => setStoreSlug(s.slug)).catch(() => {});
   }, [accessToken]);
 
   const toggleSelect = (id: string) => {
@@ -136,7 +149,6 @@ export default function ProductsPage() {
     return list;
   }, [products, search, statusFilter, sortKey, sortAsc]);
 
-  const totalRetailValue = products.reduce((s, p) => s + p.price * p.stock, 0);
   const outOfStock = products.filter((p) => p.status === "out_of_stock").length;
 
   const allSelected =
@@ -167,34 +179,6 @@ export default function ProductsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Import */}
-          <button
-            className="flex items-center gap-1.5 h-9 px-3.5 rounded-[8px] border text-[12px] font-semibold transition-colors"
-            style={{
-              borderColor: "#e2e8f0",
-              background: "#fff",
-              color: "#374151",
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#F0FAF3")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
-          >
-            <Download className="w-3.5 h-3.5" /> Import
-          </button>
-
-          {/* Actions dropdown */}
-          <button
-            className="flex items-center gap-1.5 h-9 px-3.5 rounded-[8px] border text-[12px] font-semibold transition-colors"
-            style={{
-              borderColor: "#e2e8f0",
-              background: "#fff",
-              color: "#374151",
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#F0FAF3")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
-          >
-            Actions <ChevronDown className="w-3.5 h-3.5" />
-          </button>
-
           {/* Add product */}
           <Link
             href={ROUTES.MERCHANT.PRODUCTS_NEW}
@@ -213,14 +197,7 @@ export default function ProductsPage() {
 
       <div className="px-6 lg:px-8 py-5 space-y-5">
         {/* ── Stats row ─────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard
-            label="Total Retail Value"
-            value={loadingProducts ? "—" : fmt(totalRetailValue)}
-            icon={Tag}
-            iconBg="#eff6ff"
-            iconColor="#3b82f6"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard
             label="Total Products"
             value={loadingProducts ? "—" : String(products.length)}
@@ -271,7 +248,7 @@ export default function ProductsPage() {
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-0.5"
                     style={{ background: "#F0FAF3", color: "#1A7A42" }}
                   >
-                    {COLLECTIONS.length}
+                    {collections.length}
                   </span>
                 </span>
               ) : (
@@ -485,6 +462,8 @@ export default function ProductsPage() {
                     product={product}
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
+                    storeSlug={storeSlug}
+                    onChanged={load}
                   />
                 ))}
               </div>
@@ -496,6 +475,8 @@ export default function ProductsPage() {
                     product={product}
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
+                    storeSlug={storeSlug}
+                    onChanged={load}
                   />
                 ))}
               </div>
@@ -504,7 +485,9 @@ export default function ProductsPage() {
         )}
 
         {/* ── Collections tab ───────────────────────────── */}
-        {tab === "collections" && <CollectionsTab />}
+        {tab === "collections" && (
+          <CollectionsTab collections={collections} loading={loadingProducts} />
+        )}
       </div>
     </div>
   );

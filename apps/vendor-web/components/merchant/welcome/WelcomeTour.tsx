@@ -44,7 +44,7 @@ const SLIDES = [
     emoji: "🚀",
     title: "Ready to launch!",
     description:
-      "Set up your store details next — it takes under 2 minutes. Add your store name, category, and WhatsApp number to get started.",
+      "Choose a plan that fits your business — start free, upgrade anytime. Your first store is just 2 minutes away.",
     bg: "rgba(236,72,153,0.09)",
     accent: "#ec4899",
   },
@@ -169,7 +169,7 @@ export function WelcomeTour() {
   }
 
   function proceed() {
-    router.push(ROUTES.ONBOARDING.SETUP);
+    router.push(ROUTES.ONBOARDING.PLANS);
   }
 
   return (

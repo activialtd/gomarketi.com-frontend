@@ -12,6 +12,7 @@ import {
   LogOut,
   User,
 } from "lucide-react";
+import { ROUTES } from "@/lib/config/routes";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -209,12 +210,20 @@ export function Header({
 
                 <div className="py-1.5 px-1.5">
                   {[
-                    { Icon: User, label: "Profile" },
-                    { Icon: Settings, label: "Account settings" },
-                  ].map(({ Icon, label }) => (
-                    <button
+                    {
+                      Icon: User,
+                      label: "Profile",
+                      href: ROUTES.MERCHANT.PROFILE,
+                    },
+                    {
+                      Icon: Settings,
+                      label: "Account settings",
+                      href: ROUTES.MERCHANT.SETTINGS,
+                    },
+                  ].map(({ Icon, label, href }) => (
+                    <Link
+                      href={href}
                       key={label}
-                      type="button"
                       className="w-full flex items-center gap-2.5 px-3 py-2 rounded-[7px] text-[13px] font-medium text-left transition-colors hover:bg-gray-50"
                       style={{ color: "#374151" }}
                     >
@@ -223,7 +232,7 @@ export function Header({
                         style={{ color: "#9ca3af" }}
                       />
                       {label}
-                    </button>
+                    </Link>
                   ))}
                 </div>
 

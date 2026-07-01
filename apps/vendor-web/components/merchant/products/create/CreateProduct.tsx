@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,26 +20,42 @@ import {
   SelectValue,
 } from "@gomarket/ui";
 import { ROUTES } from "@/lib/config/routes";
-import { COLLECTIONS } from "@/lib/data/products";
 import {
   CreateProductFormValues,
   createProductSchema,
 } from "@/lib/validations/schemas";
 import {
   Field,
-  CATEGORIES,
-  CATEGORY_LABELS,
   ImageUpload,
   Toggle,
   VariantOptionBuilder,
   Section,
 } from "./helpers";
+import { catalogueApi, ApiError, type CollectionResp, type CategoryResp } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 
-export default function CreateProductPage() {
+export default function CreateProductPage({ productId }: { productId?: string }) {
   const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isEditing = !!productId;
   const [images, setImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [collections, setCollections] = useState<CollectionResp[]>([]);
+  const [categories, setCategories] = useState<CategoryResp[]>([]);
+  const [loadingProduct, setLoadingProduct] = useState(isEditing);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    catalogueApi.listCollections(accessToken)
+      .then((r) => setCollections(r.collections))
+      .catch(() => {});
+    catalogueApi.listCategories(accessToken)
+      .then((cats) => setCategories(cats))
+      .catch(() => {});
+  }, [accessToken]);
 
   const {
     register,
@@ -47,6 +63,7 @@ export default function CreateProductPage() {
     control,
     watch,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<CreateProductFormValues>({
     resolver: zodResolver(createProductSchema) as any,
@@ -57,6 +74,52 @@ export default function CreateProductPage() {
       featured: false,
     },
   });
+
+  useEffect(() => {
+    if (!productId || !accessToken) return;
+    let cancelled = false;
+    (async () => {
+      let p;
+      try {
+        p = await catalogueApi.getProduct(productId, accessToken);
+      } catch (err) {
+        if (!cancelled) {
+          const message = err instanceof ApiError ? err.message : "Could not load this product. It may have been deleted.";
+          // eslint-disable-next-line no-console
+          console.error("Failed to load product for editing:", err);
+          setLoadError(message);
+          setLoadingProduct(false);
+        }
+        return;
+      }
+      if (cancelled) return;
+      try {
+        setImages(p.images ?? []);
+        reset({
+          name: p.name,
+          description: p.description ?? "",
+          category: p.category_id ?? "",
+          tags: (p.tags ?? []).join(", "),
+          price: p.price_kobo / 100,
+          stock: p.stock,
+          sku: p.sku ?? "",
+          status: p.is_published ? "active" : "draft",
+          trackInventory: true,
+          hasVariants: false,
+          featured: false,
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Product loaded but failed to populate the form:", err);
+        if (!cancelled) setLoadError("This product loaded but couldn't be displayed. Please try again.");
+      } finally {
+        if (!cancelled) setLoadingProduct(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, accessToken, reset]);
 
   const { onBlur: descriptionOnBlur, ...descriptionRegister } =
     register("description");
@@ -76,12 +139,62 @@ export default function CreateProductPage() {
     data: CreateProductFormValues,
     status: "draft" | "active",
   ) {
+    if (!accessToken) return;
     const setter = status === "draft" ? setIsSaving : setIsPublishing;
     setter(true);
-    setValue("status", status);
-    await new Promise((r) => setTimeout(r, 1000));
-    setter(false);
-    router.push(ROUTES.MERCHANT.PRODUCTS);
+    setSubmitError(null);
+    try {
+      const payload = {
+        name: data.name,
+        description: data.description || undefined,
+        category_id: data.category || undefined,
+        price_kobo: Math.round((data.price ?? 0) * 100),
+        stock: data.trackInventory ? (data.stock ?? 0) : 9999,
+        sku: data.sku || undefined,
+        images,
+        tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      };
+
+      const productIdForPublish = isEditing
+        ? (await catalogueApi.updateProduct(productId!, payload, accessToken)).id
+        : (await catalogueApi.createProduct({ ...payload, is_digital: false }, accessToken)).id;
+
+      if (status === "active") {
+        await catalogueApi.publishProduct(productIdForPublish, accessToken);
+      } else if (isEditing) {
+        await catalogueApi.unpublishProduct(productIdForPublish, accessToken);
+      }
+      router.push(ROUTES.MERCHANT.PRODUCTS);
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : "Failed to save product. Please try again.");
+    } finally {
+      setter(false);
+    }
+  }
+
+  if (loadingProduct) {
+    return (
+      <div className="w-full flex items-center justify-center py-32 gap-2" style={{ color: "#94a3b8" }}>
+        <Loader2 className="w-5 h-5 animate-spin" />
+        <span className="text-[13px]">Loading product…</span>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="w-full flex flex-col items-center justify-center py-32 gap-3">
+        <p className="text-[13px] font-semibold" style={{ color: "#374151" }}>{loadError}</p>
+        <button
+          type="button"
+          onClick={() => router.push(ROUTES.MERCHANT.PRODUCTS)}
+          className="text-[12px] font-bold"
+          style={{ color: "#1A7A42" }}
+        >
+          Back to products
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -105,9 +218,12 @@ export default function CreateProductPage() {
           className="text-[18px] font-extrabold flex-1"
           style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}
         >
-          {nameVal || "New product"}
+          {nameVal || (isEditing ? "Edit product" : "New product")}
         </h1>
         <div className="flex items-center gap-2">
+          {submitError && (
+            <span className="text-[12px] font-semibold text-red-500 max-w-[200px] truncate">{submitError}</span>
+          )}
           <button
             type="button"
             onClick={handleSubmit((d) => onSubmit(d, "draft"))}
@@ -122,7 +238,7 @@ export default function CreateProductPage() {
             onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
           >
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-            Save draft
+            {isEditing ? "Save as draft" : "Save draft"}
           </button>
           <button
             type="button"
@@ -141,7 +257,7 @@ export default function CreateProductPage() {
             {isPublishing ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : null}
-            Publish product
+            {isEditing ? "Save & publish" : "Publish product"}
           </button>
         </div>
       </div>
@@ -218,11 +334,17 @@ export default function CreateProductPage() {
                             <SelectValue placeholder="Select category" />
                           </SelectTrigger>
                           <SelectContent>
-                            {CATEGORIES.map((c) => (
-                              <SelectItem key={c} value={c}>
-                                {CATEGORY_LABELS[c]}
+                            {categories.length === 0 ? (
+                              <SelectItem value="__none" disabled>
+                                No categories yet — add from Categories page
                               </SelectItem>
-                            ))}
+                            ) : (
+                              categories.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}
+                                </SelectItem>
+                              ))
+                            )}
                           </SelectContent>
                         </Select>
                       )}
@@ -250,9 +372,8 @@ export default function CreateProductPage() {
               <ImageUpload
                 images={images}
                 onAdd={(url) => setImages((p) => [...p, url])}
-                onRemove={(i) =>
-                  setImages((p) => p.filter((_, idx) => idx !== i))
-                }
+                onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))}
+                accessToken={accessToken ?? ""}
               />
             </Section>
 
@@ -672,7 +793,12 @@ export default function CreateProductPage() {
                 name="collectionIds"
                 render={({ field }) => (
                   <div className="space-y-1.5">
-                    {COLLECTIONS.map((col) => {
+                    {collections.length === 0 && (
+                      <p className="text-[12px] py-2" style={{ color: "#94a3b8" }}>
+                        No collections yet — create one from the Products page.
+                      </p>
+                    )}
+                    {collections.map((col) => {
                       const isChecked = (field.value ?? []).includes(col.id);
                       return (
                         <label
@@ -721,7 +847,7 @@ export default function CreateProductPage() {
                             className="ml-auto text-[10px]"
                             style={{ color: "#94a3b8" }}
                           >
-                            {col.productIds.length}
+                            {col.product_ids?.length ?? 0}
                           </span>
                         </label>
                       );

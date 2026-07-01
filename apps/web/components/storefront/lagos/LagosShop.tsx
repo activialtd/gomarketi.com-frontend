@@ -2,34 +2,31 @@
 
 import { useState, useMemo } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
-import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
 import { LagosProductCard } from "./LagosProductCard";
+import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
-const CATEGORIES = Array.from(new Set(PRODUCTS.map((p) => p.category)));
-
-export default function LagosShop() {
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [collectionFilter, setCollectionFilter] = useState<string | null>(null);
+export default function LagosShop({ products = [] }: { products?: StorefrontProduct[] }) {
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    products.forEach((p) => p.tags.forEach((t) => tags.add(t)));
+    return Array.from(tags).slice(0, 12);
+  }, [products]);
   const [sortBy, setSortBy] = useState<"newest" | "price-asc" | "price-desc">(
     "newest",
   );
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const filtered = useMemo(() => {
-    let list = PRODUCTS.filter(
-      (p) => p.status === "active" || p.status === "out_of_stock",
-    );
-    if (categoryFilter)
-      list = list.filter((p) => p.category === categoryFilter);
-    if (collectionFilter)
-      list = list.filter((p) => p.collectionIds.includes(collectionFilter));
-    list = [...list].sort((a, b) => {
-      if (sortBy === "price-asc") return a.price - b.price;
-      if (sortBy === "price-desc") return b.price - a.price;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    let list = [...products];
+    if (tagFilter) list = list.filter((p) => p.tags.includes(tagFilter));
+    list.sort((a, b) => {
+      if (sortBy === "price-asc") return a.price_kobo - b.price_kobo;
+      if (sortBy === "price-desc") return b.price_kobo - a.price_kobo;
+      return 0;
     });
     return list;
-  }, [categoryFilter, collectionFilter, sortBy]);
+  }, [products, tagFilter, sortBy]);
 
   const FilterPanel = () => (
     <div className="space-y-9">
@@ -39,49 +36,26 @@ export default function LagosShop() {
         </p>
         <div className="flex flex-col gap-0.5">
           <button
-            onClick={() => setCategoryFilter(null)}
+            onClick={() => setTagFilter(null)}
             className={`border-l-2 py-1.5 pl-3 text-left text-[13px] transition-colors ${
-              categoryFilter === null
+              tagFilter === null
                 ? "border-[#C75D3A] font-semibold text-[#F7F4EE]"
                 : "border-white/10 text-white/45 hover:text-white/70"
             }`}
           >
-            All
+            All products
           </button>
-          {CATEGORIES.map((cat) => (
+          {allTags.map((tag) => (
             <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
+              key={tag}
+              onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
               className={`border-l-2 py-1.5 pl-3 text-left text-[13px] capitalize transition-colors ${
-                categoryFilter === cat
+                tagFilter === tag
                   ? "border-[#C75D3A] font-semibold text-[#F7F4EE]"
                   : "border-white/10 text-white/45 hover:text-white/70"
               }`}
             >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.18em] text-white/35">
-          Collections
-        </p>
-        <div className="flex flex-col gap-0.5">
-          {COLLECTIONS.map((col) => (
-            <button
-              key={col.id}
-              onClick={() =>
-                setCollectionFilter(collectionFilter === col.id ? null : col.id)
-              }
-              className={`border-l-2 py-1.5 pl-3 text-left text-[13px] transition-colors ${
-                collectionFilter === col.id
-                  ? "border-[#C75D3A] font-semibold text-[#F7F4EE]"
-                  : "border-white/10 text-white/45 hover:text-white/70"
-              }`}
-            >
-              {col.name}
+              {tag}
             </button>
           ))}
         </div>

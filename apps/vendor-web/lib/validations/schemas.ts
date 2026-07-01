@@ -63,6 +63,13 @@ export const storeSetupSchema = z.object({
   teamSize: z.string().optional(),
 
   businessPhone: z.string().optional(),
+
+  // Address (optional — can be set later in Store Information)
+  address: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
 });
 
 const variantOptionSchema = z.object({
@@ -123,25 +130,25 @@ export const categorySchema = z.object({
 export const storeInfoSchema = z.object({
   storeName: z.string().min(2, "At least 2 characters").max(80),
   storeTagline: z.string().max(120).optional(),
-  storeEmail: z.string().email("Enter a valid email"),
   storePhone: z
     .string()
     .regex(/^(0|\+234)[789][01]\d{8}$/, "Enter a valid Nigerian number"),
   storeAddress: z.string().min(5, "Enter a full address"),
   storeCity: z.string().min(2, "Required"),
   storeState: z.string().min(2, "Required"),
-  supportEmail: z
-    .string()
-    .email("Enter a valid email")
-    .optional()
-    .or(z.literal("")),
-  whatsapp: z.string().optional(),
-  instagram: z.string().optional(),
-  twitter: z.string().optional(),
-  facebook: z.string().optional(),
-  openingHours: z.string().optional(),
-  returnPolicy: z.string().optional(),
 });
+
+export const ninSchema = z.object({
+  nin: z
+    .string()
+    .length(11, "NIN must be exactly 11 digits")
+    .regex(/^\d{11}$/, "NIN must contain only numbers"),
+  dateOfBirth: z.string().min(1, "Date of birth is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+});
+
+export type NINValues = z.infer<typeof ninSchema>;
 
 export type BusinessFormValues = z.infer<typeof businessSchema>;
 export type StoreFormValues = z.infer<typeof storeSchema>;

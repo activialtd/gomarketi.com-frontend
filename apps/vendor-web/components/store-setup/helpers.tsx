@@ -1,5 +1,25 @@
-import { AlertCircle, Store, Upload } from "lucide-react";
-import { useRef } from "react";
+import { AlertCircle, Store, Upload, Loader2 } from "lucide-react";
+import { useRef, useState } from "react";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+
+async function uploadLogoToR2(file: File, accessToken: string): Promise<string> {
+  const presignRes = await fetch(`${API_BASE}/v1/storefront/uploads/presign`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size, purpose: "logo" }),
+  });
+  if (!presignRes.ok) {
+    const body = await presignRes.json().catch(() => ({})) as { error?: string };
+    throw new Error(body.error ?? "Could not get upload URL");
+  }
+  const { upload_url, public_url } = await presignRes.json() as { upload_url: string; public_url: string };
+
+  const putRes = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+  if (!putRes.ok) throw new Error("Upload failed");
+
+  return public_url;
+}
 
 export function Section({
   title,
@@ -102,11 +122,30 @@ export function StyledTextarea(
 export function LogoUpload({
   logo,
   onSet,
+  accessToken,
 }: {
   logo: string | null;
   onSet: (url: string) => void;
+  accessToken: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleFile(file: File | undefined) {
+    if (!file || !accessToken) return;
+    setUploading(true);
+    setError("");
+    try {
+      const url = await uploadLogoToR2(file, accessToken);
+      onSet(url);
+    } catch {
+      setError("Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div className="flex items-center gap-4">
       <div
@@ -116,7 +155,9 @@ export function LogoUpload({
           background: "#F0FAF3",
         }}
       >
-        {logo ? (
+        {uploading ? (
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: "#1A7A42" }} />
+        ) : logo ? (
           <img src={logo} alt="Logo" className="w-full h-full object-cover" />
         ) : (
           <Store className="w-8 h-8" style={{ color: "#d1fae5" }} />
@@ -126,7 +167,8 @@ export function LogoUpload({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="flex items-center gap-2 h-9 px-4 rounded-[8px] border text-[12px] font-semibold transition-colors"
+          disabled={uploading}
+          className="flex items-center gap-2 h-9 px-4 rounded-[8px] border text-[12px] font-semibold transition-colors disabled:opacity-60"
           style={{
             borderColor: "#1A7A42",
             background: "#F0FAF3",
@@ -136,10 +178,10 @@ export function LogoUpload({
           onMouseOut={(e) => (e.currentTarget.style.background = "#F0FAF3")}
         >
           <Upload className="w-3.5 h-3.5" />{" "}
-          {logo ? "Change logo" : "Upload logo"}
+          {uploading ? "Uploading…" : logo ? "Change logo" : "Upload logo"}
         </button>
-        <p className="text-[11px]" style={{ color: "#94a3b8" }}>
-          PNG or SVG · Square · Min 200×200px
+        <p className="text-[11px]" style={{ color: error ? "#dc2626" : "#94a3b8" }}>
+          {error || "PNG or SVG · Square · Min 200×200px"}
         </p>
       </div>
       <input
@@ -147,11 +189,7 @@ export function LogoUpload({
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={() =>
-          onSet(
-            "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=200&q=80",
-          )
-        }
+        onChange={(e) => handleFile(e.target.files?.[0])}
       />
     </div>
   );

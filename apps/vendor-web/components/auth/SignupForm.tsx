@@ -22,6 +22,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
+import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,7 @@ interface OAuthUser {
   firstName: string;
   lastName: string;
   email: string;
+  credential?: string; // id_token from Google/Apple — used on profile submit
 }
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -106,11 +108,13 @@ export function SignupForm() {
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
   const setSignupPhone = useAuthStore((s) => s.setSignupPhone);
+  const { signIn: googleSignIn } = useGoogleAuth();
 
   const [step, setStep] = useState<Step>("METHOD_SELECT");
   const [oauthUser, setOauthUser] = useState<OAuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [oauthApiError, setOauthApiError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
   const [pwStrength, setPwStrength] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -163,22 +167,43 @@ export function SignupForm() {
 
   async function handleOAuth(provider: "google" | "apple") {
     setOauthLoading(provider);
-    await new Promise((r) => setTimeout(r, 900));
-    setOauthLoading(null);
-    const mock: OAuthUser = {
-      provider,
-      firstName: provider === "google" ? "Ada" : "Chidi",
-      lastName: provider === "google" ? "Okafor" : "Nwachukwu",
-      email:
-        provider === "google" ? "ada.okafor@gmail.com" : "chidi@icloud.com",
-    };
-    setOauthUser(mock);
-    oauthForm.reset({
-      firstName: mock.firstName,
-      lastName: mock.lastName,
-      marketing: false,
-    });
-    setStep("OAUTH_PROFILE");
+    setOauthApiError(null);
+    try {
+      if (provider === "google") {
+        const result = await googleSignIn();
+
+        // Try to log in as an existing user first
+        try {
+          const resp = await authApi.googleAuth(result.credential);
+          // Existing user — go straight to dashboard
+          setAuth(resp.user, resp.access_token);
+          setAuthSession();
+          router.push(ROUTES.MERCHANT.OVERVIEW);
+          return;
+        } catch (loginErr) {
+          // 404/not found = new user, continue to profile step
+          if (loginErr instanceof ApiError && loginErr.status !== 404) throw loginErr;
+        }
+
+        // New user — pre-fill the profile form from Google data
+        const nameParts = result.name.trim().split(" ");
+        const firstName = nameParts[0] ?? "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+
+        const newUser: OAuthUser = { provider, firstName, lastName, email: result.email, credential: result.credential };
+        setOauthUser(newUser);
+        oauthForm.reset({ firstName, lastName, marketing: false });
+        setStep("OAUTH_PROFILE");
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message !== "one_tap_unavailable" && err.message !== "Google Sign-In was cancelled") {
+        setOauthApiError(
+          err instanceof ApiError ? err.message : "Google sign-in failed. Please try again."
+        );
+      }
+    } finally {
+      setOauthLoading(null);
+    }
   }
 
   async function onSignupSubmit(data: SignupData) {
@@ -269,12 +294,23 @@ export function SignupForm() {
     }
   }, [signupEmail, isLoading, resendCooldown]);
 
-  async function onOAuthProfileSubmit(_data: OAuthProfileData) {
+  async function onOAuthProfileSubmit(data: OAuthProfileData) {
+    if (!oauthUser?.credential) return;
     setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setIsLoading(false);
-    if (_data.phone) setSignupPhone(_data.phone);
-    router.push(ROUTES.ONBOARDING.WELCOME);
+    setOauthApiError(null);
+    try {
+      if (data.phone) setSignupPhone(data.phone);
+      const resp = await authApi.googleAuth(oauthUser.credential);
+      setAuth(resp.user, resp.access_token);
+      setAuthSession();
+      router.push(ROUTES.ONBOARDING.WELCOME);
+    } catch (err) {
+      setOauthApiError(
+        err instanceof ApiError ? err.message : "Could not complete sign-up. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   function onPasswordChange(val: string) {
@@ -333,6 +369,11 @@ export function SignupForm() {
       {/* ═══ METHOD SELECT ════════════════════════════════════ */}
       {step === "METHOD_SELECT" && (
         <div className="space-y-3">
+          {oauthApiError && (
+            <p className="text-[12px] text-center font-medium" style={{ color: "#dc2626" }}>
+              {oauthApiError}
+            </p>
+          )}
           <OAuthBtn
             onClick={() => handleOAuth("google")}
             loading={oauthLoading === "google"}

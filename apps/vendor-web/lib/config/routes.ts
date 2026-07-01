@@ -8,7 +8,9 @@ export const ROUTES = {
 
   ONBOARDING: {
     WELCOME: "/merchant/welcome",
+    PLANS: "/merchant/plans",
     SETUP: "/merchant/store-setup",
+    KYC: "/merchant/kyc",
   },
 
   MERCHANT: {
@@ -17,6 +19,7 @@ export const ROUTES = {
     // Products
     PRODUCTS: "/merchant/products",
     PRODUCTS_NEW: "/merchant/products/create-product",
+    PRODUCTS_EDIT: (id: string) => `/merchant/products/edit/${id}`,
     CATEGORIES: "/merchant/products/categories",
     COLLECTIONS_NEW: "/merchant/products/create-collection",
 
@@ -30,17 +33,19 @@ export const ROUTES = {
 
     // Finance
     WALLET: "/merchant/wallet",
-    PAYOUTS: "/merchant/finance/payouts",
-    INVOICES: "/merchant/finance/invoices",
 
     // Store setup
     STORE_INFO: "/merchant/store/information",
     CUSTOMISE: "/merchant/store/customize",
-    STAFF: "/merchant/store/staff",
+    STAFF: "/merchant/staffs",
 
     // Account
     SETTINGS: "/merchant/settings",
     HELP: "/merchant/help",
+
+    // KYC
+    KYC: "/merchant/kyc",
+    PROFILE: "/merchant/profile",
   },
 } as const;
 
