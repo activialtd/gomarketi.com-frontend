@@ -29,7 +29,7 @@ export function LoginForm() {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const { signIn: googleSignIn, configured: googleConfigured } = useGoogleAuth();
+  const { signIn: googleSignIn, buttonRef: googleButtonRef } = useGoogleAuth();
 
   const {
     register,
@@ -108,6 +108,8 @@ export function LoginForm() {
       </p>
 
       {/* ── OAuth buttons ───────────────────────────────────── */}
+      {/* Hidden div where GSI renders the real Google button — our OAuthBtn click triggers it */}
+      <div ref={googleButtonRef} style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 1, height: 1, overflow: "hidden" }} aria-hidden />
       <OAuthBtn
         onClick={() => handleOAuth("google")}
         loading={oauthLoading === "google"}

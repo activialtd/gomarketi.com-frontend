@@ -8,108 +8,135 @@ type G = any;
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
 export interface GoogleAuthResult {
-  /** Raw Google id_token — send this to POST /v1/auth/oauth/google */
-  credential: string;
+  credential: string; // id_token — send to POST /v1/auth/oauth/google
   email: string;
   name: string;
   picture: string;
 }
 
-/**
- * Wraps Google Identity Services (GSI) One Tap.
- *
- * Returns:
- *   - signIn(): triggers Google sign-in, resolves with credential on success
- *   - ready: true once the GSI script is loaded and CLIENT_ID is set
- *
- * Setup: set NEXT_PUBLIC_GOOGLE_CLIENT_ID in your .env.local and
- * add http://localhost:3000 + your production URL as authorized origins
- * in Google Cloud Console → OAuth 2.0 credentials.
- */
+// ── Module-level singleton ────────────────────────────────────────────────────
+// GSI must only be initialized ONCE per page. Storing state at module level
+// prevents the "initialized multiple times" warning when the hook is used
+// in both LoginForm and SignupForm on the same page.
+
+let gsiReady = false;
+let gsiLoading = false;
+const readyCallbacks: Array<() => void> = [];
+let pendingResolve: ((r: GoogleAuthResult) => void) | null = null;
+let pendingReject: ((e: Error) => void) | null = null;
+
+function decodeCredential(credential: string): { email: string; name: string; picture: string } {
+  try {
+    const payload = JSON.parse(
+      atob(credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
+    );
+    return { email: payload.email ?? "", name: payload.name ?? "", picture: payload.picture ?? "" };
+  } catch {
+    return { email: "", name: "", picture: "" };
+  }
+}
+
+function onCredential(response: G) {
+  if (!response?.credential) {
+    pendingReject?.(new Error("No credential returned from Google"));
+    pendingReject = null; pendingResolve = null;
+    return;
+  }
+  const { email, name, picture } = decodeCredential(response.credential);
+  pendingResolve?.({ credential: response.credential, email, name, picture });
+  pendingResolve = null; pendingReject = null;
+}
+
+function initGSI() {
+  const g: G = (window as G).google;
+  if (!g?.accounts?.id || gsiReady) return;
+  g.accounts.id.initialize({
+    client_id: CLIENT_ID,
+    callback: onCredential,
+    auto_select: false,
+    cancel_on_tap_outside: true,
+    use_fedcm_for_prompt: true,
+    itp_support: true,
+  });
+  gsiReady = true;
+  readyCallbacks.splice(0).forEach((cb) => cb());
+}
+
+function ensureGSI(onReady: () => void) {
+  if (gsiReady) { onReady(); return; }
+  readyCallbacks.push(onReady);
+  if (gsiLoading) return;
+  gsiLoading = true;
+  if ((window as G).google?.accounts?.id) { initGSI(); return; }
+  const id = "google-gsi-script";
+  if (!document.getElementById(id)) {
+    const el = document.createElement("script");
+    el.id = id; el.src = "https://accounts.google.com/gsi/client"; el.async = true;
+    el.onload = initGSI;
+    document.head.appendChild(el);
+  }
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────────
+
 export function useGoogleAuth() {
-  const [ready, setReady] = useState(false);
-  const callbackRef = useRef<((r: GoogleAuthResult | null) => void) | null>(null);
+  const [ready, setReady] = useState(gsiReady);
+  const buttonRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!CLIENT_ID) return;
-
-    function initGSI() {
-      const g: G = (window as G).google;
-      if (!g?.accounts?.id) return;
-
-      g.accounts.id.initialize({
-        client_id: CLIENT_ID,
-        callback: (response: G) => {
-          if (!response?.credential) {
-            callbackRef.current?.(null);
-            return;
-          }
-          // Decode JWT payload to get display info (signature verified by backend)
-          let email = "";
-          let name = "";
-          let picture = "";
-          try {
-            const payload = JSON.parse(
-              atob(response.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
-            );
-            email = payload.email ?? "";
-            name = payload.name ?? "";
-            picture = payload.picture ?? "";
-          } catch { /* non-fatal */ }
-
-          callbackRef.current?.({ credential: response.credential, email, name, picture });
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true,
-        itp_support: true,
-      });
-
-      setReady(true);
-    }
-
-    const id = "google-gsi-script";
-    if ((window as G).google?.accounts?.id) {
-      initGSI();
-    } else if (!document.getElementById(id)) {
-      const el = document.createElement("script");
-      el.id = id;
-      el.src = "https://accounts.google.com/gsi/client";
-      el.async = true;
-      el.onload = initGSI;
-      document.head.appendChild(el);
-    } else {
-      document.getElementById(id)!.addEventListener("load", initGSI, { once: true });
-    }
+    ensureGSI(() => setReady(true));
   }, []);
+
+  useEffect(() => {
+    if (!ready || !buttonRef.current) return;
+    const g: G = (window as G).google;
+    if (!g?.accounts?.id) return;
+    // Render a native Google button inside the ref div. Clicking it triggers
+    // the FedCM-compatible sign-in popup and fires the onCredential callback.
+    g.accounts.id.renderButton(buttonRef.current, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      width: buttonRef.current.offsetWidth || 360,
+    });
+  }, [ready]);
 
   function signIn(): Promise<GoogleAuthResult> {
     return new Promise((resolve, reject) => {
       if (!CLIENT_ID) {
-        reject(new Error("NEXT_PUBLIC_GOOGLE_CLIENT_ID is not configured"));
-        return;
+        reject(new Error("NEXT_PUBLIC_GOOGLE_CLIENT_ID is not configured")); return;
       }
-      const g: G = (window as G).google;
-      if (!g?.accounts?.id) {
-        reject(new Error("Google Sign-In is still loading — please try again"));
-        return;
+      if (!gsiReady) {
+        reject(new Error("Google Sign-In is still loading — please try again")); return;
       }
 
-      callbackRef.current = (result) => {
-        callbackRef.current = null;
-        if (result) resolve(result);
-        else reject(new Error("Google Sign-In was cancelled"));
-      };
+      pendingResolve = resolve;
+      pendingReject = reject;
 
-      g.accounts.id.prompt((notification: G) => {
-        // One Tap may be suppressed (e.g. user dismissed it before, browser settings).
-        // Fall back to the Google OAuth popup in that case.
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          callbackRef.current = null;
-          reject(new Error("one_tap_unavailable"));
+      // Click the native Google button rendered inside buttonRef.
+      // This is FedCM-safe and avoids the deprecated prompt() flow.
+      const nativeBtn = buttonRef.current?.querySelector<HTMLElement>("div[role=button]");
+      if (nativeBtn) {
+        nativeBtn.click();
+      } else {
+        // Fallback to prompt() if native button isn't rendered yet
+        (window as G).google?.accounts?.id?.prompt((n: G) => {
+          if (n?.isNotDisplayed?.() || n?.isSkippedMoment?.()) {
+            pendingResolve = null; pendingReject = null;
+            reject(new Error("Google Sign-In was cancelled or blocked by the browser. Try disabling any extensions that block sign-in."));
+          }
+        });
+      }
+
+      setTimeout(() => {
+        if (pendingReject === reject) {
+          pendingResolve = null; pendingReject = null;
+          reject(new Error("Google Sign-In timed out"));
         }
-      });
+      }, 120_000);
     });
   }
 
-  return { signIn, ready: ready && !!CLIENT_ID, configured: !!CLIENT_ID };
+  return { signIn, buttonRef, ready: ready && !!CLIENT_ID, configured: !!CLIENT_ID };
 }
