@@ -370,7 +370,8 @@ export function SignupForm() {
       {step === "METHOD_SELECT" && (
         <div className="space-y-3">
           {/* Hidden div where GSI renders the real Google button */}
-          <div ref={googleButtonRef} style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 1, height: 1, overflow: "hidden" }} aria-hidden />
+          {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
+          <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
           {oauthApiError && (
             <p className="text-[12px] text-center font-medium" style={{ color: "#dc2626" }}>
               {oauthApiError}
