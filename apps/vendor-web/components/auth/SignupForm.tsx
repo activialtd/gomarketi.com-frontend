@@ -108,7 +108,7 @@ export function SignupForm() {
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
   const setSignupPhone = useAuthStore((s) => s.setSignupPhone);
-  const { signIn: googleSignIn } = useGoogleAuth();
+  const { signIn: googleSignIn, buttonRef: googleButtonRef } = useGoogleAuth();
 
   const [step, setStep] = useState<Step>("METHOD_SELECT");
   const [oauthUser, setOauthUser] = useState<OAuthUser | null>(null);
@@ -369,6 +369,8 @@ export function SignupForm() {
       {/* ═══ METHOD SELECT ════════════════════════════════════ */}
       {step === "METHOD_SELECT" && (
         <div className="space-y-3">
+          {/* Hidden div where GSI renders the real Google button */}
+          <div ref={googleButtonRef} style={{ position: "absolute", opacity: 0, pointerEvents: "none", width: 1, height: 1, overflow: "hidden" }} aria-hidden />
           {oauthApiError && (
             <p className="text-[12px] text-center font-medium" style={{ color: "#dc2626" }}>
               {oauthApiError}
