@@ -92,13 +92,13 @@ export function useGoogleAuth() {
     if (!ready || !buttonRef.current) return;
     const g: G = (window as G).google;
     if (!g?.accounts?.id) return;
-    // Render a native Google button inside the ref div. Clicking it triggers
-    // the FedCM-compatible sign-in popup and fires the onCredential callback.
+    // Render a native Google button in the off-screen div.
+    // Must use width:360 explicitly because the div is off-screen (offsetWidth=0).
     g.accounts.id.renderButton(buttonRef.current, {
       type: "standard",
       theme: "outline",
       size: "large",
-      width: buttonRef.current.offsetWidth || 360,
+      width: 360,
     });
   }, [ready]);
 
