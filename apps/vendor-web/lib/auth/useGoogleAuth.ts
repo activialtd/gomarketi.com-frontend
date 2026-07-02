@@ -55,8 +55,8 @@ function initGSI() {
     callback: onCredential,
     auto_select: false,
     cancel_on_tap_outside: true,
-    use_fedcm_for_prompt: true,
-    itp_support: true,
+    // Do NOT set use_fedcm_for_prompt — FedCM is blocked in many browsers.
+    // Without it, GSI uses the traditional popup which works everywhere.
   });
   gsiReady = true;
   readyCallbacks.splice(0).forEach((cb) => cb());
