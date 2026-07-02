@@ -64,10 +64,10 @@ export const storeSetupSchema = z.object({
 
   businessPhone: z.string().optional(),
 
-  // Address (optional — can be set later in Store Information)
-  address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
+  // Address — required for store setup
+  address: z.string().min(5, "Enter your business address"),
+  city: z.string().min(2, "Enter your city or LGA"),
+  state: z.string().min(2, "Select your state"),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
 });
