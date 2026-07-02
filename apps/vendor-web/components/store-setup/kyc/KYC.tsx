@@ -197,12 +197,24 @@ export default function KYCPage() {
     }).catch(() => {});
   }, [accessToken]);
 
-  // idValue is either a BVN or NIN — backend accepts both via the same field
-  async function verifyNIN(idValue: string) {
+  // Passes whichever of BVN/NIN the user chose, plus name/DOB for Smile ID matching
+  async function verifyNIN(
+    idValue: string,
+    method: "bvn" | "nin",
+    firstName: string,
+    lastName: string,
+    dob: string,
+  ) {
     if (!accessToken) return;
-    // 11-digit BVN and NIN go to their respective fields; length is the same
-    // We send as nin by default; the KYC form tells the user which they're submitting
-    await identityApi.submitKYC({ nin: idValue }, accessToken);
+    await identityApi.submitKYC(
+      {
+        [method]: idValue, // sends as bvn: or nin: based on user's choice
+        first_name: firstName,
+        last_name: lastName,
+        dob: dob,
+      },
+      accessToken,
+    );
   }
 
   async function verifyCAC(cac_number: string) {

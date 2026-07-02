@@ -345,7 +345,10 @@ export function AnimatedShield({ filled }: { filled: boolean }) {
 // ─── Step NIN ─────────────────────────────────────────────────────────────────
 
 // StepNIN is now the Tier 1 individual identity step (BVN or NIN — CBN framework)
-export function StepNIN({ onNext, onVerify }: { onNext: () => void; onVerify?: (nin: string) => Promise<void> }) {
+export function StepNIN({ onNext, onVerify }: {
+  onNext: () => void;
+  onVerify?: (idValue: string, method: "bvn" | "nin", firstName: string, lastName: string, dob: string) => Promise<void>;
+}) {
   const formRef = useRef<HTMLDivElement>(null);
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
@@ -375,7 +378,7 @@ export function StepNIN({ onNext, onVerify }: { onNext: () => void; onVerify?: (
     try {
       const idValue = data.method === "bvn" ? data.bvn! : data.nin!;
       if (onVerify) {
-        await onVerify(idValue);
+        await onVerify(idValue, data.method, data.firstName, data.lastName, data.dateOfBirth);
       } else {
         await new Promise((r) => setTimeout(r, 1500));
       }

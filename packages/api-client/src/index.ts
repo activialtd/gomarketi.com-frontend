@@ -685,10 +685,18 @@ export const identityApi = {
     request<{ onboarding_step: string }>("/v1/identity/vendor/onboard/business", { method: "PATCH", body: JSON.stringify(data) }, token),
 
   submitKYC: (data: {
+    // Identity fields for Smile ID name/DOB matching
+    first_name?: string;
+    last_name?: string;
+    dob?: string; // YYYY-MM-DD
+    // Tier 1 — one of bvn or nin
     bvn?: string;
     nin?: string;
+    // Tier 2 — KYB
     cac_number?: string;
+    tin?: string;
     cac_document_url?: string;
+    // Optional supporting docs
     id_type?: string;
     id_number?: string;
     id_document_url?: string;
