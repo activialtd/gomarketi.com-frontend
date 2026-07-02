@@ -21,7 +21,6 @@ import {
   StepIndicator,
   StepNIN,
   StepCAC,
-  StepBankStatement,
   StepSuccess,
   getTiers,
   type KycTier,
@@ -173,11 +172,11 @@ function TierCard({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-// Tier 2 steps: NIN → Success
-const TIER2_STEPS = ["NIN", "Complete"];
+// Tier 2: BVN/NIN identity check (CBN Tier 1 individual)
+const TIER2_STEPS = ["Identity", "Complete"];
 
-// Tier 3 steps: CAC → Bank Statement → Success
-const TIER3_STEPS = ["CAC", "Bank Statement", "Complete"];
+// Tier 3: CAC + TIN business check (CBN Tier 2 KYB — bank statement removed)
+const TIER3_STEPS = ["Business (KYB)", "Complete"];
 
 export default function KYCPage() {
   const router = useRouter();
@@ -198,9 +197,12 @@ export default function KYCPage() {
     }).catch(() => {});
   }, [accessToken]);
 
-  async function verifyNIN(nin: string) {
+  // idValue is either a BVN or NIN — backend accepts both via the same field
+  async function verifyNIN(idValue: string) {
     if (!accessToken) return;
-    await identityApi.submitKYC({ nin }, accessToken);
+    // 11-digit BVN and NIN go to their respective fields; length is the same
+    // We send as nin by default; the KYC form tells the user which they're submitting
+    await identityApi.submitKYC({ nin: idValue }, accessToken);
   }
 
   async function verifyCAC(cac_number: string) {
@@ -404,18 +406,18 @@ export default function KYCPage() {
               boxShadow: "0 4px 24px rgba(0,0,0,0.05)",
             }}
           >
-            {/* Tier 2 flow */}
+            {/* Tier 2 — CBN Tier 1 Individual (BVN or NIN) */}
             {activeTier === 2 && step === 0 && (
               <>
-                <p
-                  className="text-[16px] font-extrabold mb-1"
-                  style={{ color: "#1C1C1C" }}
-                >
-                  NIN verification
+                <p className="text-[16px] font-extrabold mb-1" style={{ color: "#1C1C1C" }}>
+                  Individual identity verification
                 </p>
-                <p className="text-[12.5px] mb-5" style={{ color: "#6b7280" }}>
-                  Verify your identity with the NIMC database in real time.
+                <p className="text-[12.5px] mb-1" style={{ color: "#6b7280" }}>
+                  Submit your BVN or NIN to unlock payouts up to ₦50,000/day.
                 </p>
+                <div className="flex items-center gap-2 mb-5 px-2.5 py-1.5 rounded-[6px] w-fit" style={{ background: "#eff6ff" }}>
+                  <span className="text-[11px] font-bold" style={{ color: "#3b82f6" }}>CBN Tier 1 · Max ₦50,000/day withdrawal</span>
+                </div>
                 <StepNIN onNext={nextStep} onVerify={verifyNIN} />
               </>
             )}
@@ -423,35 +425,19 @@ export default function KYCPage() {
               <StepSuccess tier={2} onDone={handleTierComplete} />
             )}
 
-            {/* Tier 3 flow */}
+            {/* Tier 3 — CBN Tier 2 KYB (CAC + TIN, no bank statement required) */}
             {activeTier === 3 && step === 0 && (
               <>
-                <p
-                  className="text-[16px] font-extrabold mb-1"
-                  style={{ color: "#1C1C1C" }}
-                >
-                  CAC verification
+                <p className="text-[16px] font-extrabold mb-1" style={{ color: "#1C1C1C" }}>
+                  Business verification (KYB)
                 </p>
-                <p className="text-[12.5px] mb-5" style={{ color: "#6b7280" }}>
-                  Verify your business registration with the Corporate Affairs
-                  Commission.
+                <p className="text-[12.5px] mb-1" style={{ color: "#6b7280" }}>
+                  Register your business to unlock unlimited payouts and the GoMarket Verified badge.
                 </p>
+                <div className="flex items-center gap-2 mb-5 px-2.5 py-1.5 rounded-[6px] w-fit" style={{ background: "#F0FAF3" }}>
+                  <span className="text-[11px] font-bold" style={{ color: "#1A7A42" }}>CBN Tier 2 · Unlimited withdrawals</span>
+                </div>
                 <StepCAC onNext={nextStep} onVerify={verifyCAC} />
-              </>
-            )}
-            {activeTier === 3 && step === 1 && (
-              <>
-                <p
-                  className="text-[16px] font-extrabold mb-1"
-                  style={{ color: "#1C1C1C" }}
-                >
-                  Bank statement
-                </p>
-                <p className="text-[12.5px] mb-5" style={{ color: "#6b7280" }}>
-                  Upload a 6-month bank statement to verify your business
-                  financial history.
-                </p>
-                <StepBankStatement onNext={nextStep} />
               </>
             )}
             {activeTier === 3 && isSuccessStep && (

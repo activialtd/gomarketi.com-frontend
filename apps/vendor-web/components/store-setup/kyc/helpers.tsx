@@ -41,23 +41,49 @@ export type TierInfo = {
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
 
-export const ninSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  dateOfBirth: z.string().min(1, "Date of birth is required"),
-  nin: z
+// Tier 1 — Individual identity (CBN: BVN or NIN required)
+export const identitySchema = z
+  .object({
+    firstName: z.string().min(1, "First name is required"),
+    lastName: z.string().min(1, "Last name is required"),
+    dateOfBirth: z.string().min(1, "Date of birth is required"),
+    method: z.enum(["bvn", "nin"]),
+    bvn: z.string().optional(),
+    nin: z.string().optional(),
+    consent: z.boolean().refine((v) => v, "You must consent to data processing"),
+  })
+  .superRefine((d, ctx) => {
+    const val = d.method === "bvn" ? d.bvn : d.nin;
+    if (!val || !/^\d{11}$/.test(val)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${d.method === "bvn" ? "BVN" : "NIN"} must be exactly 11 digits`,
+        path: [d.method],
+      });
+    }
+  });
+
+// Tier 2 — Business / KYB (CBN: CAC + TIN required)
+export const kybSchema = z.object({
+  rcNumber: z.string().min(4, "Enter your RC number (e.g. RC1234567)").max(20),
+  businessName: z.string().min(2, "Registered business name is required"),
+  tin: z
     .string()
-    .length(11, "NIN must be exactly 11 digits")
-    .regex(/^\d{11}$/, "NIN must contain only numbers"),
+    .min(8, "TIN must be at least 8 digits")
+    .max(15)
+    .regex(/^\d+(-\d+)?$/, "Enter a valid TIN (digits only)"),
+  directorName: z.string().min(3, "Director / owner full name is required"),
+  consent: z.boolean().refine((v) => v, "You must consent to data processing"),
 });
 
-export const cacSchema = z.object({
-  rcNumber: z.string().min(4, "Enter your RC number").max(20),
-  businessName: z.string().min(2, "Business name is required"),
-});
+export type IdentityValues = z.infer<typeof identitySchema>;
+export type KYBValues = z.infer<typeof kybSchema>;
 
-export type NINValues = z.infer<typeof ninSchema>;
-export type CACValues = z.infer<typeof cacSchema>;
+// Keep legacy aliases so KYC.tsx import doesn't break immediately
+export const ninSchema = identitySchema;
+export const cacSchema = kybSchema;
+export type NINValues = IdentityValues;
+export type CACValues = KYBValues;
 
 // ─── Tier config ──────────────────────────────────────────────────────────────
 
@@ -66,41 +92,42 @@ export function getTiers(completedTiers: KycTier[]): TierInfo[] {
   return [
     {
       tier: 1,
-      name: "Free access",
-      tagline: "Basic store + product listing",
+      name: "Active seller",
+      tagline: "Store open, manual payouts",
       icon: Zap,
       color: "#6b7280",
       unlocks: [
-        "Create your store",
-        "List up to 10 products",
-        "Accept manual orders",
+        "Create your storefront",
+        "List unlimited products",
+        "Accept orders via your store link",
       ],
-      status: "completed", // always completed — no action needed
+      status: "completed", // always completed — signup grants this
     },
     {
       tier: 2,
-      name: "Identity verified",
-      tagline: "NIN verification",
+      name: "Individual / Casual Seller",
+      tagline: "BVN or NIN — Tier 1 CBN",
       icon: Shield,
       color: "#3b82f6",
       unlocks: [
-        "Receive Paystack payouts",
-        "Payouts up to ₦500,000/month",
-        "GoMarket trust badge",
+        "Automated Paystack payouts",
+        "Up to ₦50,000 withdrawal/day",
+        "GoMarket identity badge",
+        "Faster dispute resolution",
       ],
-      status: completed(2) ? "completed" : completed(1) ? "active" : "locked",
+      status: completed(2) ? "completed" : "active", // always unlocked
     },
     {
       tier: 3,
-      name: "Business verified",
-      tagline: "CAC + bank statement",
+      name: "Registered Business",
+      tagline: "CAC + TIN — Tier 2 CBN (KYB)",
       icon: Building2,
       color: "#1A7A42",
       unlocks: [
-        "Unlimited payouts",
+        "Unlimited daily withdrawals",
         "GoMarket Verified Business badge",
-        "Priority support",
-        "Storefront featured placement",
+        "Priority support & account manager",
+        "Featured storefront placement",
       ],
       status: completed(3) ? "completed" : completed(2) ? "active" : "locked",
     },
@@ -317,220 +344,178 @@ export function AnimatedShield({ filled }: { filled: boolean }) {
 
 // ─── Step NIN ─────────────────────────────────────────────────────────────────
 
+// StepNIN is now the Tier 1 individual identity step (BVN or NIN — CBN framework)
 export function StepNIN({ onNext, onVerify }: { onNext: () => void; onVerify?: (nin: string) => Promise<void> }) {
   const formRef = useRef<HTMLDivElement>(null);
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
-  const [ninVisible, setNinVisible] = useState(false);
+  const [valueVisible, setValueVisible] = useState(false);
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
-  } = useForm<NINValues>({ resolver: zodResolver(ninSchema) });
+  } = useForm<IdentityValues>({ resolver: zodResolver(identitySchema), defaultValues: { method: "bvn" } });
+
+  const method = watch("method");
 
   useEffect(() => {
     if (!formRef.current) return;
     gsap.fromTo(
       formRef.current.querySelectorAll("[data-field]"),
       { opacity: 0, y: 18 },
-      {
-        opacity: 1,
-        y: 0,
-        stagger: 0.07,
-        duration: 0.45,
-        ease: "power2.out",
-        delay: 0.1,
-      },
+      { opacity: 1, y: 0, stagger: 0.07, duration: 0.45, ease: "power2.out", delay: 0.1 },
     );
   }, []);
 
-  async function onSubmit(data: NINValues) {
+  async function onSubmit(data: IdentityValues) {
     setVerifying(true);
     setVerifyError("");
     try {
+      const idValue = data.method === "bvn" ? data.bvn! : data.nin!;
       if (onVerify) {
-        await onVerify(data.nin);
+        await onVerify(idValue);
       } else {
         await new Promise((r) => setTimeout(r, 1500));
       }
       onNext();
     } catch {
-      setVerifyError("Verification failed. Please check your NIN and try again.");
+      setVerifyError(`Verification failed. Please check your ${method.toUpperCase()} and try again.`);
     } finally {
       setVerifying(false);
     }
   }
 
+  const idError = method === "bvn" ? (errors as Record<string, { message?: string }>).bvn?.message : (errors as Record<string, { message?: string }>).nin?.message;
+
   return (
     <div ref={formRef} className="space-y-5">
-      <div
-        data-field
-        className="flex items-start gap-3 p-4 rounded-[10px]"
-        style={{
-          background: "#fffbeb",
-          border: "1px solid rgba(245,158,11,0.2)",
-        }}
-      >
-        <Info
-          className="w-4 h-4 shrink-0 mt-0.5"
-          style={{ color: "#f59e0b" }}
-        />
-        <p
-          className="text-[12.5px] leading-relaxed"
-          style={{ color: "#92400e" }}
-        >
-          Your NIN is an 11-digit number on your National ID Card, NIN slip, or
-          NIMC app. Used solely to confirm your identity — never shared with
-          third parties.
+      {/* CBN Tier 1 info */}
+      <div data-field className="flex items-start gap-3 p-4 rounded-[10px]" style={{ background: "#eff6ff", border: "1px solid rgba(59,130,246,0.2)" }}>
+        <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#3b82f6" }} />
+        <p className="text-[12.5px] leading-relaxed" style={{ color: "#1e40af" }}>
+          This is your <strong>Tier 1 CBN verification</strong> — required for automated payouts up to ₦50,000/day.
+          Your BVN or NIN is encrypted end-to-end and never shared with third parties.
         </p>
       </div>
+
+      {/* BVN vs NIN choice */}
+      <div data-field>
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-2.5" style={{ color: "#3D6B4F" }}>
+          Verification method
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {(["bvn", "nin"] as const).map((m) => (
+            <button key={m} type="button" onClick={() => setValue("method", m)}
+              className="flex flex-col items-start px-4 py-3 rounded-[10px] border text-left transition-all"
+              style={{ borderColor: method === m ? "#1A7A42" : "#e2e8f0", background: method === m ? "rgba(26,122,66,0.04)" : "#fafafa" }}>
+              <p className="text-[13px] font-bold" style={{ color: method === m ? "#1A7A42" : "#1C1C1C" }}>
+                {m === "bvn" ? "BVN" : "NIN"}
+              </p>
+              <p className="text-[11px]" style={{ color: "#6b7280" }}>
+                {m === "bvn" ? "Bank Verification Number" : "National ID Number"}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Name fields */}
       <div data-field className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <KYCInput label="First name" required error={errors.firstName?.message}>
-          <input
-            className={inputClass}
-            style={inputStyle}
-            placeholder="As on your ID"
-            {...register("firstName")}
-          />
+          <input className={inputClass} style={inputStyle} placeholder="As on your ID" {...register("firstName")} />
         </KYCInput>
         <KYCInput label="Last name" required error={errors.lastName?.message}>
-          <input
-            className={inputClass}
-            style={inputStyle}
-            placeholder="As on your ID"
-            {...register("lastName")}
-          />
+          <input className={inputClass} style={inputStyle} placeholder="As on your ID" {...register("lastName")} />
         </KYCInput>
       </div>
+
+      {/* Date of birth */}
       <div data-field>
-        <KYCInput
-          label="Date of birth"
-          required
-          error={errors.dateOfBirth?.message}
-        >
-          <input
-            className={inputClass}
-            style={inputStyle}
-            type="date"
-            {...register("dateOfBirth")}
-          />
+        <KYCInput label="Date of birth" required error={errors.dateOfBirth?.message}>
+          <input className={inputClass} style={inputStyle} type="date" {...register("dateOfBirth")} />
         </KYCInput>
       </div>
+
+      {/* BVN / NIN field */}
       <div data-field>
         <KYCInput
-          label="NIN (National Identification Number)"
+          label={method === "bvn" ? "BVN (Bank Verification Number)" : "NIN (National Identification Number)"}
           required
-          hint="11-digit number on your NIMC card or slip"
-          error={errors.nin?.message}
+          hint={method === "bvn" ? "11-digit number — dial *565*0# on your registered phone" : "11-digit number on your NIMC card or slip"}
+          error={idError}
         >
           <div className="relative">
             <input
               className={`${inputClass} pr-10`}
-              style={{
-                ...inputStyle,
-                letterSpacing: ninVisible ? "normal" : "0.2em",
-                fontFamily: "monospace",
-              }}
-              type={ninVisible ? "text" : "password"}
+              style={{ ...inputStyle, letterSpacing: valueVisible ? "normal" : "0.2em", fontFamily: "monospace" }}
+              type={valueVisible ? "text" : "password"}
               placeholder="00000000000"
               maxLength={11}
-              {...register("nin")}
+              {...register(method)}
             />
-            <button
-              type="button"
-              onClick={() => setNinVisible((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[#F0FAF3] transition-colors"
-            >
-              {ninVisible ? (
-                <EyeOff className="w-4 h-4" style={{ color: "#94a3b8" }} />
-              ) : (
-                <Eye className="w-4 h-4" style={{ color: "#94a3b8" }} />
-              )}
+            <button type="button" onClick={() => setValueVisible((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[#F0FAF3] transition-colors">
+              {valueVisible ? <EyeOff className="w-4 h-4" style={{ color: "#94a3b8" }} /> : <Eye className="w-4 h-4" style={{ color: "#94a3b8" }} />}
             </button>
           </div>
         </KYCInput>
       </div>
-      <div data-field>
-        <button
-          type="button"
-          onClick={handleSubmit(onSubmit)}
-          disabled={verifying}
-          className="w-full h-[48px] rounded-[12px] text-[14px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
-          style={{
-            background: "#0A2E1A",
-            boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
-          }}
-          onMouseOver={(e) =>
-            !verifying && (e.currentTarget.style.background = "#239452")
-          }
-          onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
-        >
-          {verifying ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Verifying with NIMC…
-            </>
-          ) : (
-            <>
-              Verify NIN <ChevronRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
+
+      {/* NDPA Consent — required by Nigeria Data Protection Act */}
+      <div data-field className="flex items-start gap-3 p-3.5 rounded-[10px] border" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
+        <input type="checkbox" id="id-consent" className="w-4 h-4 mt-0.5 accent-[#1A7A42] shrink-0" {...register("consent")} />
+        <label htmlFor="id-consent" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: "#374151" }}>
+          I consent to GoMarketi processing my {method === "bvn" ? "BVN" : "NIN"} for identity verification purposes
+          in accordance with the <strong>Nigeria Data Protection Act (NDPA)</strong>. My data is encrypted
+          and will only be used to verify my identity on this platform.
+        </label>
       </div>
-      {verifyError && (
-        <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>{verifyError}</p>
-      )}
-      <p
-        data-field
-        className="text-center text-[11px]"
-        style={{ color: "#94a3b8" }}
+      {errors.consent && <p className="text-[11px]" style={{ color: "#dc2626" }}>{errors.consent.message}</p>}
+
+      <button type="button" onClick={handleSubmit(onSubmit)} disabled={verifying}
+        className="w-full h-[48px] rounded-[12px] text-[14px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+        style={{ background: "#0A2E1A", boxShadow: "0 4px 14px rgba(26,122,66,0.3)" }}
+        onMouseOver={(e) => !verifying && (e.currentTarget.style.background = "#239452")}
+        onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
       >
-        🔒 Encrypted and securely processed via NIMC API. Your NIN is never
-        stored on our servers.
+        {verifying ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</> : <>Verify {method.toUpperCase()} <ChevronRight className="w-4 h-4" /></>}
+      </button>
+      {verifyError && <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>{verifyError}</p>}
+      <p className="text-center text-[11px]" style={{ color: "#94a3b8" }}>
+        🔒 AES-256 encrypted · Verified via licensed KYC provider · NDPA compliant
       </p>
     </div>
   );
 }
 
-// ─── Step CAC ─────────────────────────────────────────────────────────────────
+// ─── Step CAC / KYB — Tier 2 Business Verification (CBN framework) ────────────
 
 export function StepCAC({ onNext, onVerify }: { onNext: () => void; onVerify?: (cac_number: string) => Promise<void> }) {
   const formRef = useRef<HTMLDivElement>(null);
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<CACValues>({ resolver: zodResolver(cacSchema) });
+  const { register, handleSubmit, formState: { errors } } = useForm<KYBValues>({ resolver: zodResolver(kybSchema) });
 
   useEffect(() => {
     if (!formRef.current) return;
     gsap.fromTo(
       formRef.current.querySelectorAll("[data-field]"),
       { opacity: 0, y: 18 },
-      {
-        opacity: 1,
-        y: 0,
-        stagger: 0.07,
-        duration: 0.45,
-        ease: "power2.out",
-        delay: 0.1,
-      },
+      { opacity: 1, y: 0, stagger: 0.07, duration: 0.45, ease: "power2.out", delay: 0.1 },
     );
   }, []);
 
-  async function onSubmit(data: CACValues) {
+  async function onSubmit(data: KYBValues) {
     setVerifying(true);
     setVerifyError("");
     try {
-      if (onVerify) {
-        await onVerify(data.rcNumber);
-      } else {
-        await new Promise((r) => setTimeout(r, 1600));
-      }
+      if (onVerify) await onVerify(data.rcNumber);
+      else await new Promise((r) => setTimeout(r, 1600));
       onNext();
     } catch {
-      setVerifyError("CAC verification failed. Please check your RC number.");
+      setVerifyError("Business verification failed. Please check your RC number and try again.");
     } finally {
       setVerifying(false);
     }
@@ -538,82 +523,65 @@ export function StepCAC({ onNext, onVerify }: { onNext: () => void; onVerify?: (
 
   return (
     <div ref={formRef} className="space-y-5">
-      <div
-        data-field
-        className="flex items-start gap-3 p-4 rounded-[10px]"
-        style={{
-          background: "#fffbeb",
-          border: "1px solid rgba(245,158,11,0.2)",
-        }}
-      >
-        <Info
-          className="w-4 h-4 shrink-0 mt-0.5"
-          style={{ color: "#f59e0b" }}
-        />
-        <p
-          className="text-[12.5px] leading-relaxed"
-          style={{ color: "#92400e" }}
-        >
-          Your CAC RC number is on your Certificate of Incorporation. We verify
-          against the Corporate Affairs Commission (CAC) database.
+      {/* KYB info banner */}
+      <div data-field className="flex items-start gap-3 p-4 rounded-[10px]" style={{ background: "#F0FAF3", border: "1px solid rgba(26,122,66,0.2)" }}>
+        <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#1A7A42" }} />
+        <p className="text-[12.5px] leading-relaxed" style={{ color: "#0A2E1A" }}>
+          This is your <strong>Tier 2 KYB (Know Your Business)</strong> check — required for unlimited payouts.
+          We verify directly against the CAC and FIRS databases.
         </p>
       </div>
+
+      {/* Business name */}
       <div data-field>
-        <KYCInput
-          label="Business name"
-          required
-          error={errors.businessName?.message}
-          hint="Exactly as registered with CAC"
-        >
-          <input
-            className={inputClass}
-            style={inputStyle}
-            placeholder="Eko Fashion House Limited"
-            {...register("businessName")}
-          />
+        <KYCInput label="Registered business name" required error={errors.businessName?.message} hint="Exactly as it appears on your Certificate of Incorporation">
+          <input className={inputClass} style={inputStyle} placeholder="Eko Fashion House Limited" {...register("businessName")} />
         </KYCInput>
       </div>
+
+      {/* RC Number */}
       <div data-field>
-        <KYCInput
-          label="RC Number"
-          required
-          error={errors.rcNumber?.message}
-          hint="e.g. RC1234567 — found on your Certificate of Incorporation"
-        >
-          <input
-            className={inputClass}
-            style={inputStyle}
-            placeholder="RC1234567"
-            {...register("rcNumber")}
-          />
+        <KYCInput label="CAC RC Number" required error={errors.rcNumber?.message} hint="On your Certificate of Incorporation (e.g. RC1234567)">
+          <input className={inputClass} style={inputStyle} placeholder="RC1234567" {...register("rcNumber")} />
         </KYCInput>
       </div>
+
+      {/* TIN */}
       <div data-field>
-        <button
-          type="button"
-          onClick={handleSubmit(onSubmit)}
-          disabled={verifying}
-          className="w-full h-[48px] rounded-[12px] text-[14px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
-          style={{
-            background: "#0A2E1A",
-            boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
-          }}
-          onMouseOver={(e) =>
-            !verifying && (e.currentTarget.style.background = "#239452")
-          }
-          onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
-        >
-          {verifying ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" /> Verifying with CAC…
-            </>
-          ) : (
-            <>
-              Verify business <ChevronRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
+        <KYCInput label="Tax Identification Number (TIN)" required error={errors.tin?.message} hint="From the FIRS TIN portal (tin.firs.gov.ng)">
+          <input className={inputClass} style={inputStyle} placeholder="1234567-0001" {...register("tin")} />
+        </KYCInput>
       </div>
+
+      {/* Director info */}
+      <div data-field>
+        <KYCInput label="Director / Beneficial owner full name" required error={errors.directorName?.message} hint="A person with 25% or more ownership of the business">
+          <input className={inputClass} style={inputStyle} placeholder="Akachi Ezekiel Okonkwo" {...register("directorName")} />
+        </KYCInput>
+      </div>
+
+      {/* NDPA Consent */}
+      <div data-field className="flex items-start gap-3 p-3.5 rounded-[10px] border" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
+        <input type="checkbox" id="kyb-consent" className="w-4 h-4 mt-0.5 accent-[#1A7A42] shrink-0" {...register("consent")} />
+        <label htmlFor="kyb-consent" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: "#374151" }}>
+          I confirm that the business information provided is accurate and I am authorised to submit this on behalf of the company.
+          I consent to GoMarketi verifying this information via CAC and FIRS databases in accordance with the <strong>Nigeria Data Protection Act (NDPA)</strong>.
+        </label>
+      </div>
+      {errors.consent && <p className="text-[11px]" style={{ color: "#dc2626" }}>{errors.consent.message}</p>}
+
+      <button type="button" onClick={handleSubmit(onSubmit)} disabled={verifying}
+        className="w-full h-[48px] rounded-[12px] text-[14px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+        style={{ background: "#0A2E1A", boxShadow: "0 4px 14px rgba(26,122,66,0.3)" }}
+        onMouseOver={(e) => !verifying && (e.currentTarget.style.background = "#239452")}
+        onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
+      >
+        {verifying ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying with CAC…</> : <>Submit business verification <ChevronRight className="w-4 h-4" /></>}
+      </button>
+      {verifyError && <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>{verifyError}</p>}
+      <p className="text-center text-[11px]" style={{ color: "#94a3b8" }}>
+        🔒 Verified directly against CAC & FIRS databases · NDPA compliant
+      </p>
     </div>
   );
 }
