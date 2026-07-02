@@ -65,14 +65,6 @@ const QUICK_ACTIONS = [
     color: "#3b82f6",
   },
   {
-    icon: Globe,
-    label: "View Storefront",
-    sub: "See customer view",
-    href: "#",
-    color: "#8b5cf6",
-    external: true,
-  },
-  {
     icon: BarChart3,
     label: "Analytics",
     sub: "Sales & traffic data",
@@ -186,7 +178,9 @@ export default function OverviewPage() {
   const [wallet, setWallet] = useState<WalletResp | null>(null);
 
   const accountNumber = "9740176746";
-  const storefrontUrl = store ? `http://${store.slug}.${STORE_DOMAIN}` : null;
+  // Use https — subdomains are served over TLS via Cloudflare wildcard cert.
+  // http:// causes ERR_SSL_PROTOCOL_ERROR when Chrome HSTS-upgrades the URL.
+  const storefrontUrl = store ? `https://${store.slug}.${STORE_DOMAIN}` : null;
 
   useEffect(() => {
     if (!accessToken) return;
@@ -259,16 +253,7 @@ export default function OverviewPage() {
                   <ShieldCheck className="w-3.5 h-3.5" />
                   Verified store
                 </div>
-                <div
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold"
-                  style={{
-                    background: "rgba(245,158,11,0.12)",
-                    color: "#fbbf24",
-                  }}
-                >
-                  <Star className="w-3 h-3" fill="#fbbf24" />
-                  4.8 · 124 reviews
-                </div>
+                {/* Star rating hidden until real consumer ratings are available */}
               </div>
             </div>
           </div>
@@ -336,15 +321,9 @@ export default function OverviewPage() {
               {QUICK_ACTIONS.map((action) => (
                 <Link
                   key={action.label}
-                  href={action.external ? (storefrontUrl ?? "#") : action.href}
-                  target={action.external && storefrontUrl ? "_blank" : undefined}
-                  rel={action.external ? "noopener noreferrer" : undefined}
+                  href={action.href}
                   className="flex items-center gap-2.5 p-3 rounded-[10px] border transition-all hover:border-[#1A7A42] hover:bg-[#F0FAF3] group"
-                  style={{
-                    borderColor: "#e9eef3", background: "#fafafa",
-                    opacity: action.external && !storefrontUrl ? 0.5 : 1,
-                    pointerEvents: action.external && !storefrontUrl ? "none" : "auto",
-                  }}
+                  style={{ borderColor: "#e9eef3", background: "#fafafa" }}
                 >
                   <div
                     className="w-7 h-7 rounded-[7px] flex items-center justify-center shrink-0"

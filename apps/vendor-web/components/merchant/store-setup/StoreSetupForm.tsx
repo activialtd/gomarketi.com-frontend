@@ -375,7 +375,11 @@ export function StoreSetupForm() {
             </button>
             <button
               type="button"
-              onClick={() => router.push(ROUTES.MERCHANT.OVERVIEW)}
+              onClick={() => {
+                // Clear tour flag so new users see the dashboard tour on first visit
+                if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v1");
+                router.push(ROUTES.MERCHANT.OVERVIEW);
+              }}
               className="w-full flex items-center justify-center h-[44px] rounded-[12px] text-[13px] font-semibold transition-colors"
               style={{ color: "#6b7280", background: "#f8fafc", border: `1px solid ${BORDER}` }}
               onMouseOver={(e) => (e.currentTarget.style.background = "#f1f5f9")}
