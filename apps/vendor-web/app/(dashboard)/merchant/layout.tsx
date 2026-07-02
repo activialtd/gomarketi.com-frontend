@@ -7,6 +7,7 @@ import { Header } from "@/components/common/Header";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
+import { SWRProvider } from "@/lib/swr/provider";
 import { authApi, storefrontApi, setTokenRefreshCallback } from "@gomarket/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
@@ -85,6 +86,7 @@ export default function MerchantLayout({
   // }
 
   return (
+    <SWRProvider>
     <div className="flex h-screen overflow-hidden bg-[#f4f6f9]">
       <DashboardTour />
 
@@ -111,5 +113,6 @@ export default function MerchantLayout({
         </main>
       </div>
     </div>
+    </SWRProvider>
   );
 }
