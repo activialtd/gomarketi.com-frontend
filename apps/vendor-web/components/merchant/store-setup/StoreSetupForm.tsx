@@ -605,21 +605,25 @@ export function StoreSetupForm() {
             <div className="space-y-6">
               {/* Business address */}
               <div className="space-y-2">
-                <FieldLabel>Business address <span className="text-[11px] font-normal" style={{color:"#94a3b8"}}>(optional — helps with local SEO)</span></FieldLabel>
+                <FieldLabel>Business address</FieldLabel>
                 <AddressSearch
                   defaultValue={watch("address") ?? ""}
                   onSelect={(r) => {
-                    setValue("address", r.fullAddress);
-                    setValue("city", r.city);
-                    setValue("state", r.state);
+                    setValue("address", r.fullAddress, { shouldValidate: true });
+                    setValue("city", r.city, { shouldValidate: true });
+                    setValue("state", r.state, { shouldValidate: true });
                     if (r.lat) setValue("latitude", r.lat);
                     if (r.lng) setValue("longitude", r.lng);
                   }}
                 />
-                {watch("address") && (
+                {watch("address") ? (
                   <p className="text-[12px] flex items-center gap-1.5" style={{color:"#1A7A42"}}>
                     <span>📍</span> {watch("city")}, {watch("state")}
                   </p>
+                ) : errors.address ? (
+                  <p className="text-[11px]" style={{color:"#dc2626"}}>{errors.address.message}</p>
+                ) : (
+                  <p className="text-[11px]" style={{color:"#94a3b8"}}>Search and select your business address above</p>
                 )}
               </div>
 

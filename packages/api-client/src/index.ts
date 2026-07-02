@@ -718,4 +718,15 @@ export const identityApi = {
       is_email_verified: boolean;
       vendor?: { id: string; onboarding_step: string; kyc_status: string; is_active: boolean };
     }>("/v1/identity/me", {}, token),
+
+  listVendorBanks: (token: string) =>
+    request<Array<{
+      id: string;
+      bank_name: string;
+      bank_code: string;
+      account_number_masked: string;
+      account_name: string;
+      is_primary: boolean;
+      is_verified: boolean;
+    }>>("/v1/identity/vendor/banks", {}, token),
 };
