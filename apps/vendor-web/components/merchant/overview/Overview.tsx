@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   Copy,
   Check,
@@ -23,18 +23,9 @@ import {
   ArrowUpRight,
   CheckCircle2,
 } from "lucide-react";
-import {
-  analyticsApi,
-  ordersApi,
-  storefrontApi,
-  walletApi,
-  type AnalyticsOverviewResp,
-  type OrderResp,
-  type StoreResp,
-  type WalletResp,
-} from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ORDER_STATUS_CONFIG } from "@gomarket/shared-utils";
+import { useAnalyticsOverview, useOrders, useMyStore, useWallet } from "@/lib/swr/hooks";
 import Link from "next/link";
 import { ROUTES } from "@/lib/config/routes";
 
@@ -167,45 +158,19 @@ function StatCard({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function OverviewPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
   const [copied, setCopied] = useState(false);
-  const [analytics, setAnalytics] = useState<AnalyticsOverviewResp | null>(
-    null,
-  );
-  const [recentOrders, setRecentOrders] = useState<OrderResp[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [store, setStore] = useState<StoreResp | null>(null);
-  const [wallet, setWallet] = useState<WalletResp | null>(null);
+
+  // SWR — all cached, instant on re-visit
+  const { data: analytics, isLoading: loadingAnalytics } = useAnalyticsOverview();
+  const { data: ordersData, isLoading: loadingOrders } = useOrders({ per_page: 5 });
+  const { data: store, isLoading: loadingStore } = useMyStore();
+  const { data: wallet } = useWallet();
+
+  const loading = loadingAnalytics || loadingOrders || loadingStore;
+  const recentOrders = ordersData?.orders?.slice(0, 5) ?? [];
 
   const accountNumber = "9740176746";
   const storefrontUrl = store ? `http://${store.slug}.${STORE_DOMAIN}` : null;
-
-  useEffect(() => {
-    if (!accessToken) return;
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const [ov, ol, st, wl] = await Promise.allSettled([
-          analyticsApi.getOverview(accessToken!),
-          ordersApi.listOrders({ per_page: 5 }, accessToken!),
-          storefrontApi.getMyStore(accessToken!),
-          walletApi.getBalance(accessToken!),
-        ]);
-        if (cancelled) return;
-        if (ov.status === "fulfilled") setAnalytics(ov.value);
-        if (ol.status === "fulfilled") setRecentOrders(ol.value.orders);
-        if (st.status === "fulfilled") setStore(st.value);
-        if (wl.status === "fulfilled") setWallet(wl.value);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
 
   function handleCopy() {
     navigator.clipboard.writeText(accountNumber);

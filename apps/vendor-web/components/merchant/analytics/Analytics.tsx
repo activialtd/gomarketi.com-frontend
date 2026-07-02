@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
   TrendingUp,
   ShoppingBag,
@@ -11,41 +10,13 @@ import {
   BarChart3,
 } from "lucide-react";
 import { fmtK } from "@gomarket/shared-utils";
-import { analyticsApi, type AnalyticsOverviewResp, type TopProductResp } from "@gomarket/api-client";
-import { useAuthStore } from "@/store/useAuthStore";
 import { KPICard } from "./helpers";
+import { useAnalyticsOverview, useTopProducts } from "@/lib/swr/hooks";
 
 export default function Analytics() {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const [overview, setOverview] = useState<AnalyticsOverviewResp | null>(null);
-  const [topProducts, setTopProducts] = useState<TopProductResp[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!accessToken) return;
-    let cancelled = false;
-    Promise.all([
-      analyticsApi.getOverview(accessToken),
-      analyticsApi.getTopProducts(5, accessToken),
-    ])
-      .then(([ov, products]) => {
-        if (cancelled) return;
-        setOverview(ov);
-        setTopProducts(products);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setOverview(null);
-          setTopProducts([]);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
+  const { data: overview, isLoading: loadingOverview } = useAnalyticsOverview();
+  const { data: topProducts = [], isLoading: loadingTop } = useTopProducts(5);
+  const loading = loadingOverview || loadingTop;
 
   return (
     <div className="w-full">

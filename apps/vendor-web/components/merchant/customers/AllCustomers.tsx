@@ -1,38 +1,19 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Search, Users, TrendingUp, ArrowUpDown, Loader2 } from "lucide-react";
-import { crmApi, type CustomerResp } from "@gomarket/api-client";
-import { useAuthStore } from "@/store/useAuthStore";
+import { type CustomerResp } from "@gomarket/api-client";
 import { fmtNaira } from "@gomarket/shared-utils";
 import { CustomerDrawer, CustomerRow } from "./helpers";
+import { useCustomers } from "@/lib/swr/hooks";
 
 export default function AllCustomers() {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const [customers, setCustomers] = useState<CustomerResp[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sortAsc, setSortAsc] = useState(false);
   const [selected, setSelected] = useState<CustomerResp | null>(null);
 
-  useEffect(() => {
-    if (!accessToken) return;
-    let cancelled = false;
-    crmApi
-      .listCustomers({ per_page: 100 }, accessToken)
-      .then((resp) => {
-        if (!cancelled) setCustomers(resp.customers);
-      })
-      .catch(() => {
-        if (!cancelled) setCustomers([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
+  const { data: customersData, isLoading: loading } = useCustomers();
+  const customers: CustomerResp[] = customersData?.customers ?? [];
 
   const filtered = useMemo(() => {
     let list = [...customers];

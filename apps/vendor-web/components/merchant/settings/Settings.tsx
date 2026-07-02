@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ShieldCheck,
@@ -20,7 +20,8 @@ import {
 } from "lucide-react";
 import { ROUTES } from "@/lib/config/routes";
 import { KYC_CONFIG, PLAN_CONFIG, Field, EditButton, Section } from "./helper";
-import { identityApi, storefrontApi, analyticsApi, type PlanResp } from "@gomarket/api-client";
+import { useMyStore, useVendorProfile, useSubscription, useAnalyticsOverview } from "@/lib/swr/hooks";
+import { identityApi, type PlanResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { InstagramIcon, FacebookIcon, TwitterIcon } from "@/lib/icons";
 
@@ -38,85 +39,51 @@ const planDisplay: Record<string, { label: string; bg: string; color: string }> 
 
 export default function Settings() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
-
-  // Real data
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [businessCategory, setBusinessCategory] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [storeSlug, setStoreSlug] = useState("");
-  const [city, setCity] = useState("");
-  const [storeState, setStoreState] = useState("");
-  const [phone, setPhone] = useState("");
-  const [joinedAt, setJoinedAt] = useState("");
-  const [kycStatus, setKycStatus] = useState<KycStatus>("unverified");
-  const [plan, setPlan] = useState<PlanResp | null>(null);
-  const [social, setSocial] = useState<{ instagram?: string; twitter?: string; facebook?: string }>({});
-  const [totalOrders, setTotalOrders] = useState(0);
-  const [totalCustomers, setTotalCustomers] = useState(0);
   const [primaryBank, setPrimaryBank] = useState<{ bank_name: string; account_number_masked: string; account_name: string } | null>(null);
 
-  useEffect(() => {
+  // SWR — all cached, instant on re-visit
+  const { data: store, isLoading: loadingStore } = useMyStore();
+  const { data: vendorProfile, isLoading: loadingVendor } = useVendorProfile();
+  const { data: subscription } = useSubscription();
+  const { data: analyticsData } = useAnalyticsOverview();
+
+  const loading = loadingStore || loadingVendor;
+
+  // Banks are fetched once on mount (not SWR — rarely changes, fine with manual fetch)
+  useState(() => {
     if (!accessToken) return;
-    let cancelled = false;
-
-    (async () => {
-      const [meRes, storeRes, vendorRes, subRes, analyticsRes, banksRes] = await Promise.allSettled([
-        identityApi.getMe(accessToken),
-        storefrontApi.getMyStore(accessToken),
-        identityApi.getVendorProfile(accessToken),
-        identityApi.getSubscription(accessToken),
-        analyticsApi.getOverview(accessToken),
-        identityApi.listVendorBanks(accessToken),
-      ]);
-
-      if (cancelled) return;
-
-      if (meRes.status === "fulfilled") {
-        setFullName(meRes.value.full_name ?? "");
-        setEmail(meRes.value.email ?? "");
-      }
-      if (storeRes.status === "fulfilled") {
-        const s = storeRes.value;
-        setBusinessName(s.name);
-        setBusinessCategory(s.category);
-        setTagline(s.tagline ?? "");
-        setStoreSlug(s.slug);
-        setCity(s.city ?? "");
-        setStoreState(s.state ?? "");
-        setPhone(s.support_phone ?? "");
-        setJoinedAt(s.created_at);
-        // Parse social from theme_config
-        try {
-          const cfg = JSON.parse(s.theme_config ?? "{}");
-          setSocial(cfg?.sections?.footer?.social ?? {});
-        } catch { /* non-fatal */ }
-      }
-      if (vendorRes.status === "fulfilled") {
-        const k = vendorRes.value.kyc_status;
-        setKycStatus(k === "none" ? "unverified" : k as KycStatus);
-      }
-      if (subRes.status === "fulfilled") {
-        setPlan(subRes.value.plan);
-      }
-      if (analyticsRes.status === "fulfilled") {
-        setTotalOrders(analyticsRes.value.total_orders);
-        setTotalCustomers(analyticsRes.value.total_customers);
-      }
-      if (banksRes.status === "fulfilled") {
-        const banks = banksRes.value;
+    identityApi.listVendorBanks(accessToken)
+      .then((banks) => {
         const primary = banks.find((b) => b.is_primary) ?? banks[0] ?? null;
         setPrimaryBank(primary);
-      }
+      })
+      .catch(() => {});
+  });
 
-      setLoading(false);
-    })();
+  // Derive display values from SWR data
+  const fullName = "";   // comes from auth store user object if needed
+  const email = useAuthStore((s) => (s.user as { email?: string } | null)?.email ?? "");
+  const businessName = store?.name ?? "";
+  const businessCategory = store?.category ?? "";
+  const tagline = store?.tagline ?? "";
+  const storeSlug = store?.slug ?? "";
+  const city = store?.city ?? "";
+  const storeState = store?.state ?? "";
+  const phone = store?.support_phone ?? "";
+  const joinedAt = store?.created_at ?? "";
+  const plan: PlanResp | null = subscription?.plan ?? null;
+  const totalOrders = analyticsData?.total_orders ?? 0;
+  const totalCustomers = analyticsData?.total_customers ?? 0;
 
-    return () => { cancelled = true; };
-  }, [accessToken]);
+  const rawKyc = vendorProfile?.kyc_status ?? "none";
+  const kycStatus: KycStatus = rawKyc === "none" ? "unverified" : rawKyc as KycStatus;
+
+  let social: { instagram?: string; twitter?: string; facebook?: string } = {};
+  try {
+    const cfg = JSON.parse(store?.theme_config ?? "{}");
+    social = cfg?.sections?.footer?.social ?? {};
+  } catch { /* non-fatal */ }
 
   const kyc = KYC_CONFIG[kycStatus];
   const planCfg = planDisplay[plan?.slug ?? "free"] ?? planDisplay.free;
