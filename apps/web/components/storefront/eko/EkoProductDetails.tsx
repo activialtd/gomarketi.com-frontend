@@ -1,550 +1,253 @@
-// apps/storefront/app/products/[slug]/page.tsx
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Minus,
-  Plus,
-  ShoppingBag,
-  Check,
-  ChevronRight,
-  MessageCircle,
-  Truck,
-  ShieldCheck,
+  Download, ShoppingBag, Check, Share2,
+  Shield, Zap, RotateCcw, ChevronRight,
 } from "lucide-react";
-import { STORE_CONFIG } from "@/lib/storeConfig";
-import { Product, PRODUCTS } from "@/lib/data/products";
 import { useCart } from "@/lib/cartContext";
-import { fmtNaira } from "@gomarket/shared-utils";
+import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
+import { ProductCard } from "./EkoProductCard";
 
-export default function ProductDetailPage({ slug }: { slug: string }) {
-  const c = STORE_CONFIG.colors;
-  const router = useRouter();
+function fmt(kobo: number) {
+  return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
+}
+
+export default function EkoProductDetails({
+  product,
+  related = [],
+}: {
+  product: StorefrontProduct;
+  related?: StorefrontProduct[];
+}) {
   const { addToCart } = useCart();
-  const product = PRODUCTS.find((p) => p.slug === slug) ?? null;
-  const [activeImage, setActiveImage] = useState(0);
-  const [selectedOptions, setSelectedOptions] = useState<
-    Record<string, string>
-  >({});
-
-  const [quantity, setQuantity] = useState(1);
+  const router = useRouter();
+  const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
+  const [qty, setQty] = useState(1);
 
-  const matchedVariant = useMemo(() => {
-    if (!product?.hasVariants || !product.variants) return undefined;
-
-    const allSelected = product.variantOptions?.every(
-      (opt) => selectedOptions[opt.name],
-    );
-
-    if (!allSelected) return undefined;
-
-    return product.variants.find((v) =>
-      Object.entries(selectedOptions).every(
-        ([key, val]) => v.options[key] === val,
-      ),
-    );
-  }, [product, selectedOptions]);
-
-  if (!product) {
-    return (
-      <div
-        style={{
-          maxWidth: "600px",
-          margin: "0 auto",
-          padding: "80px 20px",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            fontSize: "18px",
-            fontWeight: 800,
-            color: c.text,
-            marginBottom: "8px",
-          }}
-        >
-          Product not found
-        </p>
-        <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "20px" }}>
-          This item may be out of stock or no longer available.
-        </p>
-        <Link
-          href="/shop"
-          style={{
-            color: c.primary,
-            fontWeight: 700,
-            fontSize: "13px",
-            textDecoration: "none",
-          }}
-        >
-          Browse all products →
-        </Link>
-      </div>
-    );
-  }
-
-  const needsSelection = product.hasVariants && !matchedVariant;
-  const currentPrice = matchedVariant?.price ?? product.price;
-  const currentCompareAt = matchedVariant
-    ? matchedVariant.compareAtPrice
-    : product.compareAtPrice;
-  const currentStock = matchedVariant?.stock ?? product.stock;
-  const isOutOfStock = product.hasVariants
-    ? matchedVariant
-      ? matchedVariant.stock === 0
-      : false
-    : product.stock === 0;
-
-  function selectOption(optionName: string, value: string) {
-    setSelectedOptions((prev) => ({ ...prev, [optionName]: value }));
-    setQuantity(1);
-    setAdded(false);
-  }
-
-  function isValueAvailable(optionName: string, value: string): boolean {
-    if (!product!.variants) return true;
-    // Check if any variant with this value (given other current selections) has stock
-    const trial = { ...selectedOptions, [optionName]: value };
-    return (
-      product!.variants.some(
-        (v) =>
-          Object.entries(trial).every(([k, val]) => v.options[k] === val) &&
-          v.stock > 0,
-      ) || product!.variants.some((v) => v.options[optionName] === value)
-    ); // fallback: at least exists
-  }
-
-  function handleAddToCart() {
-    if (needsSelection || isOutOfStock) return;
-    addToCart(product!, matchedVariant, quantity);
+  function handleAdd() {
+    addToCart(product, qty);
     setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
+    setTimeout(() => setAdded(false), 2500);
   }
 
   function handleBuyNow() {
-    if (needsSelection || isOutOfStock) return;
-    addToCart(product!, matchedVariant, quantity);
+    addToCart(product, qty);
     router.push("/checkout");
   }
 
   return (
-    <div
-      style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        padding: "24px 20px 64px",
-      }}
-    >
+    <div style={{ minHeight: "100vh", background: "#fff" }}>
+
       {/* Breadcrumb */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "6px",
-          fontSize: "12px",
-          color: "#94a3b8",
-          marginBottom: "24px",
-          flexWrap: "wrap",
-        }}
-      >
-        <Link href="/" style={{ color: "#94a3b8", textDecoration: "none" }}>
-          Home
-        </Link>
-        <ChevronRight className="w-3 h-3" />
-        <Link href="/shop" style={{ color: "#94a3b8", textDecoration: "none" }}>
-          Shop
-        </Link>
-        <ChevronRight className="w-3 h-3" />
-        <span style={{ color: c.text, fontWeight: 600 }}>{product.name}</span>
+      <div style={{ background: "#f8fafc", borderBottom: "1px solid #f1f5f9", padding: "10px 24px" }}>
+        <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          <Link href="/" style={{ color: "#6b7280", fontSize: "12px", textDecoration: "none" }}>Home</Link>
+          <ChevronRight style={{ width: "12px", height: "12px", color: "#d1d5db" }} />
+          <Link href="/shop" style={{ color: "#6b7280", fontSize: "12px", textDecoration: "none" }}>Shop</Link>
+          <ChevronRight style={{ width: "12px", height: "12px", color: "#d1d5db" }} />
+          <span style={{ color: "#374151", fontSize: "12px", fontWeight: 600 }}>{product.name}</span>
+        </div>
       </div>
 
-      <div
-        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "48px" }}
-        className="product-grid"
-      >
-        {/* ── Image gallery ────────────────────────────────── */}
-        <div>
-          <div
-            style={{
-              borderRadius: "16px",
-              overflow: "hidden",
-              aspectRatio: "1",
-              background: c.bg,
-              marginBottom: "12px",
-            }}
-          >
-            <img
-              src={product.images[activeImage]}
-              alt={product.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-          {product.images.length > 1 && (
-            <div style={{ display: "flex", gap: "8px" }}>
-              {product.images.map((img, i) => (
-                <button
-                  key={i}
-                  onClick={() => setActiveImage(i)}
-                  style={{
-                    width: "64px",
-                    height: "64px",
-                    borderRadius: "8px",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                    border:
-                      activeImage === i
-                        ? `2px solid ${c.primary}`
-                        : "2px solid #f1f5f9",
-                    cursor: "pointer",
-                    padding: 0,
-                    background: "none",
-                  }}
-                >
-                  <img
-                    src={img}
-                    alt=""
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
-                </button>
-              ))}
+      {/* Main section */}
+      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "40px 24px" }}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+
+          {/* Image gallery */}
+          <div>
+            <div style={{
+              aspectRatio: "1", borderRadius: "20px", overflow: "hidden",
+              background: "var(--store-bg, #F0FAF3)", border: "1px solid #f1f5f9",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: "12px", position: "relative",
+            }}>
+              {product.images.length > 0 ? (
+                <img src={product.images[activeImg]} alt={product.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                <div style={{ textAlign: "center", opacity: 0.4 }}>
+                  {product.is_digital
+                    ? <Download style={{ width: "64px", height: "64px", color: "var(--store-primary, #1A7A42)", margin: "0 auto 8px" }} />
+                    : <ShoppingBag style={{ width: "64px", height: "64px", color: "var(--store-primary, #1A7A42)", margin: "0 auto 8px" }} />
+                  }
+                  <p style={{ fontSize: "13px", fontWeight: 600, color: "#6b7280" }}>
+                    {product.is_digital ? "Digital product" : "No image"}
+                  </p>
+                </div>
+              )}
+              {product.is_digital && (
+                <div style={{
+                  position: "absolute", top: "14px", left: "14px",
+                  background: "var(--store-primary, #1A7A42)", color: "#fff",
+                  borderRadius: "999px", padding: "5px 12px",
+                  fontSize: "11px", fontWeight: 700,
+                  display: "flex", alignItems: "center", gap: "5px",
+                }}>
+                  <Download style={{ width: "11px", height: "11px" }} /> Digital Download
+                </div>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* ── Details ──────────────────────────────────────── */}
-        <div>
-          <p
-            style={{
-              fontSize: "11px",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              color: c.primary,
-              marginBottom: "8px",
-            }}
-          >
-            {product.category}
-          </p>
-          <h1
-            style={{
-              fontSize: "26px",
-              fontWeight: 900,
-              color: c.text,
-              letterSpacing: "-0.5px",
-              marginBottom: "12px",
-              lineHeight: 1.2,
-            }}
-          >
-            {product.name}
-          </h1>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginBottom: "20px",
-            }}
-          >
-            <span
-              style={{ fontSize: "24px", fontWeight: 800, color: c.primary }}
-            >
-              {fmtNaira(currentPrice)}
-            </span>
-            {currentCompareAt && (
-              <span
-                style={{
-                  fontSize: "15px",
-                  color: "#94a3b8",
-                  textDecoration: "line-through",
-                }}
-              >
-                {fmtNaira(currentCompareAt)}
-              </span>
+            {product.images.length > 1 && (
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {product.images.map((img, i) => (
+                  <button key={i} onClick={() => setActiveImg(i)} style={{
+                    width: "72px", height: "72px", borderRadius: "10px", overflow: "hidden",
+                    border: `2px solid ${i === activeImg ? "var(--store-primary, #1A7A42)" : "#e2e8f0"}`,
+                    cursor: "pointer", padding: 0, background: "transparent",
+                  }}>
+                    <img src={img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
-          <p
-            style={{
-              fontSize: "14px",
-              color: "#374151",
-              lineHeight: 1.7,
-              marginBottom: "24px",
-            }}
-          >
-            {product.description}
-          </p>
+          {/* Product info */}
+          <div className="lg:sticky lg:top-20">
+            {product.tags.length > 0 && (
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "12px" }}>
+                {product.tags.slice(0, 4).map((tag) => (
+                  <span key={tag} style={{
+                    background: "var(--store-bg, #F0FAF3)", color: "var(--store-primary, #1A7A42)",
+                    borderRadius: "999px", padding: "3px 10px",
+                    fontSize: "11px", fontWeight: 600, textTransform: "capitalize",
+                  }}>{tag}</span>
+                ))}
+              </div>
+            )}
 
-          {/* Variant selectors */}
-          {product.hasVariants &&
-            product.variantOptions?.map((opt) => (
-              <div key={opt.name} style={{ marginBottom: "20px" }}>
-                <p
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 700,
-                    color: c.text,
-                    marginBottom: "10px",
-                  }}
-                >
-                  {opt.name}
-                  {selectedOptions[opt.name] && (
-                    <span style={{ color: "#6b7280", fontWeight: 500 }}>
-                      {" "}
-                      — {selectedOptions[opt.name]}
-                    </span>
-                  )}
+            <h1 style={{
+              fontSize: "clamp(22px, 3.5vw, 32px)", fontWeight: 900,
+              letterSpacing: "-0.5px", color: "#1C1C1C", lineHeight: 1.15, marginBottom: "16px",
+            }}>
+              {product.name}
+            </h1>
+
+            <div style={{ marginBottom: "24px", display: "flex", alignItems: "baseline", gap: "12px" }}>
+              <span style={{ fontSize: "34px", fontWeight: 900, color: "var(--store-primary, #1A7A42)", letterSpacing: "-0.5px" }}>
+                {fmt(product.price_kobo)}
+              </span>
+              {product.is_digital && (
+                <span style={{ fontSize: "13px", color: "#6b7280" }}>One-time purchase</span>
+              )}
+            </div>
+
+            {product.description && (
+              <p style={{ fontSize: "15px", lineHeight: 1.8, color: "#374151", marginBottom: "28px", whiteSpace: "pre-line" }}>
+                {product.description}
+              </p>
+            )}
+
+            {!product.is_digital && (
+              <div style={{ marginBottom: "24px" }}>
+                <p style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", marginBottom: "8px", letterSpacing: "0.08em" }}>
+                  QUANTITY
                 </p>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                  {opt.values.map((val) => {
-                    const isSelected = selectedOptions[opt.name] === val;
-                    const available = isValueAvailable(opt.name, val);
-                    return (
-                      <button
-                        key={val}
-                        onClick={() => available && selectOption(opt.name, val)}
-                        disabled={!available}
-                        style={{
-                          padding: "9px 16px",
-                          borderRadius: "9px",
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          border: isSelected
-                            ? `2px solid ${c.primary}`
-                            : "1.5px solid #e2e8f0",
-                          background: isSelected ? c.bg : "#fff",
-                          color: !available
-                            ? "#d1d5db"
-                            : isSelected
-                              ? c.primary
-                              : "#374151",
-                          cursor: available ? "pointer" : "not-allowed",
-                          textDecoration: !available ? "line-through" : "none",
-                          position: "relative",
-                        }}
-                      >
-                        {val}
-                      </button>
-                    );
-                  })}
+                <div style={{
+                  display: "inline-flex", alignItems: "center",
+                  border: "1.5px solid #e2e8f0", borderRadius: "10px", overflow: "hidden",
+                }}>
+                  <button onClick={() => setQty(Math.max(1, qty - 1))} style={{
+                    width: "42px", height: "42px", border: "none", background: "#f8fafc",
+                    cursor: "pointer", fontSize: "18px", color: "#374151",
+                  }}>−</button>
+                  <span style={{ width: "48px", textAlign: "center", fontWeight: 700, fontSize: "15px" }}>
+                    {qty}
+                  </span>
+                  <button onClick={() => setQty(qty + 1)} style={{
+                    width: "42px", height: "42px", border: "none", background: "#f8fafc",
+                    cursor: "pointer", fontSize: "18px", color: "#374151",
+                  }}>+</button>
                 </div>
               </div>
-            ))}
+            )}
 
-          {needsSelection && (
-            <p
-              style={{
-                fontSize: "12px",
-                color: "#f59e0b",
-                marginBottom: "16px",
-                fontWeight: 600,
-              }}
-            >
-              Please select{" "}
-              {product.variantOptions?.map((o) => o.name).join(" and ")} to
-              continue
-            </p>
-          )}
-
-          {/* Stock indicator */}
-          {!needsSelection && (
-            <p
-              style={{
-                fontSize: "12px",
-                marginBottom: "20px",
-                fontWeight: 600,
-                color: isOutOfStock
-                  ? "#dc2626"
-                  : currentStock <= 5
-                    ? "#f59e0b"
-                    : "#15803d",
-              }}
-            >
-              {isOutOfStock
-                ? "Out of stock"
-                : currentStock <= 5
-                  ? `Only ${currentStock} left in stock`
-                  : "In stock"}
-            </p>
-          )}
-
-          {/* Quantity */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "16px",
-              marginBottom: "20px",
-            }}
-          >
-            <span style={{ fontSize: "12px", fontWeight: 700, color: c.text }}>
-              Quantity
-            </span>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                border: "1.5px solid #e2e8f0",
-                borderRadius: "10px",
-                padding: "6px 10px",
-              }}
-            >
-              <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "2px",
-                }}
-              >
-                <Minus className="w-3.5 h-3.5" style={{ color: "#374151" }} />
-              </button>
-              <span
-                style={{
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  minWidth: "20px",
-                  textAlign: "center",
-                }}
-              >
-                {quantity}
-              </span>
-              <button
-                onClick={() =>
-                  setQuantity((q) => Math.min(currentStock || 1, q + 1))
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px" }}>
+              <button onClick={handleBuyNow} style={{
+                height: "54px", borderRadius: "14px", border: "none",
+                background: "var(--store-primary, #1A7A42)", color: "#fff",
+                fontSize: "15px", fontWeight: 800, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                boxShadow: "0 8px 24px rgba(26,122,66,0.35)",
+              }}>
+                {product.is_digital
+                  ? <><Zap style={{ width: "17px", height: "17px" }} /> Get Instant Access</>
+                  : <><ShoppingBag style={{ width: "17px", height: "17px" }} /> Buy Now</>
                 }
-                disabled={quantity >= (currentStock || 1)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: "2px",
-                  opacity: quantity >= (currentStock || 1) ? 0.3 : 1,
-                }}
-              >
-                <Plus className="w-3.5 h-3.5" style={{ color: "#374151" }} />
+              </button>
+
+              <button onClick={handleAdd} style={{
+                height: "54px", borderRadius: "14px",
+                border: `2px solid ${added ? "var(--store-primary, #1A7A42)" : "#e2e8f0"}`,
+                background: added ? "var(--store-bg, #F0FAF3)" : "#fff",
+                color: added ? "var(--store-primary, #1A7A42)" : "#374151",
+                fontSize: "15px", fontWeight: 700, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                transition: "all 0.2s",
+              }}>
+                {added
+                  ? <><Check style={{ width: "17px", height: "17px" }} /> Added to cart!</>
+                  : <><ShoppingBag style={{ width: "17px", height: "17px" }} /> Add to cart</>
+                }
               </button>
             </div>
-          </div>
 
-          {/* Actions */}
-          <div style={{ display: "flex", gap: "10px", marginBottom: "28px" }}>
-            <button
-              onClick={handleAddToCart}
-              disabled={needsSelection || isOutOfStock}
-              style={{
-                flex: 1,
-                height: "48px",
-                borderRadius: "12px",
-                border: `2px solid ${c.primary}`,
-                background: added ? c.primary : "#fff",
-                color: added ? "#fff" : c.primary,
-                fontSize: "13px",
-                fontWeight: 800,
-                cursor:
-                  needsSelection || isOutOfStock ? "not-allowed" : "pointer",
-                opacity: needsSelection || isOutOfStock ? 0.5 : 1,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                transition: "all 0.2s",
-              }}
-            >
-              {added ? (
-                <>
-                  <Check className="w-4 h-4" /> Added
-                </>
-              ) : (
-                <>
-                  <ShoppingBag className="w-4 h-4" /> Add to cart
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleBuyNow}
-              disabled={needsSelection || isOutOfStock}
-              style={{
-                flex: 1,
-                height: "48px",
-                borderRadius: "12px",
-                border: "none",
-                background: c.primary,
-                color: "#fff",
-                fontSize: "13px",
-                fontWeight: 800,
-                cursor:
-                  needsSelection || isOutOfStock ? "not-allowed" : "pointer",
-                opacity: needsSelection || isOutOfStock ? 0.5 : 1,
-                boxShadow: `0 4px 14px ${c.primary}40`,
-              }}
-            >
-              Buy now
-            </button>
-          </div>
+            {/* Trust badges */}
+            <div style={{
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px",
+              padding: "16px", background: "#f8fafc", borderRadius: "14px", marginBottom: "20px",
+            }}>
+              {[
+                { icon: Shield, text: "Secure checkout" },
+                { icon: Zap, text: product.is_digital ? "Instant delivery" : "Fast shipping" },
+                { icon: RotateCcw, text: "7-day guarantee" },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} style={{ textAlign: "center" }}>
+                  <Icon style={{ width: "20px", height: "20px", color: "var(--store-primary, #1A7A42)", margin: "0 auto 5px" }} />
+                  <p style={{ fontSize: "10px", fontWeight: 600, color: "#374151", lineHeight: 1.3 }}>{text}</p>
+                </div>
+              ))}
+            </div>
 
-          {/* Trust badges */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-              padding: "16px",
-              borderRadius: "12px",
-              background: c.bg,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Truck
-                className="w-4 h-4 shrink-0"
-                style={{ color: c.primary }}
-              />
-              <span style={{ fontSize: "12px", color: "#374151" }}>
-                Delivery available nationwide
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <ShieldCheck
-                className="w-4 h-4 shrink-0"
-                style={{ color: c.primary }}
-              />
-              <span style={{ fontSize: "12px", color: "#374151" }}>
-                {STORE_CONFIG.returnPolicy.split(".")[0]}.
-              </span>
-            </div>
-            <a
-              href={`https://wa.me/${STORE_CONFIG.contact.whatsapp.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                textDecoration: "none",
+            <button
+              onClick={() => {
+                if (typeof navigator !== "undefined" && navigator.share) {
+                  navigator.share({ title: product.name, url: window.location.href }).catch(() => {});
+                }
               }}
-            >
-              <MessageCircle
-                className="w-4 h-4 shrink-0"
-                style={{ color: c.primary }}
-              />
-              <span
-                style={{ fontSize: "12px", color: c.primary, fontWeight: 600 }}
-              >
-                Ask a question on WhatsApp
-              </span>
-            </a>
+              style={{
+                display: "flex", alignItems: "center", gap: "6px",
+                background: "none", border: "none", cursor: "pointer",
+                color: "#94a3b8", fontSize: "13px", padding: 0,
+              }}>
+              <Share2 style={{ width: "14px", height: "14px" }} /> Share
+            </button>
           </div>
         </div>
       </div>
+
+      {/* Related products */}
+      {related.length > 0 && (
+        <div style={{ background: "#f8fafc", padding: "60px 24px", borderTop: "1px solid #f1f5f9" }}>
+          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "28px" }}>
+              <h2 style={{ fontSize: "22px", fontWeight: 900, color: "#1C1C1C", letterSpacing: "-0.3px" }}>
+                You may also like
+              </h2>
+              <Link href="/shop" style={{ fontSize: "13px", fontWeight: 700, color: "var(--store-primary, #1A7A42)", textDecoration: "none" }}>
+                View all →
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+              {related.map((p, i) => <ProductCard key={p.id} product={p} index={i} />)}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

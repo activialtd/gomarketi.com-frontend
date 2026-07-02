@@ -13,12 +13,14 @@ import {
   Building2,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { identityApi } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 import {
   StepIndicator,
   StepNIN,
   StepCAC,
-  StepBankStatement,
   StepSuccess,
   getTiers,
   type KycTier,
@@ -170,18 +172,61 @@ function TierCard({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-// Tier 2 steps: NIN → Success
-const TIER2_STEPS = ["NIN", "Complete"];
+// Tier 2: BVN/NIN identity check (CBN Tier 1 individual)
+const TIER2_STEPS = ["Identity", "Complete"];
 
-// Tier 3 steps: CAC → Bank Statement → Success
-const TIER3_STEPS = ["CAC", "Bank Statement", "Complete"];
+// Tier 3: CAC + TIN business check (CBN Tier 2 KYB — bank statement removed)
+const TIER3_STEPS = ["Business (KYB)", "Complete"];
 
 export default function KYCPage() {
-  // In production, fetch the actual completed tiers from the API.
-  // completedTiers: [1] = only free tier done, [1,2] = identity verified, etc.
+  const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
+
   const [completedTiers, setCompletedTiers] = useState<KycTier[]>([1]);
   const [activeTier, setActiveTier] = useState<KycTier | null>(null);
   const [step, setStep] = useState(0);
+
+  // Load current KYC status
+  useEffect(() => {
+    if (!accessToken) return;
+    identityApi.getVendorProfile(accessToken).then((p) => {
+      const done: KycTier[] = [1];
+      if (p.has_nin || p.has_bvn) done.push(2);
+      if (p.cac_number) done.push(3);
+      setCompletedTiers(done);
+    }).catch(() => {});
+  }, [accessToken]);
+
+  // Passes whichever of BVN/NIN the user chose, plus name/DOB for Smile ID matching
+  async function verifyNIN(
+    idValue: string,
+    method: "bvn" | "nin",
+    firstName: string,
+    lastName: string,
+    dob: string,
+  ) {
+    if (!accessToken) return;
+    await identityApi.submitKYC(
+      {
+        [method]: idValue, // sends as bvn: or nin: based on user's choice
+        first_name: firstName,
+        last_name: lastName,
+        dob: dob,
+      },
+      accessToken,
+    );
+  }
+
+  async function verifyCAC(cac_number: string) {
+    if (!accessToken) return;
+    await identityApi.submitKYC({ cac_number }, accessToken);
+  }
+
+  function skipKYC() {
+    // Ensure tour shows on first dashboard visit for new users
+    if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v2");
+    router.push(ROUTES.MERCHANT.OVERVIEW);
+  }
 
   const tiers = getTiers(completedTiers);
 
@@ -261,6 +306,9 @@ export default function KYCPage() {
       setCompletedTiers((prev) => [...prev, activeTier] as KycTier[]);
     setActiveTier(null);
     setStep(0);
+    // Redirect to dashboard — tour will show since key was cleared during onboarding
+    if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v2");
+    router.push(ROUTES.MERCHANT.OVERVIEW);
     // Animate tiers back in
     setTimeout(() => {
       if (tiersRef.current) {
@@ -321,6 +369,21 @@ export default function KYCPage() {
               <TierCard tier={tier} onStart={handleStartTier} />
             </div>
           ))}
+
+          {/* Skip KYC */}
+          <button
+            type="button"
+            onClick={skipKYC}
+            className="w-full py-3 text-[13px] font-semibold transition-colors rounded-[10px] border"
+            style={{ borderColor: "#e2e8f0", color: "#6b7280", background: "#fafafa" }}
+            onMouseOver={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+            onMouseOut={(e) => (e.currentTarget.style.background = "#fafafa")}
+          >
+            Skip verification for now — go to dashboard →
+          </button>
+          <p className="text-center text-[11px]" style={{ color: "#94a3b8" }}>
+            You can always complete verification later from Settings.
+          </p>
         </div>
       )}
 
@@ -358,54 +421,38 @@ export default function KYCPage() {
               boxShadow: "0 4px 24px rgba(0,0,0,0.05)",
             }}
           >
-            {/* Tier 2 flow */}
+            {/* Tier 2 — CBN Tier 1 Individual (BVN or NIN) */}
             {activeTier === 2 && step === 0 && (
               <>
-                <p
-                  className="text-[16px] font-extrabold mb-1"
-                  style={{ color: "#1C1C1C" }}
-                >
-                  NIN verification
+                <p className="text-[16px] font-extrabold mb-1" style={{ color: "#1C1C1C" }}>
+                  Individual identity verification
                 </p>
-                <p className="text-[12.5px] mb-5" style={{ color: "#6b7280" }}>
-                  Verify your identity with the NIMC database in real time.
+                <p className="text-[12.5px] mb-1" style={{ color: "#6b7280" }}>
+                  Submit your BVN or NIN to unlock payouts up to ₦50,000/day.
                 </p>
-                <StepNIN onNext={nextStep} />
+                <div className="flex items-center gap-2 mb-5 px-2.5 py-1.5 rounded-[6px] w-fit" style={{ background: "#eff6ff" }}>
+                  <span className="text-[11px] font-bold" style={{ color: "#3b82f6" }}>CBN Tier 1 · Max ₦50,000/day withdrawal</span>
+                </div>
+                <StepNIN onNext={nextStep} onVerify={verifyNIN} />
               </>
             )}
             {activeTier === 2 && isSuccessStep && (
               <StepSuccess tier={2} onDone={handleTierComplete} />
             )}
 
-            {/* Tier 3 flow */}
+            {/* Tier 3 — CBN Tier 2 KYB (CAC + TIN, no bank statement required) */}
             {activeTier === 3 && step === 0 && (
               <>
-                <p
-                  className="text-[16px] font-extrabold mb-1"
-                  style={{ color: "#1C1C1C" }}
-                >
-                  CAC verification
+                <p className="text-[16px] font-extrabold mb-1" style={{ color: "#1C1C1C" }}>
+                  Business verification (KYB)
                 </p>
-                <p className="text-[12.5px] mb-5" style={{ color: "#6b7280" }}>
-                  Verify your business registration with the Corporate Affairs
-                  Commission.
+                <p className="text-[12.5px] mb-1" style={{ color: "#6b7280" }}>
+                  Register your business to unlock unlimited payouts and the GoMarket Verified badge.
                 </p>
-                <StepCAC onNext={nextStep} />
-              </>
-            )}
-            {activeTier === 3 && step === 1 && (
-              <>
-                <p
-                  className="text-[16px] font-extrabold mb-1"
-                  style={{ color: "#1C1C1C" }}
-                >
-                  Bank statement
-                </p>
-                <p className="text-[12.5px] mb-5" style={{ color: "#6b7280" }}>
-                  Upload a 6-month bank statement to verify your business
-                  financial history.
-                </p>
-                <StepBankStatement onNext={nextStep} />
+                <div className="flex items-center gap-2 mb-5 px-2.5 py-1.5 rounded-[6px] w-fit" style={{ background: "#F0FAF3" }}>
+                  <span className="text-[11px] font-bold" style={{ color: "#1A7A42" }}>CBN Tier 2 · Unlimited withdrawals</span>
+                </div>
+                <StepCAC onNext={nextStep} onVerify={verifyCAC} />
               </>
             )}
             {activeTier === 3 && isSuccessStep && (

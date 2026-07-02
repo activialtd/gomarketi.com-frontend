@@ -1,5 +1,17 @@
 .next
 tmp
 node_modules
+
+# ALL .env variations — secrets live in Vercel dashboard only
+.env
+.env.*
+*.env
+*.env.*
 .env.local
-.env*.local
+.env.production
+.env.staging
+.env.development
+.env.test
+.env.*.local
+!.env.example
+!.env.sample

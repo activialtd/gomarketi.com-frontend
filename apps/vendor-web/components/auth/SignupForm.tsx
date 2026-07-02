@@ -15,13 +15,15 @@ import {
   CheckCircle2,
   ArrowLeft,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { Input } from "@gomarket/ui";
-import { authApi, ApiError } from "@gomarket/api-client";
+import { authApi, identityApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
+import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +34,7 @@ interface OAuthUser {
   firstName: string;
   lastName: string;
   email: string;
+  credential?: string; // id_token from Google/Apple — used on profile submit
 }
 
 // ─── Schemas ─────────────────────────────────────────────────────────────────
@@ -47,10 +50,6 @@ const signupSchema = z
       .regex(/[A-Z]/, "Add an uppercase letter")
       .regex(/[0-9]/, "Add a number"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
-    phone: z
-      .string()
-      .min(6, "Enter a valid number")
-      .regex(/^[\d\s\-()]+$/, "Digits only"),
     terms: z.boolean().refine((value) => value, "You must accept the terms"),
     marketing: z.boolean().optional(),
   })
@@ -59,13 +58,10 @@ const signupSchema = z
     path: ["confirmPassword"],
   });
 
+// Phone and address are collected during store setup, not signup
 const oauthProfileSchema = z.object({
   firstName: z.string().min(1, "Required"),
   lastName: z.string().min(1, "Required"),
-  phone: z
-    .string()
-    .min(7, "Enter a valid number")
-    .regex(/^\+?[\d\s\-()+]+$/, "Invalid number"),
   heardAbout: z.string().min(1, "Please select an option"),
   terms: z.boolean().refine((value) => value, "You must accept the terms"),
   marketing: z.boolean().optional(),
@@ -105,16 +101,16 @@ export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const setSignupPhone = useAuthStore((s) => s.setSignupPhone);
+  const { signIn: googleSignIn, buttonRef: googleButtonRef } = useGoogleAuth();
 
   const [step, setStep] = useState<Step>("METHOD_SELECT");
   const [oauthUser, setOauthUser] = useState<OAuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
+  const [oauthApiError, setOauthApiError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
   const [pwStrength, setPwStrength] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [dialCode, setDialCode] = useState("+234");
 
   // OTP state
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -123,9 +119,11 @@ export function SignupForm() {
   const [otpError, setOtpError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   // Form-level API error
   const [apiError, setApiError] = useState<string | null>(null);
+  const [existingVerifiedEmail, setExistingVerifiedEmail] = useState<string | null>(null);
 
   const busy = isLoading || !!oauthLoading;
 
@@ -163,22 +161,54 @@ export function SignupForm() {
 
   async function handleOAuth(provider: "google" | "apple") {
     setOauthLoading(provider);
-    await new Promise((r) => setTimeout(r, 900));
-    setOauthLoading(null);
-    const mock: OAuthUser = {
-      provider,
-      firstName: provider === "google" ? "Ada" : "Chidi",
-      lastName: provider === "google" ? "Okafor" : "Nwachukwu",
-      email:
-        provider === "google" ? "ada.okafor@gmail.com" : "chidi@icloud.com",
-    };
-    setOauthUser(mock);
-    oauthForm.reset({
-      firstName: mock.firstName,
-      lastName: mock.lastName,
-      marketing: false,
-    });
-    setStep("OAUTH_PROFILE");
+    setOauthApiError(null);
+    try {
+      if (provider === "google") {
+        const result = await googleSignIn();
+
+        // Authenticate with Google — creates account on first visit, logs in on return.
+        // We can't tell new vs returning from this response alone.
+        const resp = await authApi.googleAuth(result.credential);
+        setAuth(resp.user, resp.access_token);
+        setAuthSession();
+
+        // Detect new vs returning user by checking vendor profile existence.
+        // New users have no vendor profile yet (returns 404).
+        let isNewUser = true;
+        try {
+          const profile = await identityApi.getVendorProfile(resp.access_token);
+          // Returning user only if they completed onboarding
+          isNewUser = !profile.is_active;
+        } catch {
+          // No vendor profile at all — definitely a new user
+          isNewUser = true;
+        }
+
+        if (isNewUser) {
+          // Create vendor profile row before going further into onboarding
+          await identityApi.startOnboarding(resp.access_token).catch(() => {});
+          // Show profile step to collect missing info, then full onboarding
+          const nameParts = result.name.trim().split(" ");
+          const firstName = nameParts[0] ?? "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+          const newUser: OAuthUser = { provider, firstName, lastName, email: result.email, credential: result.credential };
+          setOauthUser(newUser);
+          oauthForm.reset({ firstName, lastName, marketing: false });
+          setStep("OAUTH_PROFILE");
+        } else {
+          // Returning user who already set up their store
+          router.push(ROUTES.MERCHANT.OVERVIEW);
+        }
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message !== "one_tap_unavailable" && err.message !== "Google Sign-In was cancelled") {
+        setOauthApiError(
+          err instanceof ApiError ? err.message : "Google sign-in failed. Please try again."
+        );
+      }
+    } finally {
+      setOauthLoading(null);
+    }
   }
 
   async function onSignupSubmit(data: SignupData) {
@@ -210,11 +240,28 @@ export function SignupForm() {
 
       setStep("VERIFY_EMAIL");
     } catch (err) {
-      setApiError(
-        err instanceof ApiError
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
+      const is409 =
+        (err instanceof ApiError && err.status === 409) ||
+        (err instanceof Error && err.message.toLowerCase().includes("already exists"));
+      if (is409) {
+        // Try to send OTP — if it succeeds the account is unverified
+        try {
+          const resp = await authApi.requestOTP(data.email);
+          setSessionToken(resp.session_token);
+          setSignupEmail(data.email);
+          setStep("VERIFY_EMAIL");
+          setResendCooldown(60);
+        } catch {
+          // OTP request failed → account is already verified
+          setExistingVerifiedEmail(data.email);
+        }
+      } else {
+        setApiError(
+          err instanceof ApiError
+            ? err.message
+            : "Something went wrong. Please try again.",
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -231,9 +278,9 @@ export function SignupForm() {
       });
       setAuth(authResp.user, authResp.access_token);
       setAuthSession();
-      // Persist the signup phone so store setup can pre-fill the WhatsApp field.
-      const rawPhone = signupForm.getValues("phone");
-      if (rawPhone) setSignupPhone(`${dialCode}${rawPhone.replace(/\D/g, "")}`);
+      // Create vendor profile row — required before any vendor endpoint works.
+      // Silently ignore errors: 409 = profile already exists, still proceed.
+      await identityApi.startOnboarding(authResp.access_token).catch(() => {});
       router.push(ROUTES.ONBOARDING.WELCOME);
     } catch (err) {
       setOtpError(
@@ -247,8 +294,8 @@ export function SignupForm() {
   }
 
   const handleResendOTP = useCallback(async () => {
-    if (!signupEmail || isLoading || resendCooldown > 0) return;
-    setIsLoading(true);
+    if (!signupEmail || isResending || resendCooldown > 0) return;
+    setIsResending(true);
     setOtpError(null);
     setResendSuccess(false);
     try {
@@ -265,15 +312,12 @@ export function SignupForm() {
           : "Failed to resend. Please try again.",
       );
     } finally {
-      setIsLoading(false);
+      setIsResending(false);
     }
-  }, [signupEmail, isLoading, resendCooldown]);
+  }, [signupEmail, isResending, resendCooldown]);
 
   async function onOAuthProfileSubmit(_data: OAuthProfileData) {
-    setIsLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setIsLoading(false);
-    if (_data.phone) setSignupPhone(_data.phone);
+    // Auth was already set in handleOAuth. Phone/location are collected in store setup.
     router.push(ROUTES.ONBOARDING.WELCOME);
   }
 
@@ -333,6 +377,14 @@ export function SignupForm() {
       {/* ═══ METHOD SELECT ════════════════════════════════════ */}
       {step === "METHOD_SELECT" && (
         <div className="space-y-3">
+          {/* Hidden div where GSI renders the real Google button */}
+          {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
+          <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
+          {oauthApiError && (
+            <p className="text-[12px] text-center font-medium" style={{ color: "#dc2626" }}>
+              {oauthApiError}
+            </p>
+          )}
           <OAuthBtn
             onClick={() => handleOAuth("google")}
             loading={oauthLoading === "google"}
@@ -508,25 +560,38 @@ export function SignupForm() {
             </div>
           )}
 
-          {/* Phone */}
-          <Field
-            label="Phone number"
-            error={signupForm.formState.errors.phone?.message}
-          >
-            <PhoneInput
-              dialCode={dialCode}
-              onDialCodeChange={setDialCode}
-              inputProps={signupForm.register("phone")}
-            />
-          </Field>
-
           <TermsBlock
             control={signupForm.control}
             errors={signupForm.formState.errors}
           />
 
-          {/* API error */}
-          {apiError && (
+          {/* API error / existing account */}
+          {existingVerifiedEmail ? (
+            <div className="rounded-[12px] border p-4 space-y-3" style={{ background: "#F0FAF3", borderColor: "rgba(26,122,66,0.2)" }}>
+              <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>Account already exists</p>
+              <p className="text-[12px]" style={{ color: "#3D6B4F" }}>
+                <span className="font-semibold">{existingVerifiedEmail}</span> is already registered and verified.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push(ROUTES.AUTH.LOGIN + '?email=' + encodeURIComponent(existingVerifiedEmail))}
+                  className="flex-1 h-9 rounded-[9px] text-white text-[12px] font-bold"
+                  style={{ background: "#1A7A42" }}
+                >
+                  Sign in →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setExistingVerifiedEmail(null); setApiError(null); signupForm.reset(); }}
+                  className="flex-1 h-9 rounded-[9px] border text-[12px] font-semibold"
+                  style={{ borderColor: "#e2e8f0", color: "#374151" }}
+                >
+                  Use different email
+                </button>
+              </div>
+            </div>
+          ) : apiError ? (
             <p
               className="text-[12px] rounded-[8px] px-3 py-2 border"
               style={{
@@ -537,7 +602,7 @@ export function SignupForm() {
             >
               {apiError}
             </p>
-          )}
+          ) : null}
 
           <PrimaryButton loading={isLoading} label="Create account" />
 
@@ -644,40 +709,50 @@ export function SignupForm() {
             onClick={handleOTPSubmit}
           />
 
-          {resendSuccess && (
-            <p
-              className="text-center text-[12px] rounded-[8px] px-3 py-2 border"
+          {/* Resend section */}
+          <div className="flex flex-col items-center gap-2 pt-1">
+            <p className="text-[11px]" style={{ color: "#3D6B4F" }}>
+              Didn&apos;t receive the code?
+            </p>
+            <button
+              type="button"
+              disabled={isResending || resendCooldown > 0}
+              onClick={handleResendOTP}
+              className="flex items-center justify-center gap-2 h-10 px-5 rounded-[10px] border text-[12px] font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed"
               style={{
-                color: "#15803d",
-                background: "#f0fdf4",
-                borderColor: "#bbf7d0",
+                borderColor: resendCooldown > 0 ? "#e2e8f0" : "#1A7A42",
+                background: resendCooldown > 0 ? "#fafafa" : "#fff",
+                color: resendCooldown > 0 ? "#94a3b8" : "#1A7A42",
               }}
             >
-              A new code was sent to {signupEmail}
-            </p>
-          )}
+              {isResending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : resendCooldown > 0 ? (
+                <>
+                  <CountdownRing seconds={resendCooldown} total={60} />
+                  Resend in {resendCooldown}s
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Resend code
+                </>
+              )}
+            </button>
 
-          <p className="text-center text-[11px]" style={{ color: "#3D6B4F" }}>
-            Didn&apos;t receive it?{" "}
-            {resendCooldown > 0 ? (
-              <span
-                className="font-semibold"
-                style={{ color: "rgba(61,107,79,0.5)" }}
+            {resendSuccess && (
+              <p
+                className="text-center text-[12px] rounded-[8px] px-3 py-2 border w-full"
+                style={{
+                  color: "#15803d",
+                  background: "#f0fdf4",
+                  borderColor: "#bbf7d0",
+                }}
               >
-                Resend in {resendCooldown}s
-              </span>
-            ) : (
-              <button
-                type="button"
-                disabled={isLoading}
-                className="font-bold transition-colors disabled:opacity-50"
-                style={{ color: "#1A7A42" }}
-                onClick={handleResendOTP}
-              >
-                Resend code
-              </button>
+                ✓ A new code was sent to {signupEmail}
+              </p>
             )}
-          </p>
+          </div>
         </div>
       )}
 
@@ -763,20 +838,6 @@ export function SignupForm() {
               Verified by {oauthUser.provider === "google" ? "Google" : "Apple"}{" "}
               — cannot be changed here.
             </p>
-          </Field>
-
-          {/* Phone */}
-          <Field
-            label="Phone number"
-            error={oauthForm.formState.errors.phone?.message}
-          >
-            <Input
-              id="oPhone"
-              type="tel"
-              autoComplete="tel"
-              placeholder="+234 800 000 0000"
-              {...oauthForm.register("phone")}
-            />
           </Field>
 
           {/* How did you hear */}
@@ -1106,6 +1167,35 @@ function PhoneInput({
         {...inputProps}
       />
     </div>
+  );
+}
+
+function CountdownRing({ seconds, total }: { seconds: number; total: number }) {
+  const r = 7;
+  const circumference = 2 * Math.PI * r;
+  const dashOffset = circumference * (seconds / total);
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      className="shrink-0"
+      style={{ transform: "rotate(-90deg)" }}
+    >
+      <circle cx="9" cy="9" r={r} fill="none" stroke="#e2e8f0" strokeWidth="2" />
+      <circle
+        cx="9"
+        cy="9"
+        r={r}
+        fill="none"
+        stroke="#94a3b8"
+        strokeWidth="2"
+        strokeDasharray={circumference}
+        strokeDashoffset={dashOffset}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 1s linear" }}
+      />
+    </svg>
   );
 }
 

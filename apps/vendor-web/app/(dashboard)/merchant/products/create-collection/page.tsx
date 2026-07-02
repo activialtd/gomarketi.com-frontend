@@ -1,19 +1,17 @@
-import CreateCollection from "@/components/merchant/products/collections/CreateCollection";
-import { Metadata } from "next";
 import { Suspense } from "react";
-import OverviewSkeleton from "@/components/skeletons/OverviewSkeleton";
+import { Metadata } from "next";
+import CreateCollection from "@/components/merchant/products/collections/CreateCollection";
+import CreateCollectionSkeleton from "@/components/skeletons/CreateCollectionSkeleton";
 
 export const metadata: Metadata = {
-  title: "Create Collection | GoMarket Vendor",
+  title: "Create Collection | GoMarketi Vendor",
   description: "Create a new collection for your store.",
 };
 
-const page = () => {
-  return (
-    <Suspense fallback={<OverviewSkeleton />}>
-      <CreateCollection />
-    </Suspense>
-  );
-};
+const page = () => (
+  <Suspense fallback={<CreateCollectionSkeleton />}>
+    <CreateCollection />
+  </Suspense>
+);
 
 export default page;

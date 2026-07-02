@@ -477,6 +477,26 @@ export const FONT_FAMILIES: Record<string, string> = {
 
 // ─── Live preview component ───────────────────────────────────────────────────
 
+// Loose shape — just the fields LivePreview actually reads, all optional for safety
+type ThemeSections = {
+  announcement?: { enabled?: boolean; text?: string; bgColor?: string; textColor?: string; dismissible?: boolean };
+  header?: { logoUrl?: string; sticky?: boolean; showSearch?: boolean; showStoreName?: boolean };
+  nav?: { items?: Array<{ id: string; label: string; url: string }> };
+  hero?: { enabled?: boolean; headline?: string; subheadline?: string; ctaText?: string; imageUrl?: string; layout?: string; eyebrow?: string };
+  collections?: { enabled?: boolean; title?: string };
+  featured?: { enabled?: boolean; title?: string; count?: number };
+  newsletter?: { enabled?: boolean; headline?: string; subtext?: string; placeholder?: string };
+  ctaBand?: { enabled?: boolean; headline?: string; text?: string; btnText?: string };
+  footer?: {
+    tagline?: string; showPoweredBy?: boolean; copyright?: string;
+    showAbout?: boolean; showLinks?: boolean; showContact?: boolean;
+    customLinks?: Array<{ id: string; label: string; url: string }>;
+    contact?: { whatsapp?: string; email?: string; phone?: string };
+    social?: { instagram?: string; twitter?: string; facebook?: string };
+    newsletter?: boolean;
+  };
+};
+
 export function LivePreview({
   template,
   colors,
@@ -485,15 +505,18 @@ export function LivePreview({
   headline,
   subheadline,
   viewport,
+  config,
 }: {
   template: TemplateId;
-  colors: ColorPreset;
+  colors: Omit<ColorPreset, "label"> & { label?: string };
   font: string;
   storeName: string;
   headline: string;
   subheadline: string;
   viewport: "desktop" | "tablet" | "mobile";
+  config?: { sections: ThemeSections };
 }) {
+  const sec = config?.sections;
   const fontFamily = FONT_FAMILIES[font] ?? FONT_FAMILIES["plus-jakarta"];
 
   const widths: Record<string, string> = {
@@ -540,10 +563,10 @@ export function LivePreview({
   const isTablet = viewport === "tablet";
 
   return (
-    <div className="w-full overflow-auto flex justify-center">
+    <div className="w-full">
       <div
         style={{
-          width: widths[viewport],
+          width: "100%",
           minWidth: isMobile ? "375px" : undefined,
           transition: "width 0.3s ease",
           fontFamily,
@@ -551,6 +574,16 @@ export function LivePreview({
       >
         {template === "eko" && (
           <div style={{ background: "#fff", minHeight: "600px" }}>
+            {/* Announcement bar */}
+            {sec?.announcement?.enabled && (
+              <div style={{
+                background: sec.announcement.bgColor || colors.primary,
+                color: sec.announcement.textColor || "#fff",
+                padding: "7px 24px", fontSize: "11px", fontWeight: 600, textAlign: "center",
+              }}>
+                {sec.announcement.text || "Free delivery on orders above ₦20,000"}
+              </div>
+            )}
             {/* Nav */}
             <nav
               style={{
@@ -562,28 +595,14 @@ export function LivePreview({
                 justifyContent: "space-between",
               }}
             >
-              <span
-                style={{
-                  color: "#fff",
-                  fontWeight: 800,
-                  fontSize: "18px",
-                  letterSpacing: "-0.3px",
-                }}
-              >
+              <span style={{ color: "#fff", fontWeight: 800, fontSize: "18px", letterSpacing: "-0.3px" }}>
                 {storeName}
               </span>
               {!isMobile && (
-                <div style={{ display: "flex", gap: "24px" }}>
-                  {["Shop", "Collections", "About"].map((l) => (
-                    <span
-                      key={l}
-                      style={{
-                        color: "rgba(255,255,255,0.75)",
-                        fontSize: "13px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {l}
+                <div style={{ display: "flex", gap: "20px" }}>
+                  {(sec?.nav?.items?.length ? sec.nav.items : [{ label: "Shop" }, { label: "Collections" }]).slice(0, 4).map((item) => (
+                    <span key={item.label} style={{ color: "rgba(255,255,255,0.75)", fontSize: "12px", cursor: "pointer" }}>
+                      {item.label}
                     </span>
                   ))}
                 </div>
@@ -604,105 +623,53 @@ export function LivePreview({
               </button>
             </nav>
 
-            {/* Hero */}
-            <div
-              style={{
+            {/* Hero — shown only when enabled in config, or always in legacy mode */}
+            {(sec ? sec.hero?.enabled : true) && (
+              <div style={{
                 background: colors.bg,
                 padding: isMobile ? "32px 20px" : "52px 40px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: "24px",
+                display: "flex", alignItems: "center",
+                justifyContent: "space-between", gap: "24px",
                 flexDirection: isMobile ? "column" : "row",
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <p
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 800,
-                    letterSpacing: "0.2em",
-                    textTransform: "uppercase",
-                    color: colors.primary,
-                    marginBottom: "10px",
-                  }}
-                >
-                  New Collection
-                </p>
-                <h1
-                  style={{
-                    fontSize: isMobile ? "26px" : "36px",
-                    fontWeight: 900,
-                    letterSpacing: "-0.5px",
-                    color: colors.text,
-                    margin: "0 0 12px",
-                    lineHeight: 1.1,
-                  }}
-                >
-                  {headline}
-                </h1>
-                <p
-                  style={{
-                    fontSize: "14px",
-                    color: "#6b7280",
-                    marginBottom: "20px",
-                    maxWidth: "340px",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  {subheadline}
-                </p>
-                <button
-                  style={{
-                    background: colors.primary,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "10px",
-                    padding: "12px 24px",
-                    fontSize: "13px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    boxShadow: `0 4px 14px ${colors.primary}44`,
-                  }}
-                >
-                  Shop now →
-                </button>
-              </div>
-              {!isMobile && (
-                <div
-                  style={{
-                    width: "240px",
-                    height: "200px",
-                    borderRadius: "16px",
-                    overflow: "hidden",
-                    flexShrink: 0,
-                  }}
-                >
-                  <img
-                    src={mockProducts[0].img}
-                    alt=""
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                    }}
-                  />
+              }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: colors.primary, marginBottom: "10px" }}>
+                    {storeName}
+                  </p>
+                  <h1 style={{ fontSize: isMobile ? "26px" : "36px", fontWeight: 900, letterSpacing: "-0.5px", color: colors.text, margin: "0 0 12px", lineHeight: 1.1 }}>
+                    {sec?.hero?.headline || headline || "Welcome to our store"}
+                  </h1>
+                  <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "20px", maxWidth: "340px", lineHeight: 1.6 }}>
+                    {sec?.hero?.subheadline || subheadline || "Discover amazing products."}
+                  </p>
+                  <button style={{ background: colors.primary, color: "#fff", border: "none", borderRadius: "10px", padding: "12px 24px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 14px ${colors.primary}44` }}>
+                    {sec?.hero?.ctaText || "Shop now"} →
+                  </button>
                 </div>
-              )}
-            </div>
+                {!isMobile && (
+                  <div style={{ width: "240px", height: "200px", borderRadius: "16px", overflow: "hidden", flexShrink: 0, background: `${colors.primary}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {sec?.hero?.imageUrl
+                      ? <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ textAlign: "center", color: colors.primary, opacity: 0.5 }}>
+                          <div style={{ fontSize: "32px", marginBottom: "4px" }}>🖼</div>
+                          <p style={{ fontSize: "10px", fontWeight: 600 }}>Hero image</p>
+                        </div>
+                    }
+                  </div>
+                )}
+              </div>
+            )}
+            {sec && !sec.hero?.enabled && (
+              <div style={{ background: "#f8fafc", borderBottom: "1px dashed #e2e8f0", padding: "12px 40px", display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{ fontSize: "11px", color: "#94a3b8" }}>🖼 Hero section — enable it in the Sections panel</span>
+              </div>
+            )}
 
-            {/* Products */}
+            {/* Featured products */}
+            {(sec ? sec.featured?.enabled : true) && (
             <div style={{ padding: isMobile ? "24px 16px" : "40px 40px" }}>
-              <h2
-                style={{
-                  fontSize: "18px",
-                  fontWeight: 800,
-                  color: colors.text,
-                  marginBottom: "20px",
-                  letterSpacing: "-0.3px",
-                }}
-              >
-                Featured products
+              <h2 style={{ fontSize: "18px", fontWeight: 800, color: colors.text, marginBottom: "20px", letterSpacing: "-0.3px" }}>
+                {sec?.featured?.title || "Featured products"}
               </h2>
               <div
                 style={{
@@ -768,319 +735,222 @@ export function LivePreview({
                 ))}
               </div>
             </div>
+            )}
+            {sec && !sec.featured?.enabled && (
+              <div style={{ background: "#f8fafc", borderTop: "1px dashed #e2e8f0", padding: "12px 40px" }}>
+                <span style={{ fontSize: "11px", color: "#94a3b8" }}>📦 Featured products — enable in Sections panel</span>
+              </div>
+            )}
+
+            {/* Newsletter */}
+            {sec?.newsletter?.enabled && (
+              <div style={{ background: colors.bg, padding: "32px 40px", textAlign: "center" }}>
+                <h3 style={{ fontSize: "18px", fontWeight: 800, color: colors.text, marginBottom: "6px" }}>
+                  {sec.newsletter.headline || "Stay in the loop"}
+                </h3>
+                <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "14px" }}>{sec.newsletter.subtext}</p>
+                <div style={{ display: "flex", gap: "8px", maxWidth: "320px", margin: "0 auto" }}>
+                  <input readOnly placeholder={sec.newsletter.placeholder || "Enter your email"}
+                    style={{ flex: 1, padding: "9px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "12px", outline: "none" }} />
+                  <button style={{ padding: "9px 16px", borderRadius: "8px", background: colors.primary, color: "#fff", border: "none", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                    Subscribe
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Footer */}
-            <div
-              style={{
-                background: colors.secondary,
-                padding: "24px 40px",
-                marginTop: "20px",
-              }}
-            >
-              <p
-                style={{
-                  color: "rgba(255,255,255,0.6)",
-                  fontSize: "11px",
-                  textAlign: "center",
-                }}
-              >
-                © 2026 {storeName} · Powered by GoMarket
+            <div style={{ background: colors.secondary, padding: "24px 40px", marginTop: "8px" }}>
+              {sec?.footer?.tagline && (
+                <p style={{ color: "rgba(255,255,255,0.75)", fontSize: "12px", textAlign: "center", marginBottom: "6px" }}>
+                  {sec.footer.tagline}
+                </p>
+              )}
+              <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "10px", textAlign: "center" }}>
+                {sec?.footer?.copyright || `© 2026 ${storeName}`}
+                {sec?.footer?.showPoweredBy !== false && " · Powered by GoMarketi"}
               </p>
             </div>
           </div>
         )}
 
         {template === "lagos" && (
-          <div style={{ background: "#fff", minHeight: "600px" }}>
-            {/* Minimal nav */}
-            <nav
-              style={{
-                padding: "0 32px",
-                height: "52px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                borderBottom: "1px solid #f1f5f9",
-              }}
-            >
-              <span
-                style={{
-                  fontWeight: 900,
-                  fontSize: "20px",
-                  letterSpacing: "-0.5px",
-                  color: colors.primary,
-                }}
-              >
+          <div style={{ background: "#0E0E0E", color: "#F7F4EE", minHeight: "600px" }}>
+            {/* Nav — matches LagosLayout exactly */}
+            <nav style={{
+              padding: "0 32px", height: "56px",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              borderBottom: "1px solid rgba(255,255,255,0.08)",
+            }}>
+              <span style={{
+                fontWeight: 600, fontSize: "16px", letterSpacing: "-0.3px",
+                color: "#F7F4EE", fontFamily: "'Playfair Display', Georgia, serif",
+              }}>
                 {storeName}
               </span>
               {!isMobile && (
-                <div style={{ display: "flex", gap: "28px" }}>
-                  {["Women", "Men", "Kids", "Sale"].map((l) => (
-                    <span
-                      key={l}
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "#374151",
-                        cursor: "pointer",
-                        letterSpacing: "0.04em",
-                      }}
-                    >
-                      {l}
+                <div style={{ display: "flex", gap: "24px" }}>
+                  {(sec?.nav?.items?.length ? sec.nav.items : [{ label: "Shop" }, { label: "Collections" }]).slice(0, 4).map((item) => (
+                    <span key={item.label} style={{
+                      fontSize: "11px", fontWeight: 500, color: "rgba(247,244,238,0.6)",
+                      cursor: "pointer", letterSpacing: "0.08em", textTransform: "uppercase",
+                    }}>
+                      {item.label}
                     </span>
                   ))}
                 </div>
               )}
-              <button
-                style={{
-                  background: colors.primary,
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "7px 16px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Bag (0)
+              <button style={{
+                background: "transparent", color: "#F7F4EE",
+                border: "1px solid rgba(247,244,238,0.2)", borderRadius: 0,
+                padding: "7px 14px", fontSize: "10px", fontWeight: 600,
+                letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer",
+              }}>
+                Bag
               </button>
             </nav>
 
-            {/* Full-bleed hero */}
-            <div style={{ position: "relative", overflow: "hidden" }}>
-              <img
-                src={mockProducts[1].img}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: isMobile ? "220px" : "320px",
-                  objectFit: "cover",
-                  objectPosition: "center 30%",
-                  display: "block",
-                }}
-              />
-              <div
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  background: "rgba(0,0,0,0.45)",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: "20px",
-                }}
-              >
-                <p
-                  style={{
-                    color: "rgba(255,255,255,0.7)",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    letterSpacing: "0.2em",
-                    textTransform: "uppercase",
-                    marginBottom: "10px",
-                  }}
-                >
-                  Now available
-                </p>
-                <h1
-                  style={{
-                    fontSize: isMobile ? "24px" : "40px",
-                    fontWeight: 900,
-                    color: "#fff",
-                    letterSpacing: "-0.5px",
-                    textAlign: "center",
-                    marginBottom: "16px",
-                    lineHeight: 1.1,
-                    textShadow: "0 2px 12px rgba(0,0,0,0.4)",
-                  }}
-                >
-                  {headline}
-                </h1>
-                <button
-                  style={{
-                    background: "#fff",
-                    color: colors.primary,
-                    border: "none",
-                    borderRadius: "10px",
-                    padding: "12px 32px",
-                    fontSize: "13px",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
-                >
-                  Explore collection
-                </button>
-              </div>
-            </div>
-
-            {/* Collections strip */}
-            {!isMobile && (
-              <div
-                style={{
-                  padding: "32px 32px 0",
-                  display: "grid",
-                  gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: "12px",
-                }}
-              >
-                {[
-                  { label: "Women's wear", img: mockProducts[0].img },
-                  { label: "Men's wear", img: mockProducts[3].img },
-                  { label: "Accessories", img: mockProducts[4].img },
-                ].map((c) => (
-                  <div
-                    key={c.label}
-                    style={{
-                      position: "relative",
-                      borderRadius: "10px",
-                      overflow: "hidden",
-                      aspectRatio: "4/3",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <img
-                      src={c.img}
-                      alt=""
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "rgba(0,0,0,0.3)",
-                        display: "flex",
-                        alignItems: "flex-end",
-                        padding: "14px",
-                      }}
-                    >
-                      <p
-                        style={{
-                          color: "#fff",
-                          fontWeight: 800,
-                          fontSize: "14px",
-                        }}
-                      >
-                        {c.label}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            {/* Announcement bar */}
+            {sec?.announcement?.enabled && (
+              <div style={{
+                background: sec.announcement.bgColor || "#1A1A1A",
+                color: sec.announcement.textColor || "#fff",
+                padding: "7px 24px", fontSize: "11px", fontWeight: 600, textAlign: "center",
+              }}>
+                {sec.announcement.text || "Free delivery on orders above ₦20,000"}
               </div>
             )}
 
-            {/* Products */}
-            <div style={{ padding: isMobile ? "24px 16px" : "32px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: "20px",
-                }}
-              >
-                <h2
-                  style={{
-                    fontSize: "18px",
-                    fontWeight: 800,
-                    color: colors.text,
-                    letterSpacing: "-0.3px",
-                  }}
-                >
-                  New arrivals
-                </h2>
-                <span
-                  style={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: colors.primary,
-                    cursor: "pointer",
-                  }}
-                >
-                  See all →
-                </span>
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile
-                    ? "repeat(2, 1fr)"
-                    : "repeat(4, 1fr)",
-                  gap: "12px",
-                }}
-              >
-                {mockProducts.slice(0, 4).map((p) => (
-                  <div
-                    key={p.name}
-                    style={{
-                      borderRadius: "10px",
-                      overflow: "hidden",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div
-                      style={{
-                        aspectRatio: "3/4",
-                        overflow: "hidden",
-                        background: colors.bg,
-                      }}
-                    >
-                      <img
-                        src={p.img}
-                        alt=""
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    </div>
-                    <p
-                      style={{
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: colors.text,
-                        marginTop: "8px",
-                      }}
-                    >
-                      {p.name}
+            {/* Hero — split layout, matches LagosHome exactly */}
+            {(sec ? sec.hero?.enabled : true) && (
+              <div style={{
+                display: "grid",
+                gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr",
+                gap: isMobile ? "20px" : "32px",
+                padding: isMobile ? "32px 20px" : "48px 32px",
+                alignItems: "stretch",
+              }}>
+                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  {sec?.hero?.eyebrow && (
+                    <p style={{
+                      fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em",
+                      textTransform: "uppercase", color: colors.primary, marginBottom: "10px",
+                    }}>
+                      {sec.hero.eyebrow}
                     </p>
-                    <p
-                      style={{
-                        fontSize: "13px",
-                        fontWeight: 800,
-                        color: colors.primary,
-                      }}
-                    >
-                      {p.price}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  )}
+                  <h1 style={{
+                    fontSize: isMobile ? "30px" : "44px", fontWeight: 600,
+                    lineHeight: 0.98, letterSpacing: "-0.5px", color: "#F7F4EE",
+                    fontFamily: "'Playfair Display', Georgia, serif", marginBottom: "16px",
+                  }}>
+                    {sec?.hero?.headline || headline || "Welcome to our store"}
+                  </h1>
+                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(247,244,238,0.55)", marginBottom: "22px", maxWidth: "320px" }}>
+                    {sec?.hero?.subheadline || subheadline || "Discover amazing products."}
+                  </p>
+                  <button style={{
+                    background: "transparent", color: "#F7F4EE",
+                    border: "1px solid #F7F4EE", borderRadius: 0,
+                    padding: "12px 24px", fontSize: "11px", fontWeight: 600,
+                    letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", alignSelf: "flex-start",
+                  }}>
+                    {sec?.hero?.ctaText || "Explore the edit"} →
+                  </button>
+                </div>
 
-            {/* Footer */}
-            <div
-              style={{
-                background: colors.bg,
-                padding: "20px 32px",
-                marginTop: "12px",
-                borderTop: "1px solid #f1f5f9",
-              }}
-            >
-              <p
-                style={{
-                  color: "#94a3b8",
-                  fontSize: "11px",
-                  textAlign: "center",
-                }}
-              >
-                © 2026 {storeName} · Powered by GoMarket
+                <div style={{ position: "relative", aspectRatio: "4/5", overflow: "hidden" }}>
+                  {sec?.hero?.imageUrl ? (
+                    <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{
+                      width: "100%", height: "100%", background: "#1a1a1a",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px",
+                    }}>
+                      <span style={{ fontSize: "28px", opacity: 0.2 }}>🖼</span>
+                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Hero image</p>
+                    </div>
+                  )}
+                  <div style={{ position: "absolute", inset: "10px", border: "1px solid rgba(255,255,255,0.2)", pointerEvents: "none" }} />
+                </div>
+              </div>
+            )}
+            {sec && !sec.hero?.enabled && (
+              <div style={{ padding: "12px 32px", textAlign: "center" }}>
+                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>🖼 Hero section — enable it in the Sections panel</span>
+              </div>
+            )}
+
+            {/* Featured products — matches LagosProductCard styling */}
+            {(sec ? sec.featured?.enabled : true) && (
+              <div style={{ padding: isMobile ? "8px 20px 32px" : "8px 32px 48px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "20px" }}>
+                  <h2 style={{
+                    fontSize: "20px", fontWeight: 600, color: "#F7F4EE",
+                    fontFamily: "'Playfair Display', Georgia, serif", letterSpacing: "-0.3px",
+                  }}>
+                    {sec?.featured?.title || "New arrivals"}
+                  </h2>
+                  <span style={{ fontSize: "11px", fontWeight: 600, color: "rgba(247,244,238,0.5)", textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer" }}>
+                    Shop all →
+                  </span>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "10px" }}>
+                  {mockProducts.slice(0, 4).map((p) => (
+                    <div key={p.name} style={{ position: "relative", aspectRatio: "3/4", overflow: "hidden", background: "#1A1A1A", cursor: "pointer" }}>
+                      <img src={p.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <div style={{ position: "absolute", top: "10px", right: "10px" }}>
+                        <span style={{ background: "#F7F4EE", color: "#0E0E0E", padding: "4px 9px", fontSize: "10px", fontWeight: 700 }}>
+                          {p.price}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {sec && !sec.featured?.enabled && (
+              <div style={{ padding: "12px 32px 32px", textAlign: "center" }}>
+                <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>📦 Featured products — enable in Sections panel</span>
+              </div>
+            )}
+
+            {/* WhatsApp CTA band — matches LagosHome */}
+            {sec?.ctaBand?.enabled && (
+              <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "40px 32px", textAlign: "center" }}>
+                <h3 style={{
+                  fontSize: "18px", fontWeight: 600, color: "#F7F4EE",
+                  fontFamily: "'Playfair Display', Georgia, serif", marginBottom: "14px", maxWidth: "320px", margin: "0 auto 14px",
+                }}>
+                  {sec.ctaBand.headline || `${storeName} replies on WhatsApp, usually within minutes.`}
+                </h3>
+                <button style={{
+                  background: colors.primary, color: "#fff", border: "none",
+                  padding: "11px 22px", fontSize: "11px", fontWeight: 700,
+                  letterSpacing: "0.06em", textTransform: "uppercase", cursor: "pointer",
+                }}>
+                  {sec.ctaBand.btnText || "Message us"}
+                </button>
+              </div>
+            )}
+
+            {/* Footer — matches LagosLayout footer */}
+            <div style={{ background: "#0A0A0A", borderTop: "1px solid rgba(255,255,255,0.08)", padding: "28px 32px" }}>
+              <p style={{
+                fontSize: "16px", fontWeight: 600, color: "#F7F4EE",
+                fontFamily: "'Playfair Display', Georgia, serif", marginBottom: sec?.footer?.tagline ? "6px" : "0",
+              }}>
+                {storeName}
+              </p>
+              {sec?.footer?.tagline && (
+                <p style={{ fontSize: "11px", color: "rgba(247,244,238,0.45)", maxWidth: "240px", marginBottom: "14px" }}>
+                  {sec.footer.tagline}
+                </p>
+              )}
+              <p style={{ fontSize: "10px", color: "rgba(247,244,238,0.3)", marginTop: "14px" }}>
+                {sec?.footer?.copyright || `© 2026 ${storeName}`}
+                {sec?.footer?.showPoweredBy !== false && " · Powered by GoMarketi"}
               </p>
             </div>
           </div>

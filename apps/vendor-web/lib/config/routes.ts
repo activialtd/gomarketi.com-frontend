@@ -3,12 +3,15 @@ export const ROUTES = {
     LOGIN: "/auth/login",
     SIGNUP: "/auth/sign-up",
     FORGOT: "/auth/forgot-password",
+    FORGOT_PASSWORD: "/auth/forgot-password",
     CALLBACK: "/auth/callback",
   },
 
   ONBOARDING: {
     WELCOME: "/merchant/welcome",
+    PLANS: "/merchant/plans",
     SETUP: "/merchant/store-setup",
+    KYC: "/merchant/kyc",
   },
 
   MERCHANT: {
@@ -17,6 +20,7 @@ export const ROUTES = {
     // Products
     PRODUCTS: "/merchant/products",
     PRODUCTS_NEW: "/merchant/products/create-product",
+    PRODUCTS_EDIT: (id: string) => `/merchant/products/edit/${id}`,
     CATEGORIES: "/merchant/products/categories",
     COLLECTIONS_NEW: "/merchant/products/create-collection",
 

@@ -48,6 +48,28 @@ export function Header({
       .toUpperCase()
       .slice(0, 2);
 
+  // Strip any accidental protocol prefix from storeDomain (e.g. Vercel env var set
+  // to "https://gomarketi.com" instead of just "gomarketi.com" produces the broken
+  // URL "https://cobi.https://gomarketi.com"). Always strip before using.
+  const cleanDomain = storeDomain.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+
+  // Build storefront URL based on environment:
+  // - Local dev (domain contains "localhost" or a port): path-based routing
+  //   → http://localhost:3001/storefront/{slug}  (apps/web dev server)
+  // - Production: subdomain routing
+  //   → https://{slug}.gomarketi.com
+  const isLocalDev = cleanDomain.includes("localhost") || /:\d+/.test(cleanDomain);
+  const storeUrl = storeSlug
+    ? isLocalDev
+      ? `http://${cleanDomain}/storefront/${storeSlug}`
+      : `https://${storeSlug}.${cleanDomain}`
+    : "#";
+  const storeSlugDisplay = storeSlug
+    ? isLocalDev
+      ? `${cleanDomain}/storefront/${storeSlug}`
+      : `${storeSlug}.${cleanDomain}`
+    : "";
+
   return (
     <header
       className="sticky top-0 z-30 flex items-center shrink-0"
@@ -85,11 +107,8 @@ export function Header({
             {storeName}
           </p>
           {storeSlug && (
-            <p
-              className="text-[10px] font-medium mt-0.5 truncate max-w-[160px]"
-              style={{ color: "#94a3b8" }}
-            >
-              {storeSlug}.{storeDomain}
+            <p className="text-[10px] font-medium mt-0.5 truncate max-w-[160px]" style={{ color: "#94a3b8" }}>
+              {storeSlugDisplay}
             </p>
           )}
         </div>
@@ -100,10 +119,12 @@ export function Header({
 
       {/* ── Right cluster ──────────────────────────────────── */}
       <div className="flex items-center gap-2">
-        {/* View Store CTA */}
+        {/* View Store CTA
+            Local dev  → http://localhost:3001/storefront/{slug}  (path-based, apps/web dev server)
+            Production → https://{slug}.gomarketi.com             (subdomain, Cloudflare SSL) */}
         {storeSlug && (
           <Link
-            href={`https://${storeSlug}.${storeDomain}`}
+            href={storeUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] text-[12px] font-bold transition-all hover:opacity-90 active:scale-[0.97]"

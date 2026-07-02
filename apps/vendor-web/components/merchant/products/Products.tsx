@@ -1,27 +1,22 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Plus,
-  Download,
   Search,
   LayoutGrid,
   LayoutList,
-  Tag,
   Package,
-  ChevronDown,
   Trash2,
   AlertTriangle,
   ArrowUpDown,
   Layers,
   Loader2,
 } from "lucide-react";
-import { type Product, COLLECTIONS } from "@/lib/data/products";
-import { catalogueApi } from "@gomarket/api-client";
-import { useAuthStore } from "@/store/useAuthStore";
+import { type Product } from "@/lib/data/products";
 import { ROUTES } from "@/lib/config/routes";
-import { fmt } from "@gomarket/shared-utils";
+import { useProducts, useCategories, useCollections, useMyStore, invalidate } from "@/lib/swr/hooks";
 import {
   CollectionsTab,
   EmptyProducts,
@@ -35,7 +30,6 @@ type ViewMode = "grid" | "list";
 type SortKey = "name" | "price" | "stock" | "sold" | "createdAt";
 
 export default function ProductsPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
   const [tab, setTab] = useState<Tab>("products");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
@@ -43,55 +37,38 @@ export default function ProductsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortAsc, setSortAsc] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
 
-  useEffect(() => {
-    if (!accessToken) return;
-    let cancelled = false;
-    async function load() {
-      setLoadingProducts(true);
-      try {
-        const resp = await catalogueApi.listProducts(
-          { per_page: 100 },
-          accessToken!,
-        );
-        if (cancelled) return;
-        const mapped: Product[] = resp.products.map((p) => ({
-          id: p.id,
-          name: p.name,
-          slug: p.id,
-          category: p.category_id ?? "Uncategorised",
-          collectionIds: [],
-          description: p.description ?? "",
-          images: p.images ?? [],
-          price: p.price_kobo / 100,
-          currency: "NGN",
-          hasVariants: false,
-          stock: p.stock,
-          sold: 0,
-          status:
-            p.stock === 0
-              ? "out_of_stock"
-              : p.is_published
-                ? "active"
-                : "draft",
-          featured: false,
-          createdAt: p.created_at,
-          tags: p.tags ?? [],
-        }));
-        setProducts(mapped);
-      } catch {
-        if (!cancelled) setProducts([]);
-      } finally {
-        if (!cancelled) setLoadingProducts(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
+  // SWR — cached, instant on re-visit
+  const { data: productsResp, isLoading: loadingProducts } = useProducts();
+  const { data: categoriesResp } = useCategories();
+  const { data: collectionsResp } = useCollections();
+  const { data: storeData } = useMyStore();
+
+  const storeSlug = storeData?.slug ?? null;
+
+  const categoryNames: Record<string, string> = {};
+  (categoriesResp ?? []).forEach((c) => { categoryNames[c.id] = c.name; });
+
+  const rawCollections = collectionsResp?.collections ?? [];
+
+  const products: Product[] = (productsResp?.products ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.id,
+    category: p.category_id ? (categoryNames[p.category_id] ?? "Uncategorised") : "Uncategorised",
+    collectionIds: [],
+    description: p.description ?? "",
+    images: p.images ?? [],
+    price: p.price_kobo / 100,
+    currency: "NGN",
+    hasVariants: false,
+    stock: p.stock,
+    sold: 0,
+    status: p.stock === 0 ? "out_of_stock" : p.is_published ? "active" : "draft",
+    featured: false,
+    createdAt: p.created_at,
+    tags: p.tags ?? [],
+  }));
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -136,7 +113,6 @@ export default function ProductsPage() {
     return list;
   }, [products, search, statusFilter, sortKey, sortAsc]);
 
-  const totalRetailValue = products.reduce((s, p) => s + p.price * p.stock, 0);
   const outOfStock = products.filter((p) => p.status === "out_of_stock").length;
 
   const allSelected =
@@ -167,34 +143,6 @@ export default function ProductsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Import */}
-          <button
-            className="flex items-center gap-1.5 h-9 px-3.5 rounded-[8px] border text-[12px] font-semibold transition-colors"
-            style={{
-              borderColor: "#e2e8f0",
-              background: "#fff",
-              color: "#374151",
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#F0FAF3")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
-          >
-            <Download className="w-3.5 h-3.5" /> Import
-          </button>
-
-          {/* Actions dropdown */}
-          <button
-            className="flex items-center gap-1.5 h-9 px-3.5 rounded-[8px] border text-[12px] font-semibold transition-colors"
-            style={{
-              borderColor: "#e2e8f0",
-              background: "#fff",
-              color: "#374151",
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.background = "#F0FAF3")}
-            onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
-          >
-            Actions <ChevronDown className="w-3.5 h-3.5" />
-          </button>
-
           {/* Add product */}
           <Link
             href={ROUTES.MERCHANT.PRODUCTS_NEW}
@@ -213,14 +161,7 @@ export default function ProductsPage() {
 
       <div className="px-6 lg:px-8 py-5 space-y-5">
         {/* ── Stats row ─────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard
-            label="Total Retail Value"
-            value={loadingProducts ? "—" : fmt(totalRetailValue)}
-            icon={Tag}
-            iconBg="#eff6ff"
-            iconColor="#3b82f6"
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <StatCard
             label="Total Products"
             value={loadingProducts ? "—" : String(products.length)}
@@ -271,7 +212,7 @@ export default function ProductsPage() {
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-0.5"
                     style={{ background: "#F0FAF3", color: "#1A7A42" }}
                   >
-                    {COLLECTIONS.length}
+                    {rawCollections.length}
                   </span>
                 </span>
               ) : (
@@ -485,6 +426,8 @@ export default function ProductsPage() {
                     product={product}
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
+                    storeSlug={storeSlug}
+                    onChanged={() => invalidate.products()}
                   />
                 ))}
               </div>
@@ -496,6 +439,8 @@ export default function ProductsPage() {
                     product={product}
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
+                    storeSlug={storeSlug}
+                    onChanged={() => invalidate.products()}
                   />
                 ))}
               </div>
@@ -504,7 +449,9 @@ export default function ProductsPage() {
         )}
 
         {/* ── Collections tab ───────────────────────────── */}
-        {tab === "collections" && <CollectionsTab />}
+        {tab === "collections" && (
+          <CollectionsTab collections={rawCollections} loading={loadingProducts} />
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { Input } from "@gomarket/ui";
 import { ROUTES } from "@/lib/config/routes";
-import { PRODUCTS } from "@/lib/data/products";
+import { catalogueApi, type ProductResp, ApiError } from "@gomarket/api-client";
+import { useAuthStore } from "@/store/useAuthStore";
 import {
   CreateCollectionFormValues,
   createCollectionSchema,
@@ -28,10 +29,20 @@ import {
 
 export default function CreateCollection() {
   const router = useRouter();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [productSearch, setProductSearch] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [allProducts, setAllProducts] = useState<ProductResp[]>([]);
+
+  useEffect(() => {
+    if (!accessToken) return;
+    catalogueApi.listProducts({ per_page: 200 }, accessToken)
+      .then((r) => setAllProducts(r.products))
+      .catch(() => {});
+  }, [accessToken]);
 
   const {
     register,
@@ -52,17 +63,12 @@ export default function CreateCollection() {
   const selectedIds: string[] = watch("productIds") ?? [];
 
   const filteredProducts = useMemo(() => {
-    if (!productSearch.trim()) return PRODUCTS;
+    if (!productSearch.trim()) return allProducts;
     const q = productSearch.toLowerCase();
-    return PRODUCTS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.category.includes(q) ||
-        p.tags.some((t) => t.includes(q)),
-    );
-  }, [productSearch]);
+    return allProducts.filter((p) => p.name.toLowerCase().includes(q));
+  }, [productSearch, allProducts]);
 
-  const selectedProducts = PRODUCTS.filter((p) => selectedIds.includes(p.id));
+  const selectedProducts = allProducts.filter((p) => selectedIds.includes(p.id));
 
   function toggleProduct(id: string) {
     const curr = selectedIds;
@@ -77,12 +83,26 @@ export default function CreateCollection() {
     data: CreateCollectionFormValues,
     status: "active" | "draft",
   ) {
+    if (!accessToken) return;
     const setter = status === "draft" ? setIsSaving : setIsPublishing;
     setter(true);
-    setValue("status", status);
-    await new Promise((r) => setTimeout(r, 1000));
-    setter(false);
-    router.push(ROUTES.MERCHANT.PRODUCTS);
+    setSubmitError(null);
+    try {
+      const col = await catalogueApi.createCollection({
+        name: data.name,
+        description: data.description || undefined,
+        image_url: coverImage || undefined,
+        product_ids: selectedIds,
+      }, accessToken);
+      if (status === "active") {
+        await catalogueApi.publishCollection(col.id, accessToken);
+      }
+      router.push(ROUTES.MERCHANT.PRODUCTS);
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : "Failed to save collection.");
+    } finally {
+      setter(false);
+    }
   }
 
   return (
@@ -220,6 +240,7 @@ export default function CreateCollection() {
                 image={coverImage}
                 onSet={setCoverImage}
                 onClear={() => setCoverImage(null)}
+                accessToken={accessToken ?? ""}
               />
             </Section>
 

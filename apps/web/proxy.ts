@@ -5,7 +5,7 @@ const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "gomarketi.com";
 // Subdomains that belong to the platform itself, not stores
 const RESERVED = new Set(["www", "vendor", "app", "api", "admin", "mail", "cdn"]);
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
   // Strip port (for local dev: "cobi.localhost:3001" → "cobi.localhost")
   const hostname = host.replace(/:\d+$/, "");

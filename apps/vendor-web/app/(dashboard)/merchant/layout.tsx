@@ -7,7 +7,9 @@ import { Header } from "@/components/common/Header";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
-import { authApi, storefrontApi } from "@gomarket/api-client";
+import { SWRProvider } from "@/lib/swr/provider";
+import { useOrderEvents } from "@/lib/swr/hooks";
+import { authApi, storefrontApi, setTokenRefreshCallback } from "@gomarket/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 
@@ -22,7 +24,25 @@ export default function MerchantLayout({
   const [storeName, setStoreName] = useState("My Store");
   const [storeSlug, setStoreSlug] = useState("");
   const router = useRouter();
-  const { user, hydrating, clearAuth, accessToken } = useAuthStore();
+  const { user, hydrating, clearAuth, accessToken, setAuth } = useAuthStore();
+
+  // Register a global token-refresh callback so any API call that gets a 401
+  // silently refreshes the JWT and retries — no manual handling needed per-page.
+  useEffect(() => {
+    setTokenRefreshCallback(async () => {
+      try {
+        const fresh = await authApi.refreshTokens();
+        setAuth(fresh.user, fresh.access_token);
+        return fresh.access_token;
+      } catch {
+        clearAuth();
+        return null;
+      }
+    });
+  }, [setAuth, clearAuth]);
+
+  // Subscribe to real-time order/wallet SSE updates for the entire dashboard.
+  useOrderEvents();
 
   const merchantName = user?.full_name ?? user?.email?.split("@")[0] ?? "";
   const avatarInitials = merchantName
@@ -70,6 +90,7 @@ export default function MerchantLayout({
   // }
 
   return (
+    <SWRProvider>
     <div className="flex h-screen overflow-hidden bg-[#f4f6f9]">
       <DashboardTour />
 
@@ -96,5 +117,6 @@ export default function MerchantLayout({
         </main>
       </div>
     </div>
+    </SWRProvider>
   );
 }

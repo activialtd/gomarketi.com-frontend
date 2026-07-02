@@ -1,4 +1,4 @@
-// apps/storefront/app/checkout/page.tsx
+// components/storefront/Checkout.tsx
 "use client";
 
 import { useState } from "react";
@@ -15,9 +15,13 @@ import {
   AlertCircle,
   MapPin,
 } from "lucide-react";
-import { STORE_CONFIG } from "@/lib/storeConfig";
 import { useCart, type CustomerInfo } from "@/lib/cartContext";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { PaystackModal } from "@/components/storefront/PaystackModal";
+import { ordersApi } from "@gomarket/api-client";
+
+function fmtNaira(kobo: number) {
+  return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
+}
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 // Email, phone, and address are required before an order can be created.
@@ -133,29 +137,34 @@ function inputStyle(hasError?: boolean): React.CSSProperties {
   };
 }
 
-export default function CheckoutPage() {
+export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoMarketi Store" }: { storeId: string | null; storeSlug?: string; storeName?: string }) {
   const router = useRouter();
-  const c = STORE_CONFIG.colors;
+  const shopUrl = storeSlug ? `/storefront/${storeSlug}/shop` : "/shop";
+  const c = { primary: "var(--store-primary, #1A7A42)", bg: "var(--store-bg, #F0FAF3)", text: "#1C1C1C", secondary: "var(--store-secondary, #0A4D2A)" };
   const { lines, subtotal, setCustomer, clearCart } = useCart();
   const [isPlacing, setIsPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
+  const [showPaystack, setShowPaystack] = useState(false);
+  const [pendingCustomer, setPendingCustomer] = useState<CustomerInfo | null>(null);
+  const [orderError, setOrderError] = useState("");
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
   });
 
-  const shipping = subtotal > 5000000 ? 0 : 150000; // free shipping over ₦50,000
+  const emailVal = watch("email") ?? "";
+  const allDigital = lines.every((l) => l.isDigital);
+  const shipping = allDigital ? 0 : subtotal > 5000000 ? 0 : 150000;
   const total = subtotal + shipping;
 
   async function onSubmit(data: CheckoutValues) {
     if (lines.length === 0) return;
-    setIsPlacing(true);
-
     const customerInfo: CustomerInfo = {
       fullName: data.fullName,
       email: data.email,
@@ -166,15 +175,47 @@ export default function CheckoutPage() {
       note: data.note,
     };
     setCustomer(customerInfo);
+    setPendingCustomer(customerInfo);
+    setShowPaystack(true);
+  }
 
-    // Simulate order creation (Paystack init + order record in production)
-    await new Promise((r) => setTimeout(r, 1300));
+  async function handlePaystackSuccess(ref: string) {
+    setShowPaystack(false);
 
-    const newOrderNumber = `#ORD-${Math.floor(4000 + Math.random() * 999)}`;
-    setOrderNumber(newOrderNumber);
-    setIsPlacing(false);
-    setOrderPlaced(true);
-    clearCart();
+    if (!storeId || !pendingCustomer) {
+      setOrderError("Something went wrong placing your order. Please try again.");
+      return;
+    }
+
+    setIsPlacing(true);
+    try {
+      const order = await ordersApi.createOrder({
+        store_id: storeId,
+        customer_name: pendingCustomer.fullName,
+        customer_email: pendingCustomer.email,
+        customer_phone: pendingCustomer.phone,
+        delivery_address: `${pendingCustomer.address}, ${pendingCustomer.city}, ${pendingCustomer.state}`,
+        items: lines.map((l) => ({
+          product_id: l.productId,
+          name: l.productName,
+          image_url: l.productImage,
+          quantity: l.quantity,
+          price_kobo: l.unitPrice,
+        })),
+        payment_reference: ref,
+      });
+      setOrderNumber(`#${order.id.slice(0, 8).toUpperCase()}`);
+      clearCart();
+      if (storeSlug) {
+        router.push(`/storefront/${storeSlug}/orders/${order.id}?email=${encodeURIComponent(pendingCustomer.email)}`);
+      } else {
+        setOrderPlaced(true);
+      }
+    } catch {
+      setOrderError("Your payment succeeded but we couldn't save your order. Please contact the store with reference " + ref + ".");
+    } finally {
+      setIsPlacing(false);
+    }
   }
 
   // ── Order success state ─────────────────────────────────
@@ -225,11 +266,11 @@ export default function CheckoutPage() {
           has been received.
         </p>
         <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "28px" }}>
-          We've sent a confirmation to your email. {STORE_CONFIG.storeName} will
+          We&apos;ve sent a confirmation to your email. The store will
           reach out shortly to confirm delivery details.
         </p>
         <Link
-          href="/shop"
+          href={shopUrl}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -278,7 +319,7 @@ export default function CheckoutPage() {
           Add some products before checking out.
         </p>
         <Link
-          href="/shop"
+          href={shopUrl}
           style={{
             color: c.primary,
             fontWeight: 700,
@@ -301,7 +342,7 @@ export default function CheckoutPage() {
       }}
     >
       <Link
-        href="/shop"
+        href={shopUrl}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -314,6 +355,24 @@ export default function CheckoutPage() {
       >
         <ChevronLeft className="w-4 h-4" /> Continue shopping
       </Link>
+
+      {orderError && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "10px",
+            padding: "12px 16px",
+            marginBottom: "20px",
+          }}
+        >
+          <AlertCircle className="w-4 h-4 shrink-0" style={{ color: "#dc2626" }} />
+          <p style={{ fontSize: "12px", color: "#991b1b" }}>{orderError}</p>
+        </div>
+      )}
 
       <div
         style={{
@@ -644,9 +703,9 @@ export default function CheckoutPage() {
                     >
                       {line.productName}
                     </p>
-                    {line.variantLabel && (
+                    {line.isDigital && (
                       <p style={{ fontSize: "10px", color: "#94a3b8" }}>
-                        {line.variantLabel}
+                        Digital download
                       </p>
                     )}
                   </div>
@@ -780,6 +839,17 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Paystack modal */}
+      {showPaystack && pendingCustomer && (
+        <PaystackModal
+          amount={total}
+          email={pendingCustomer.email}
+          storeName="GoMarketi Store"
+          onSuccess={handlePaystackSuccess}
+          onClose={() => setShowPaystack(false)}
+        />
+      )}
     </div>
   );
 }

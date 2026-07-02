@@ -7,19 +7,32 @@ import {
   ShieldCheck,
   MessageCircle,
   Sparkles,
+  Package,
 } from "lucide-react";
 import { STORE_CONFIG } from "@/lib/storeConfig";
-import { PRODUCTS, COLLECTIONS } from "@/lib/data/products";
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
+// EkoLayout is now provided by app/storefront/[slug]/layout.tsx — no import needed here
+import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
 
-export default function HomePage() {
-  const featured = PRODUCTS.filter(
-    (p) => p.featured && p.status === "active",
-  ).slice(0, 6);
-  const displayProducts =
-    featured.length >= 3
-      ? featured
-      : PRODUCTS.filter((p) => p.status === "active").slice(0, 6);
+interface Props {
+  store?: StoreData;
+  themeConfig?: ThemeConfig;
+  products?: StorefrontProduct[];
+}
+
+export default function HomePage({ store, themeConfig, products = [] }: Props) {
+  const storeName = store?.name ?? STORE_CONFIG.storeName;
+  const sec = themeConfig?.sections;
+  const colors = themeConfig?.colors ?? {
+    primary: STORE_CONFIG.colors.primary,
+    secondary: STORE_CONFIG.colors.secondary,
+    bg: STORE_CONFIG.colors.bg,
+    text: STORE_CONFIG.colors.text,
+  };
+
+  const tagline = sec?.hero?.enabled ? (sec.hero?.headline || storeName) : storeName;
+  const subtagline = sec?.hero?.enabled ? (sec.hero?.subheadline || "") : "";
+  const displayProducts = products.slice(0, sec?.featured?.count ?? 6);
 
   return (
     <div>
@@ -33,15 +46,15 @@ export default function HomePage() {
           <div className="w-full max-w-xl animate-[fadeUp_0.6s_ease_forwards] text-center lg:text-left">
             <span className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-[var(--store-primary)] shadow-sm">
               <Sparkles className="h-3 w-3" />
-              {STORE_CONFIG.hero.eyebrow}
+              {storeName}
             </span>
 
             <h1 className="text-[clamp(2rem,5.5vw,3.25rem)] font-extrabold leading-[1.05] tracking-tight text-[var(--store-text)]">
-              {STORE_CONFIG.hero.headline}
+              {tagline}
             </h1>
 
             <p className="mx-auto mt-5 max-w-md text-[15px] leading-relaxed text-gray-500 lg:mx-0">
-              {STORE_CONFIG.hero.subheadline}
+              {subtagline}
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
@@ -62,22 +75,22 @@ export default function HomePage() {
           </div>
 
           <div className="relative w-full max-w-md animate-[fadeUp_0.7s_ease_forwards] [animation-delay:120ms]">
-            <div className="aspect-[4/5] overflow-hidden rounded-[28px] shadow-2xl shadow-black/10">
-              <img
-                src={STORE_CONFIG.hero.image}
-                alt=""
-                className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out hover:scale-105"
-              />
-            </div>
-            {/* Floating stat chip — anchors the hero with a concrete number */}
-            <div className="absolute -bottom-5 -left-5 rounded-2xl bg-white px-5 py-4 shadow-xl">
-              <p className="text-[20px] font-extrabold leading-none text-[var(--store-text)]">
-                {PRODUCTS.length}+
-              </p>
-              <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                Pieces in store
-              </p>
-            </div>
+            {store && !STORE_CONFIG.hero.image ? (
+              <div className="aspect-[4/5] flex flex-col items-center justify-center rounded-[28px] gap-4" style={{ background: "var(--store-bg)", border: "2px dashed var(--store-primary)", opacity: 0.6 }}>
+                <Package className="h-12 w-12 text-[var(--store-primary)]" />
+                <p className="text-[13px] font-semibold text-center text-[var(--store-primary)] px-6">
+                  Your store banner will appear here once you add one from your dashboard.
+                </p>
+              </div>
+            ) : (
+              <div className="aspect-[4/5] overflow-hidden rounded-[28px] shadow-2xl shadow-black/10">
+                <img
+                  src={STORE_CONFIG.hero.image}
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-[1.2s] ease-out hover:scale-105"
+                />
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -117,53 +130,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Collections strip ────────────────────────────── */}
-      {COLLECTIONS.length > 0 && (
-        <section className="mx-auto max-w-6xl px-5 py-16">
-          <div className="mb-7 flex items-baseline justify-between">
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--store-primary)]">
-                Curated for you
-              </p>
-              <h2 className="mt-1 text-[22px] font-extrabold tracking-tight text-[var(--store-text)]">
-                Shop by collection
-              </h2>
-            </div>
-            <Link
-              href="/shop"
-              className="text-[13px] font-bold text-[var(--store-primary)] hover:underline"
-            >
-              View all →
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {COLLECTIONS.slice(0, 4).map((col, i) => (
-              <Link
-                key={col.id}
-                href={`/collections/${col.slug}`}
-                className="group relative block aspect-[4/5] overflow-hidden rounded-2xl opacity-0 [animation-fill-mode:forwards]"
-                style={{ animation: `fadeUp 0.5s ease forwards ${i * 80}ms` }}
-              >
-                <img
-                  src={col.coverImage}
-                  alt={col.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent transition-opacity duration-300 group-hover:from-black/75" />
-                <div className="absolute inset-x-0 bottom-0 p-4">
-                  <p className="text-[14px] font-bold leading-tight text-white">
-                    {col.name}
-                  </p>
-                  <p className="mt-0.5 text-[10.5px] text-white/70">
-                    {col.productIds.length} items
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Collections strip — re-enable once real collections are wired to this page */}
 
       {/* ── Featured products ────────────────────────────── */}
       <section className="mx-auto max-w-6xl px-5 py-16">
@@ -184,34 +151,52 @@ export default function HomePage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-          {displayProducts.map((product, i) => (
-            <ProductCard key={product.id} product={product} index={i} />
-          ))}
-        </div>
+        {displayProducts.length > 0 ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            {displayProducts.map((product, i) => (
+              <ProductCard key={product.id} product={product} index={i} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-24 gap-5 rounded-2xl border-2 border-dashed border-gray-200">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--store-bg)]">
+              <Package className="h-8 w-8 text-[var(--store-primary)]" />
+            </div>
+            <div className="text-center">
+              <p className="text-[18px] font-extrabold text-[var(--store-text)]">{storeName} is setting up</p>
+              <p className="mt-2 text-[14px] text-gray-500 max-w-xs">
+                Products are on their way. Check back soon or send us a message.
+              </p>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* ── Bottom CTA band ──────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-5 pb-20">
-        <div className="overflow-hidden rounded-3xl bg-[var(--store-secondary)] px-8 py-12 text-center sm:py-16">
-          <h3 className="text-[22px] font-extrabold tracking-tight text-white sm:text-[26px]">
-            Have a question before you order?
-          </h3>
-          <p className="mx-auto mt-2 max-w-sm text-[13px] text-white/65">
-            Message {STORE_CONFIG.storeName} directly on WhatsApp — we usually
-            reply within minutes.
-          </p>
-          <a
-            href={`https://wa.me/${STORE_CONFIG.contact.whatsapp.replace(/\D/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-[13px] font-bold text-[var(--store-secondary)] transition-transform duration-200 hover:-translate-y-0.5"
-          >
-            <MessageCircle className="h-4 w-4" />
-            Chat on WhatsApp
-          </a>
-        </div>
-      </section>
+      {sec?.ctaBand?.enabled && (
+        <section className="mx-auto max-w-6xl px-5 pb-20">
+          <div className="overflow-hidden rounded-3xl px-8 py-12 text-center sm:py-16" style={{ background: colors.secondary }}>
+            <h3 className="text-[22px] font-extrabold tracking-tight text-white sm:text-[26px]">
+              {sec?.ctaBand?.headline || "Have a question?"}
+            </h3>
+            <p className="mx-auto mt-2 max-w-sm text-[13px] text-white/65">
+              {sec?.ctaBand?.text || `Message ${storeName} directly on WhatsApp.`}
+            </p>
+            {sec?.footer?.contact?.whatsapp && (
+              <a
+                href={`https://wa.me/${sec?.footer?.contact?.whatsapp?.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-[13px] font-bold transition-transform duration-200 hover:-translate-y-0.5"
+                style={{ color: colors.secondary }}
+              >
+                <MessageCircle className="h-4 w-4" />
+                {sec?.ctaBand?.btnText || "Chat on WhatsApp"}
+              </a>
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

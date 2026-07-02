@@ -1,18 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Apple, Eye, EyeOff } from "lucide-react";
 import { Input } from "@gomarket/ui";
-import { authApi, ApiError } from "@gomarket/api-client";
+import { authApi, identityApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
+import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -23,17 +24,25 @@ type LoginData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const { signIn: googleSignIn, buttonRef: googleButtonRef } = useGoogleAuth();
 
   const {
     register,
+    reset,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginData>({ resolver: zodResolver(loginSchema) });
+
+  useEffect(() => {
+    const email = searchParams.get("email");
+    if (email) reset({ email });
+  }, []);
 
   const busy = isLoading || !!oauthLoading;
 
@@ -61,9 +70,37 @@ export function LoginForm() {
 
   async function handleOAuth(provider: string) {
     setOauthLoading(provider);
-    await new Promise((r) => setTimeout(r, 800));
-    setOauthLoading(null);
-    router.push(ROUTES.MERCHANT.OVERVIEW);
+    setApiError(null);
+    try {
+      if (provider === "google") {
+        const result = await googleSignIn();
+        const resp = await authApi.googleAuth(result.credential);
+        setAuth(resp.user, resp.access_token);
+        setAuthSession();
+
+        // If the user never completed store setup, resume onboarding
+        let destination: string = ROUTES.MERCHANT.OVERVIEW;
+        try {
+          const profile = await identityApi.getVendorProfile(resp.access_token);
+          if (!profile.is_active) destination = ROUTES.ONBOARDING.WELCOME;
+        } catch {
+          // No vendor profile — create it and send to onboarding
+          await identityApi.startOnboarding(resp.access_token).catch(() => {});
+          destination = ROUTES.ONBOARDING.WELCOME;
+        }
+        router.push(destination);
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message !== "one_tap_unavailable") {
+        setApiError(
+          err instanceof ApiError
+            ? err.message
+            : `${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`
+        );
+      }
+    } finally {
+      setOauthLoading(null);
+    }
   }
 
   return (
@@ -89,6 +126,9 @@ export function LoginForm() {
       </p>
 
       {/* ── OAuth buttons ───────────────────────────────────── */}
+      {/* Hidden div where GSI renders the real Google button — our OAuthBtn click triggers it */}
+      {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
+      <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
       <OAuthBtn
         onClick={() => handleOAuth("google")}
         loading={oauthLoading === "google"}
@@ -136,7 +176,7 @@ export function LoginForm() {
           error={errors.password?.message}
           labelRight={
             <Link
-              href="#"
+              href="/auth/forgot-password"
               className="text-[11px] font-semibold"
               style={{ color: "#1A7A42" }}
             >
