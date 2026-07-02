@@ -1,4 +1,17 @@
 .vercel
 /tmp
 .next
-apps/vendor-web/.env.production
+
+# ALL .env variations — secrets live in Vercel dashboard only
+.env
+.env.*
+*.env
+*.env.*
+.env.local
+.env.production
+.env.staging
+.env.development
+.env.test
+.env.*.local
+!.env.example
+!.env.sample
