@@ -223,6 +223,8 @@ export default function KYCPage() {
   }
 
   function skipKYC() {
+    // Ensure tour shows on first dashboard visit for new users
+    if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v1");
     router.push(ROUTES.MERCHANT.OVERVIEW);
   }
 
@@ -304,7 +306,8 @@ export default function KYCPage() {
       setCompletedTiers((prev) => [...prev, activeTier] as KycTier[]);
     setActiveTier(null);
     setStep(0);
-    // Redirect to dashboard after completing any tier
+    // Redirect to dashboard — tour will show since key was cleared during onboarding
+    if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v1");
     router.push(ROUTES.MERCHANT.OVERVIEW);
     // Animate tiers back in
     setTimeout(() => {
