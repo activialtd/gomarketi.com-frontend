@@ -1,3 +1,4 @@
 .vercel
 /tmp
 .next
+apps/vendor-web/.env.production
