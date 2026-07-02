@@ -7,9 +7,13 @@ type G = any;
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
-// Key stored on window so it persists across HMR module re-evaluations.
-// Module-level variables reset on hot reload; window does not.
-const WIN_KEY = "__gm_gsi_initialized__";
+// Store the initialization Promise on window so it is shared across:
+//  - multiple components calling useGoogleAuth() at the same time
+//  - HMR module re-evaluations (module vars reset, window does not)
+//  - React StrictMode double-effect invocations
+// Using a Promise guarantees initialize() is called AT MOST ONCE regardless
+// of how many concurrent callers there are.
+const WIN_KEY = "__gm_gsi_init_promise__";
 
 export interface GoogleAuthResult {
   credential: string;
@@ -18,19 +22,8 @@ export interface GoogleAuthResult {
   picture: string;
 }
 
-// ── Module-level state (fast path; backed by window for HMR resilience) ──────
-let gsiLoading = false;
-const readyCallbacks: Array<() => void> = [];
 let pendingResolve: ((r: GoogleAuthResult) => void) | null = null;
 let pendingReject: ((e: Error) => void) | null = null;
-
-function isInitialized(): boolean {
-  return typeof window !== "undefined" && !!(window as G)[WIN_KEY];
-}
-
-function markInitialized() {
-  if (typeof window !== "undefined") (window as G)[WIN_KEY] = true;
-}
 
 function decodeCredential(credential: string) {
   try {
@@ -56,66 +49,79 @@ function onCredential(response: G) {
   pendingReject = null;
 }
 
-function initGSI() {
-  const g: G = (window as G).google;
-  if (!g?.accounts?.id) return;
+// Returns a Promise that resolves once GSI is loaded and initialized.
+// The Promise is stored on window so all callers share the exact same
+// instance — initialize() can never be called more than once.
+function getGSIPromise(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
 
-  // Guard against calling initialize() more than once — the warning
-  // "initialized multiple times" fires even when the SAME config is passed.
-  // We store the flag on window so HMR module reloads don't reset it.
-  if (isInitialized()) {
-    // Script already loaded and initialized; just fire pending callbacks.
-    readyCallbacks.splice(0).forEach((cb) => cb());
-    return;
-  }
+  const win = window as G;
 
-  g.accounts.id.initialize({
-    client_id: CLIENT_ID,
-    callback: onCredential,
-    auto_select: false,
-    cancel_on_tap_outside: true,
-    // Do NOT set use_fedcm_for_prompt — causes NetworkError when FedCM is
-    // disabled in the user's browser settings.
+  // Already have a promise (from this or a previous mount/HMR cycle) — reuse it
+  if (win[WIN_KEY]) return win[WIN_KEY] as Promise<void>;
+
+  const promise = new Promise<void>((resolve) => {
+    function doInitialize() {
+      const g = win.google;
+      if (!g?.accounts?.id) return;
+
+      // Double-check: if another concurrent call sneaked in and already
+      // initialized (shouldn't happen with the Promise guard, but be safe)
+      if (win[WIN_KEY + "_done"]) {
+        resolve();
+        return;
+      }
+
+      win[WIN_KEY + "_done"] = true;
+      g.accounts.id.initialize({
+        client_id: CLIENT_ID,
+        callback: onCredential,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+        // Do NOT set use_fedcm_for_prompt — causes NetworkError when FedCM
+        // is disabled in the browser.
+      });
+      resolve();
+    }
+
+    // Script might already be on the page (from a previous mount / HMR cycle)
+    if (win.google?.accounts?.id) {
+      doInitialize();
+      return;
+    }
+
+    const scriptId = "google-gsi-script";
+    if (!document.getElementById(scriptId)) {
+      const el = document.createElement("script");
+      el.id = scriptId;
+      el.src = "https://accounts.google.com/gsi/client";
+      el.async = true;
+      el.onload = doInitialize;
+      document.head.appendChild(el);
+    } else {
+      // Script tag exists but hasn't fired onload yet — wait for it
+      document.getElementById(scriptId)!
+        .addEventListener("load", doInitialize, { once: true });
+    }
   });
 
-  markInitialized();
-  readyCallbacks.splice(0).forEach((cb) => cb());
-}
-
-function ensureGSI(onReady: () => void) {
-  if (isInitialized()) { onReady(); return; }
-  readyCallbacks.push(onReady);
-  if (gsiLoading) return;
-  gsiLoading = true;
-
-  // Script may already be on the page (e.g. after HMR) but not yet executed.
-  if ((window as G).google?.accounts?.id) {
-    initGSI();
-    return;
-  }
-
-  const id = "google-gsi-script";
-  if (!document.getElementById(id)) {
-    const el = document.createElement("script");
-    el.id = id;
-    el.src = "https://accounts.google.com/gsi/client";
-    el.async = true;
-    el.onload = initGSI;
-    document.head.appendChild(el);
-  } else {
-    // Script tag exists (added by a previous render cycle) — wait for it
-    document.getElementById(id)!.addEventListener("load", initGSI, { once: true });
-  }
+  // Store on window BEFORE returning so concurrent callers get the same promise
+  win[WIN_KEY] = promise;
+  return promise;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useGoogleAuth() {
-  const [ready, setReady] = useState(isInitialized);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     if (!CLIENT_ID) return;
-    ensureGSI(() => setReady(true));
+    let cancelled = false;
+    getGSIPromise().then(() => {
+      if (!cancelled) setReady(true);
+    });
+    return () => { cancelled = true; };
   }, []);
 
   function signIn(): Promise<GoogleAuthResult> {
@@ -124,7 +130,7 @@ export function useGoogleAuth() {
         reject(new Error("Google Sign-In is not configured on this deployment"));
         return;
       }
-      if (!isInitialized()) {
+      if (!(window as G).google?.accounts?.id) {
         reject(new Error("Google Sign-In is still loading — please try again"));
         return;
       }
