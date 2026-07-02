@@ -77,7 +77,8 @@ export function LoginForm() {
           const profile = await identityApi.getVendorProfile(resp.access_token);
           if (!profile.is_active) destination = ROUTES.ONBOARDING.WELCOME;
         } catch {
-          // No vendor profile — first time user, send to onboarding
+          // No vendor profile — create it and send to onboarding
+          await identityApi.startOnboarding(resp.access_token).catch(() => {});
           destination = ROUTES.ONBOARDING.WELCOME;
         }
         router.push(destination);

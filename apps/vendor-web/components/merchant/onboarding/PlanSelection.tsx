@@ -34,10 +34,16 @@ export default function PlanSelection() {
 
   useEffect(() => {
     if (!accessToken) return;
-    identityApi.listPlans(accessToken)
-      .then(setPlans)
-      .catch(() => setPlans([]))
-      .finally(() => setLoading(false));
+    // Ensure vendor profile exists before calling any vendor endpoint.
+    // startOnboarding is idempotent — silently ignore 409 (already exists).
+    identityApi.startOnboarding(accessToken)
+      .catch(() => {})
+      .finally(() => {
+        identityApi.listPlans(accessToken)
+          .then(setPlans)
+          .catch(() => setPlans([]))
+          .finally(() => setLoading(false));
+      });
   }, [accessToken]);
 
   function handleSelect(plan: PlanResp) {
