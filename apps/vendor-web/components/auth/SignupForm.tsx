@@ -182,8 +182,9 @@ export function SignupForm() {
         }
 
         if (isNewUser) {
-          // New user — show profile step to collect missing info (phone, marketing)
-          // then send them through the full onboarding flow
+          // Create vendor profile row before going further into onboarding
+          await identityApi.startOnboarding(resp.access_token).catch(() => {});
+          // Show profile step to collect missing info, then full onboarding
           const nameParts = result.name.trim().split(" ");
           const firstName = nameParts[0] ?? "";
           const lastName = nameParts.slice(1).join(" ") || "";
@@ -257,7 +258,9 @@ export function SignupForm() {
       });
       setAuth(authResp.user, authResp.access_token);
       setAuthSession();
-      // Phone and location are collected during store setup, not here.
+      // Create vendor profile row — required before any vendor endpoint works.
+      // Silently ignore errors: 409 = profile already exists, still proceed.
+      await identityApi.startOnboarding(authResp.access_token).catch(() => {});
       router.push(ROUTES.ONBOARDING.WELCOME);
     } catch (err) {
       setOtpError(
