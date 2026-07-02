@@ -1,32 +1,18 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { Eye, EyeOff, ArrowUpRight, Lock, Zap, Wallet, Loader2 } from "lucide-react";
 import { fmtNaira } from "@gomarket/shared-utils";
-import { walletApi, type WalletResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { WithdrawModal, TransactionRow } from "./helpers";
+import { useWallet, invalidate } from "@/lib/swr/hooks";
 
 export default function WalletPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [balanceVisible, setBalanceVisible] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
-  const [wallet, setWallet] = useState<WalletResp | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const loadWallet = useCallback(() => {
-    if (!accessToken) return;
-    setLoading(true);
-    walletApi
-      .getBalance(accessToken)
-      .then(setWallet)
-      .catch(() => setWallet(null))
-      .finally(() => setLoading(false));
-  }, [accessToken]);
-
-  useEffect(() => {
-    loadWallet();
-  }, [loadWallet]);
+  const { data: wallet, isLoading: loading, mutate } = useWallet();
 
   return (
     <div className="w-full">
@@ -193,7 +179,7 @@ export default function WalletPage() {
           wallet={wallet}
           token={accessToken}
           onClose={() => setWithdrawOpen(false)}
-          onSuccess={(updated) => setWallet(updated)}
+          onSuccess={(updated) => { mutate(updated, false); invalidate.wallet(); }}
         />
       )}
     </div>

@@ -1,36 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Search, RotateCcw, TrendingUp, Loader2 } from "lucide-react";
-import { ordersApi, type AbandonedCartResp } from "@gomarket/api-client";
-import { useAuthStore } from "@/store/useAuthStore";
+import { type AbandonedCartResp } from "@gomarket/api-client";
 import { fmtNaira } from "@gomarket/shared-utils";
 import { AbandonedRow, AbandonedEmptyState } from "./helpers";
+import { useAbandonedCarts } from "@/lib/swr/hooks";
 
 export default function AbandonedOrdersPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const [carts, setCarts] = useState<AbandonedCartResp[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    if (!accessToken) return;
-    let cancelled = false;
-    ordersApi
-      .listAbandonedCarts({ per_page: 100 }, accessToken)
-      .then((resp) => {
-        if (!cancelled) setCarts(resp.carts);
-      })
-      .catch(() => {
-        if (!cancelled) setCarts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [accessToken]);
+  const { data: cartsData, isLoading: loading } = useAbandonedCarts();
+  const carts: AbandonedCartResp[] = cartsData?.carts ?? [];
 
   const filtered = useMemo(() => {
     if (!search.trim()) return carts;

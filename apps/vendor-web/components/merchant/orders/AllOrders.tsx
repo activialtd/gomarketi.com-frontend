@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   Clock,
@@ -11,38 +11,29 @@ import {
   ShoppingBag,
   Loader2,
 } from "lucide-react";
-import { ordersApi, type OrderResp, type OrderStatus } from "@gomarket/api-client";
-import { useAuthStore } from "@/store/useAuthStore";
+import { type OrderResp, type OrderStatus } from "@gomarket/api-client";
 import { OrderRow, StatCard } from "./helpers";
 import { fmtNaira } from "@gomarket/shared-utils";
+import { useOrders, invalidate } from "@/lib/swr/hooks";
 
 const PAGE_SIZE = 10;
 
 export default function AllOrdersPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
-  const [orders, setOrders] = useState<OrderResp[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
 
-  const loadOrders = useCallback(() => {
-    if (!accessToken) return;
-    setLoading(true);
-    ordersApi
-      .listOrders({ per_page: 100 }, accessToken)
-      .then((resp) => setOrders(resp.orders))
-      .catch(() => setOrders([]))
-      .finally(() => setLoading(false));
-  }, [accessToken]);
-
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+  const { data: ordersData, isLoading: loading, mutate } = useOrders();
+  const orders: OrderResp[] = ordersData?.orders ?? [];
 
   function handleOrderUpdated(updated: OrderResp) {
-    setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+    // Optimistic update locally then invalidate cache
+    mutate(
+      (prev) => prev ? { ...prev, orders: prev.orders.map((o) => o.id === updated.id ? updated : o) } : prev,
+      { revalidate: false }
+    );
+    invalidate.orders();
   }
 
   function handleStatClick(filter: string) {
