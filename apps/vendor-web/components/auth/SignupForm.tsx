@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   ArrowLeft,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import { Input } from "@gomarket/ui";
 import { authApi, identityApi, ApiError } from "@gomarket/api-client";
@@ -118,6 +119,7 @@ export function SignupForm() {
   const [otpError, setOtpError] = useState<string | null>(null);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [isResending, setIsResending] = useState(false);
 
   // Form-level API error
   const [apiError, setApiError] = useState<string | null>(null);
@@ -274,8 +276,8 @@ export function SignupForm() {
   }
 
   const handleResendOTP = useCallback(async () => {
-    if (!signupEmail || isLoading || resendCooldown > 0) return;
-    setIsLoading(true);
+    if (!signupEmail || isResending || resendCooldown > 0) return;
+    setIsResending(true);
     setOtpError(null);
     setResendSuccess(false);
     try {
@@ -292,9 +294,9 @@ export function SignupForm() {
           : "Failed to resend. Please try again.",
       );
     } finally {
-      setIsLoading(false);
+      setIsResending(false);
     }
-  }, [signupEmail, isLoading, resendCooldown]);
+  }, [signupEmail, isResending, resendCooldown]);
 
   async function onOAuthProfileSubmit(_data: OAuthProfileData) {
     // Auth was already set in handleOAuth. Phone/location are collected in store setup.
@@ -664,40 +666,50 @@ export function SignupForm() {
             onClick={handleOTPSubmit}
           />
 
-          {resendSuccess && (
-            <p
-              className="text-center text-[12px] rounded-[8px] px-3 py-2 border"
+          {/* Resend section */}
+          <div className="flex flex-col items-center gap-2 pt-1">
+            <p className="text-[11px]" style={{ color: "#3D6B4F" }}>
+              Didn&apos;t receive the code?
+            </p>
+            <button
+              type="button"
+              disabled={isResending || resendCooldown > 0}
+              onClick={handleResendOTP}
+              className="flex items-center justify-center gap-2 h-10 px-5 rounded-[10px] border text-[12px] font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed"
               style={{
-                color: "#15803d",
-                background: "#f0fdf4",
-                borderColor: "#bbf7d0",
+                borderColor: resendCooldown > 0 ? "#e2e8f0" : "#1A7A42",
+                background: resendCooldown > 0 ? "#fafafa" : "#fff",
+                color: resendCooldown > 0 ? "#94a3b8" : "#1A7A42",
               }}
             >
-              A new code was sent to {signupEmail}
-            </p>
-          )}
+              {isResending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : resendCooldown > 0 ? (
+                <>
+                  <CountdownRing seconds={resendCooldown} total={60} />
+                  Resend in {resendCooldown}s
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  Resend code
+                </>
+              )}
+            </button>
 
-          <p className="text-center text-[11px]" style={{ color: "#3D6B4F" }}>
-            Didn&apos;t receive it?{" "}
-            {resendCooldown > 0 ? (
-              <span
-                className="font-semibold"
-                style={{ color: "rgba(61,107,79,0.5)" }}
+            {resendSuccess && (
+              <p
+                className="text-center text-[12px] rounded-[8px] px-3 py-2 border w-full"
+                style={{
+                  color: "#15803d",
+                  background: "#f0fdf4",
+                  borderColor: "#bbf7d0",
+                }}
               >
-                Resend in {resendCooldown}s
-              </span>
-            ) : (
-              <button
-                type="button"
-                disabled={isLoading}
-                className="font-bold transition-colors disabled:opacity-50"
-                style={{ color: "#1A7A42" }}
-                onClick={handleResendOTP}
-              >
-                Resend code
-              </button>
+                ✓ A new code was sent to {signupEmail}
+              </p>
             )}
-          </p>
+          </div>
         </div>
       )}
 
@@ -1112,6 +1124,35 @@ function PhoneInput({
         {...inputProps}
       />
     </div>
+  );
+}
+
+function CountdownRing({ seconds, total }: { seconds: number; total: number }) {
+  const r = 7;
+  const circumference = 2 * Math.PI * r;
+  const dashOffset = circumference * (seconds / total);
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 18 18"
+      className="shrink-0"
+      style={{ transform: "rotate(-90deg)" }}
+    >
+      <circle cx="9" cy="9" r={r} fill="none" stroke="#e2e8f0" strokeWidth="2" />
+      <circle
+        cx="9"
+        cy="9"
+        r={r}
+        fill="none"
+        stroke="#94a3b8"
+        strokeWidth="2"
+        strokeDasharray={circumference}
+        strokeDashoffset={dashOffset}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 1s linear" }}
+      />
+    </svg>
   );
 }
 
