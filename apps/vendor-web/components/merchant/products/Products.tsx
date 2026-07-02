@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import {
   Plus,
@@ -15,9 +15,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { type Product } from "@/lib/data/products";
-import { catalogueApi, storefrontApi, type CollectionResp } from "@gomarket/api-client";
-import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
+import { useProducts, useCategories, useCollections, useMyStore, invalidate } from "@/lib/swr/hooks";
 import {
   CollectionsTab,
   EmptyProducts,
@@ -31,7 +30,6 @@ type ViewMode = "grid" | "list";
 type SortKey = "name" | "price" | "stock" | "sold" | "createdAt";
 
 export default function ProductsPage() {
-  const accessToken = useAuthStore((s) => s.accessToken);
   const [tab, setTab] = useState<Tab>("products");
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
@@ -39,72 +37,38 @@ export default function ProductsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("createdAt");
   const [sortAsc, setSortAsc] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
-  const [collections, setCollections] = useState<CollectionResp[]>([]);
-  const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
-  const [storeSlug, setStoreSlug] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!accessToken) return;
-    setLoadingProducts(true);
-    try {
-      const [productsResp, categoriesResp, collectionsResp] = await Promise.allSettled([
-        catalogueApi.listProducts({ per_page: 100 }, accessToken),
-        catalogueApi.listCategories(accessToken),
-        catalogueApi.listCollections(accessToken),
-      ]);
+  // SWR — cached, instant on re-visit
+  const { data: productsResp, isLoading: loadingProducts } = useProducts();
+  const { data: categoriesResp } = useCategories();
+  const { data: collectionsResp } = useCollections();
+  const { data: storeData } = useMyStore();
 
-      const catMap: Record<string, string> = {};
-      if (categoriesResp.status === "fulfilled") {
-        categoriesResp.value.forEach((c) => { catMap[c.id] = c.name; });
-        setCategoryNames(catMap);
-      }
-      if (collectionsResp.status === "fulfilled") {
-        setCollections(collectionsResp.value.collections);
-      }
+  const storeSlug = storeData?.slug ?? null;
 
-      if (productsResp.status === "fulfilled") {
-        const mapped: Product[] = productsResp.value.products.map((p) => ({
-          id: p.id,
-          name: p.name,
-          slug: p.id,
-          category: p.category_id ? (catMap[p.category_id] ?? "Uncategorised") : "Uncategorised",
-          collectionIds: [],
-          description: p.description ?? "",
-          images: p.images ?? [],
-          price: p.price_kobo / 100,
-          currency: "NGN",
-          hasVariants: false,
-          stock: p.stock,
-          sold: 0,
-          status:
-            p.stock === 0
-              ? "out_of_stock"
-              : p.is_published
-                ? "active"
-                : "draft",
-          featured: false,
-          createdAt: p.created_at,
-          tags: p.tags ?? [],
-        }));
-        setProducts(mapped);
-      } else {
-        setProducts([]);
-      }
-    } finally {
-      setLoadingProducts(false);
-    }
-  }, [accessToken]);
+  const categoryNames: Record<string, string> = {};
+  (categoriesResp ?? []).forEach((c) => { categoryNames[c.id] = c.name; });
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const rawCollections = collectionsResp?.collections ?? [];
 
-  useEffect(() => {
-    if (!accessToken) return;
-    storefrontApi.getMyStore(accessToken).then((s) => setStoreSlug(s.slug)).catch(() => {});
-  }, [accessToken]);
+  const products: Product[] = (productsResp?.products ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    slug: p.id,
+    category: p.category_id ? (categoryNames[p.category_id] ?? "Uncategorised") : "Uncategorised",
+    collectionIds: [],
+    description: p.description ?? "",
+    images: p.images ?? [],
+    price: p.price_kobo / 100,
+    currency: "NGN",
+    hasVariants: false,
+    stock: p.stock,
+    sold: 0,
+    status: p.stock === 0 ? "out_of_stock" : p.is_published ? "active" : "draft",
+    featured: false,
+    createdAt: p.created_at,
+    tags: p.tags ?? [],
+  }));
 
   const toggleSelect = (id: string) => {
     setSelected((prev) => {
@@ -248,7 +212,7 @@ export default function ProductsPage() {
                     className="text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-0.5"
                     style={{ background: "#F0FAF3", color: "#1A7A42" }}
                   >
-                    {collections.length}
+                    {rawCollections.length}
                   </span>
                 </span>
               ) : (
@@ -463,7 +427,7 @@ export default function ProductsPage() {
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
                     storeSlug={storeSlug}
-                    onChanged={load}
+                    onChanged={() => invalidate.products()}
                   />
                 ))}
               </div>
@@ -476,7 +440,7 @@ export default function ProductsPage() {
                     selected={selected.has(product.id)}
                     onSelect={toggleSelect}
                     storeSlug={storeSlug}
-                    onChanged={load}
+                    onChanged={() => invalidate.products()}
                   />
                 ))}
               </div>
@@ -486,7 +450,7 @@ export default function ProductsPage() {
 
         {/* ── Collections tab ───────────────────────────── */}
         {tab === "collections" && (
-          <CollectionsTab collections={collections} loading={loadingProducts} />
+          <CollectionsTab collections={rawCollections} loading={loadingProducts} />
         )}
       </div>
     </div>
