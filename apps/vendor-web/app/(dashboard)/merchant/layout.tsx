@@ -8,6 +8,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
 import { SWRProvider } from "@/lib/swr/provider";
+import { useOrderEvents } from "@/lib/swr/hooks";
 import { authApi, storefrontApi, setTokenRefreshCallback } from "@gomarket/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
@@ -39,6 +40,9 @@ export default function MerchantLayout({
       }
     });
   }, [setAuth, clearAuth]);
+
+  // Subscribe to real-time order/wallet SSE updates for the entire dashboard.
+  useOrderEvents();
 
   const merchantName = user?.full_name ?? user?.email?.split("@")[0] ?? "";
   const avatarInitials = merchantName
