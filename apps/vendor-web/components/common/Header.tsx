@@ -48,21 +48,26 @@ export function Header({
       .toUpperCase()
       .slice(0, 2);
 
+  // Strip any accidental protocol prefix from storeDomain (e.g. Vercel env var set
+  // to "https://gomarketi.com" instead of just "gomarketi.com" produces the broken
+  // URL "https://cobi.https://gomarketi.com"). Always strip before using.
+  const cleanDomain = storeDomain.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+
   // Build storefront URL based on environment:
-  // - Local dev (STORE_DOMAIN contains "localhost" or a port): path-based routing
+  // - Local dev (domain contains "localhost" or a port): path-based routing
   //   → http://localhost:3001/storefront/{slug}  (apps/web dev server)
   // - Production: subdomain routing
   //   → https://{slug}.gomarketi.com
-  const isLocalDev = storeDomain.includes("localhost") || /:\d+/.test(storeDomain);
+  const isLocalDev = cleanDomain.includes("localhost") || /:\d+/.test(cleanDomain);
   const storeUrl = storeSlug
     ? isLocalDev
-      ? `http://${storeDomain}/storefront/${storeSlug}`
-      : `https://${storeSlug}.${storeDomain}`
+      ? `http://${cleanDomain}/storefront/${storeSlug}`
+      : `https://${storeSlug}.${cleanDomain}`
     : "#";
   const storeSlugDisplay = storeSlug
     ? isLocalDev
-      ? `${storeDomain}/storefront/${storeSlug}`
-      : `${storeSlug}.${storeDomain}`
+      ? `${cleanDomain}/storefront/${storeSlug}`
+      : `${storeSlug}.${cleanDomain}`
     : "";
 
   return (
