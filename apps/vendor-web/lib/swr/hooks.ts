@@ -23,6 +23,7 @@
  */
 
 import useSWR, { mutate } from "swr";
+import { useEffect } from "react";
 import {
   catalogueApi,
   ordersApi,
@@ -81,7 +82,7 @@ export function useOrders(
   return useSWR(
     key,
     () => ordersApi.listOrders({ per_page: 100, ...params }, tok()),
-    { revalidateOnFocus: true, dedupingInterval: 30_000 } // 30 sec
+    { revalidateOnFocus: false, dedupingInterval: 30_000 } // SSE drives updates
   );
 }
 
@@ -133,7 +134,7 @@ export function useWallet() {
   return useSWR(
     accessToken ? "wallet:balance" : null,
     () => walletApi.getBalance(tok()),
-    { revalidateOnFocus: true, dedupingInterval: 30_000 } // 30 sec
+    { revalidateOnFocus: false, dedupingInterval: 30_000 } // SSE drives updates
   );
 }
 
@@ -200,3 +201,50 @@ export const invalidate = {
   store: () => mutate("store:mine"),
   vendorProfile: () => mutate("identity:vendor-profile"),
 };
+
+// ── SSE real-time events ──────────────────────────────────────────────────────
+
+/**
+ * useOrderEvents — subscribes to the orders SSE stream for real-time
+ * notifications. When an order or wallet event arrives, the relevant
+ * SWR caches are invalidated so data refreshes automatically.
+ *
+ * Only connects when the user has an access token.
+ * Automatically reconnects if the connection drops (EventSource behaviour).
+ */
+export function useOrderEvents() {
+  const accessToken = useAuthStore.getState().accessToken;
+
+  useEffect(() => {
+    if (!accessToken) return;
+
+    // EventSource doesn't support custom headers — pass token as query param.
+    const url = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}/v1/orders/events?token=${encodeURIComponent(accessToken)}`;
+    const source = new EventSource(url);
+
+    source.addEventListener("order_created", () => {
+      invalidate.orders();
+      invalidate.wallet();
+      invalidate.analytics();
+    });
+
+    source.addEventListener("order_updated", () => {
+      invalidate.orders();
+      invalidate.analytics();
+    });
+
+    source.addEventListener("wallet_updated", () => {
+      invalidate.wallet();
+    });
+
+    source.onerror = () => {
+      // EventSource reconnects automatically — no action needed here.
+      // Log for debugging only.
+      console.debug("[SSE] orders stream disconnected, will reconnect...");
+    };
+
+    return () => {
+      source.close();
+    };
+  }, [accessToken]);
+}
