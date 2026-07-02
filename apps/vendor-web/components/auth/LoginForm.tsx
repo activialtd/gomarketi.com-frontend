@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,6 +24,7 @@ type LoginData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
   const [isLoading, setIsLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
@@ -33,9 +34,15 @@ export function LoginForm() {
 
   const {
     register,
+    reset,
     handleSubmit,
     formState: { errors },
   } = useForm<LoginData>({ resolver: zodResolver(loginSchema) });
+
+  useEffect(() => {
+    const email = searchParams.get("email");
+    if (email) reset({ email });
+  }, []);
 
   const busy = isLoading || !!oauthLoading;
 
@@ -169,7 +176,7 @@ export function LoginForm() {
           error={errors.password?.message}
           labelRight={
             <Link
-              href="#"
+              href="/auth/forgot-password"
               className="text-[11px] font-semibold"
               style={{ color: "#1A7A42" }}
             >

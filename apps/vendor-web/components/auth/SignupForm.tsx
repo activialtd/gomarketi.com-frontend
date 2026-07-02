@@ -123,6 +123,7 @@ export function SignupForm() {
 
   // Form-level API error
   const [apiError, setApiError] = useState<string | null>(null);
+  const [existingVerifiedEmail, setExistingVerifiedEmail] = useState<string | null>(null);
 
   const busy = isLoading || !!oauthLoading;
 
@@ -239,11 +240,28 @@ export function SignupForm() {
 
       setStep("VERIFY_EMAIL");
     } catch (err) {
-      setApiError(
-        err instanceof ApiError
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
+      const is409 =
+        (err instanceof ApiError && err.status === 409) ||
+        (err instanceof Error && err.message.toLowerCase().includes("already exists"));
+      if (is409) {
+        // Try to send OTP — if it succeeds the account is unverified
+        try {
+          const resp = await authApi.requestOTP(data.email);
+          setSessionToken(resp.session_token);
+          setSignupEmail(data.email);
+          setStep("VERIFY_EMAIL");
+          setResendCooldown(60);
+        } catch {
+          // OTP request failed → account is already verified
+          setExistingVerifiedEmail(data.email);
+        }
+      } else {
+        setApiError(
+          err instanceof ApiError
+            ? err.message
+            : "Something went wrong. Please try again.",
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -547,8 +565,33 @@ export function SignupForm() {
             errors={signupForm.formState.errors}
           />
 
-          {/* API error */}
-          {apiError && (
+          {/* API error / existing account */}
+          {existingVerifiedEmail ? (
+            <div className="rounded-[12px] border p-4 space-y-3" style={{ background: "#F0FAF3", borderColor: "rgba(26,122,66,0.2)" }}>
+              <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>Account already exists</p>
+              <p className="text-[12px]" style={{ color: "#3D6B4F" }}>
+                <span className="font-semibold">{existingVerifiedEmail}</span> is already registered and verified.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => router.push(ROUTES.AUTH.LOGIN + '?email=' + encodeURIComponent(existingVerifiedEmail))}
+                  className="flex-1 h-9 rounded-[9px] text-white text-[12px] font-bold"
+                  style={{ background: "#1A7A42" }}
+                >
+                  Sign in →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setExistingVerifiedEmail(null); setApiError(null); signupForm.reset(); }}
+                  className="flex-1 h-9 rounded-[9px] border text-[12px] font-semibold"
+                  style={{ borderColor: "#e2e8f0", color: "#374151" }}
+                >
+                  Use different email
+                </button>
+              </div>
+            </div>
+          ) : apiError ? (
             <p
               className="text-[12px] rounded-[8px] px-3 py-2 border"
               style={{
@@ -559,7 +602,7 @@ export function SignupForm() {
             >
               {apiError}
             </p>
-          )}
+          ) : null}
 
           <PrimaryButton loading={isLoading} label="Create account" />
 
