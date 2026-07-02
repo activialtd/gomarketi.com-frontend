@@ -9,6 +9,7 @@ import { CartDrawer } from "@/components/storefront/CartDrawer";
 interface LagosLayoutProps {
   children: React.ReactNode;
   storeName: string;
+  slug?: string;
   primary?: string;
   tagline?: string;
   whatsapp?: string;
@@ -19,6 +20,7 @@ interface LagosLayoutProps {
 export default function LagosLayout({
   children,
   storeName,
+  slug = "",
   primary = "#C75D3A",
   tagline,
   whatsapp,
@@ -124,7 +126,7 @@ export default function LagosLayout({
         </div>
       </footer>
 
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} slug={slug} />
     </div>
   );
 }

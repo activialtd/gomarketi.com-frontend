@@ -1,35 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
-  ShieldCheck,
-  Camera,
-  ExternalLink,
-  Building2,
-  Mail,
-  Phone,
-  Globe,
-  Copy,
   Check,
-  ArrowRight,
-  CreditCard,
-  BadgeCheck,
-  TrendingUp,
   Loader2,
+  ExternalLink,
+  Globe,
+  ShieldCheck,
+  ArrowRight,
+  TrendingUp,
+  ShieldAlert,
+  Phone,
+  Video,
+  Music,
 } from "lucide-react";
+import { InstagramIcon, TwitterIcon, FacebookIcon } from "@/lib/icons";
 import { ROUTES } from "@/lib/config/routes";
-import { KYC_CONFIG, PLAN_CONFIG, Field, EditButton, Section } from "./helper";
-import { useMyStore, useVendorProfile, useSubscription, useAnalyticsOverview } from "@/lib/swr/hooks";
-import { identityApi, type PlanResp } from "@gomarket/api-client";
+import { useMyStore, useVendorProfile, useSubscription, invalidate } from "@/lib/swr/hooks";
+import {
+  storefrontApi,
+  type StoreUpdatePayload,
+  type SocialLinks,
+  type ThemeConfig,
+  type PlanResp,
+} from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
-import { InstagramIcon, FacebookIcon, TwitterIcon } from "@/lib/icons";
+import { ImageUpload } from "./ImageUpload";
+import { ThemePreview } from "./ThemePreview";
 
 const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
-type KycStatus = "verified" | "pending" | "unverified" | "rejected";
+// ── Constants ─────────────────────────────────────────────────────────────────
 
-// ── Plan display config ────────────────────────────────────────────────────────
+const FONTS = ["Inter", "Poppins", "Playfair Display", "Montserrat", "Lato", "Open Sans"];
+
+const DEFAULT_THEME: ThemeConfig = {
+  primary_color: "#1A7A42",
+  secondary_color: "#0A2E1A",
+  accent_color: "#F0FAF3",
+  background_color: "#ffffff",
+  text_color: "#1C1C1C",
+  font_heading: "Inter",
+  font_body: "Inter",
+  hero_style: "split",
+  products_per_row: 3,
+  button_style: "rounded",
+  show_hero: true,
+  show_featured: true,
+  show_categories: false,
+};
+
+const TABS = ["Information", "Customization", "Social Media", "Subscription"] as const;
+type Tab = typeof TABS[number];
+
+// ── Plan display config ───────────────────────────────────────────────────────
+
 const planDisplay: Record<string, { label: string; bg: string; color: string }> = {
   free:    { label: "Free",    bg: "#f1f5f9", color: "#64748b" },
   starter: { label: "Starter", bg: "#F0FAF3", color: "#1A7A42" },
@@ -37,70 +63,734 @@ const planDisplay: Record<string, { label: string; bg: string; color: string }> 
   scale:   { label: "Scale",   bg: "#faf5ff", color: "#7c3aed" },
 };
 
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <label className="block text-[10px] font-bold uppercase tracking-[0.1em] mb-1.5" style={{ color: "#3D6B4F" }}>
+      {children}
+    </label>
+  );
+}
+
+function StyledInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  return (
+    <input
+      {...props}
+      className="w-full px-3.5 py-2.5 rounded-[10px] border text-[13px] outline-none transition-all"
+      style={{
+        borderColor: "#e2e8f0",
+        background: "#F0FAF3",
+        color: "#1C1C1C",
+        ...((props.style as React.CSSProperties) ?? {}),
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.background = "#fff";
+        e.currentTarget.style.borderColor = "#1A7A42";
+        e.currentTarget.style.outline = "2px solid #1A7A42";
+        e.currentTarget.style.outlineOffset = "-2px";
+        props.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.background = "#F0FAF3";
+        e.currentTarget.style.borderColor = "#e2e8f0";
+        e.currentTarget.style.outline = "none";
+        props.onBlur?.(e);
+      }}
+    />
+  );
+}
+
+function StyledTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      rows={3}
+      {...props}
+      className="w-full px-3.5 py-2.5 rounded-[10px] border text-[13px] resize-none outline-none transition-all"
+      style={{
+        borderColor: "#e2e8f0",
+        background: "#F0FAF3",
+        color: "#1C1C1C",
+        lineHeight: "1.6",
+        ...((props.style as React.CSSProperties) ?? {}),
+      }}
+      onFocus={(e) => {
+        e.currentTarget.style.background = "#fff";
+        e.currentTarget.style.borderColor = "#1A7A42";
+        e.currentTarget.style.outline = "2px solid #1A7A42";
+        e.currentTarget.style.outlineOffset = "-2px";
+        props.onFocus?.(e);
+      }}
+      onBlur={(e) => {
+        e.currentTarget.style.background = "#F0FAF3";
+        e.currentTarget.style.borderColor = "#e2e8f0";
+        e.currentTarget.style.outline = "none";
+        props.onBlur?.(e);
+      }}
+    />
+  );
+}
+
+function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      role="switch"
+      aria-checked={on}
+      className="shrink-0 relative inline-flex h-5 w-9 rounded-full transition-colors duration-200"
+      style={{ background: on ? "#1A7A42" : "#cbd5e1" }}
+    >
+      <span
+        className="inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform duration-200 mt-0.5"
+        style={{ transform: on ? "translateX(18px)" : "translateX(2px)" }}
+      />
+    </button>
+  );
+}
+
+function ColorSwatch({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-1.5">
+      <FieldLabel>{label}</FieldLabel>
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-[8px] border" style={{ background: value, borderColor: "#e2e8f0" }} />
+        <div className="flex-1 relative">
+          <StyledInput
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="#1A7A42"
+            maxLength={7}
+          />
+          <input
+            type="color"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded cursor-pointer border-0 p-0 opacity-0"
+            style={{ width: 24, height: 24 }}
+            title="Pick color"
+          />
+          <div
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded border pointer-events-none"
+            style={{ background: value, borderColor: "#e2e8f0" }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Banner / toast ─────────────────────────────────────────────────────────────
+
+function SaveBanner({ visible, error }: { visible: boolean; error: string | null }) {
+  if (!visible && !error) return null;
+  return (
+    <div
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-[12px] shadow-lg text-[13px] font-semibold animate-in fade-in slide-in-from-bottom-2 duration-200"
+      style={{
+        background: error ? "#7f1d1d" : "#0A2E1A",
+        color: error ? "#fecaca" : "#d1fae5",
+      }}
+    >
+      {error ? (
+        <span>{error}</span>
+      ) : (
+        <>
+          <Check className="w-4 h-4" style={{ color: "#86efac" }} />
+          Changes saved!
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Tab: Store Information ─────────────────────────────────────────────────────
+
+interface InfoState {
+  name: string;
+  tagline: string;
+  description: string;
+  site_description: string;
+}
+
+function InformationTab({
+  info,
+  setInfo,
+}: {
+  info: InfoState;
+  setInfo: (patch: Partial<InfoState>) => void;
+}) {
+  const charLimitTagline = 80;
+  const charLimitSiteDesc = 160;
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      <div>
+        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Store Information</p>
+        <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
+          Displayed on your storefront and in customer communications.
+        </p>
+      </div>
+
+      <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+        {/* Store name */}
+        <div>
+          <FieldLabel>Store name</FieldLabel>
+          <StyledInput
+            value={info.name}
+            onChange={(e) => setInfo({ name: e.target.value })}
+            placeholder="e.g. Eko Fashion House"
+            maxLength={100}
+          />
+        </div>
+
+        {/* Tagline */}
+        <div>
+          <FieldLabel>Tagline</FieldLabel>
+          <StyledInput
+            value={info.tagline}
+            onChange={(e) => setInfo({ tagline: e.target.value })}
+            placeholder="A short catchy phrase for your store"
+            maxLength={charLimitTagline}
+          />
+          <p className="text-[10px] mt-1" style={{ color: info.tagline.length > charLimitTagline * 0.9 ? "#f59e0b" : "#94a3b8" }}>
+            {info.tagline.length}/{charLimitTagline} characters
+          </p>
+        </div>
+
+        {/* Description */}
+        <div>
+          <FieldLabel>Store description</FieldLabel>
+          <StyledTextarea
+            value={info.description}
+            onChange={(e) => setInfo({ description: e.target.value })}
+            placeholder="Tell customers about your store — what you sell, your story, what makes you unique."
+            rows={4}
+          />
+        </div>
+
+        {/* SEO meta description */}
+        <div>
+          <FieldLabel>SEO meta description</FieldLabel>
+          <StyledTextarea
+            value={info.site_description}
+            onChange={(e) => setInfo({ site_description: e.target.value })}
+            placeholder="Shown in Google search results (max 160 chars)"
+            rows={3}
+          />
+          <p
+            className="text-[10px] mt-1"
+            style={{ color: info.site_description.length > charLimitSiteDesc ? "#ef4444" : "#94a3b8" }}
+          >
+            {info.site_description.length}/{charLimitSiteDesc} characters
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Customization ────────────────────────────────────────────────────────
+
+interface CustomState {
+  logo_url: string;
+  hero_image_url: string;
+  theme: ThemeConfig;
+}
+
+function CustomizationTab({
+  custom,
+  setCustom,
+  storeName,
+  accessToken,
+}: {
+  custom: CustomState;
+  setCustom: (patch: Partial<CustomState>) => void;
+  storeName: string;
+  accessToken: string;
+}) {
+  function setTheme(patch: Partial<ThemeConfig>) {
+    setCustom({ theme: { ...custom.theme, ...patch } });
+  }
+
+  return (
+    <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
+      {/* Left: controls */}
+      <div className="space-y-5">
+        <div>
+          <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Store Customization</p>
+          <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
+            Customize your storefront appearance. Changes apply after saving.
+          </p>
+        </div>
+
+        {/* Branding images */}
+        <div className="rounded-[14px] border p-5 space-y-6" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Branding Images</p>
+
+          <ImageUpload
+            label="Store Logo"
+            description="Square logo — PNG or SVG with transparent background recommended. Min 200×200px."
+            currentUrl={custom.logo_url || undefined}
+            aspectRatio="1:1"
+            onUploaded={(url) => setCustom({ logo_url: url })}
+            accessToken={accessToken}
+            uploadType="logo"
+          />
+
+          <div className="h-px" style={{ background: "#f1f5f9" }} />
+
+          <ImageUpload
+            label="Hero Image"
+            description="Banner shown at the top of your storefront. 16:9 ratio recommended (e.g. 1280×720px)."
+            currentUrl={custom.hero_image_url || undefined}
+            aspectRatio="16:9"
+            onUploaded={(url) => setCustom({ hero_image_url: url })}
+            accessToken={accessToken}
+            uploadType="hero"
+          />
+        </div>
+
+        {/* Theme colors */}
+        <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Brand Colors</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ColorSwatch label="Primary color" value={custom.theme.primary_color} onChange={(v) => setTheme({ primary_color: v })} />
+            <ColorSwatch label="Secondary color" value={custom.theme.secondary_color} onChange={(v) => setTheme({ secondary_color: v })} />
+            <ColorSwatch label="Accent / light bg" value={custom.theme.accent_color} onChange={(v) => setTheme({ accent_color: v })} />
+            <ColorSwatch label="Page background" value={custom.theme.background_color} onChange={(v) => setTheme({ background_color: v })} />
+            <ColorSwatch label="Text color" value={custom.theme.text_color} onChange={(v) => setTheme({ text_color: v })} />
+          </div>
+        </div>
+
+        {/* Typography */}
+        <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Typography</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <FieldLabel>Heading font</FieldLabel>
+              <select
+                className="w-full h-[42px] px-3.5 rounded-[10px] border text-[13px] outline-none"
+                style={{ borderColor: "#e2e8f0", background: "#F0FAF3", color: "#1C1C1C" }}
+                value={custom.theme.font_heading}
+                onChange={(e) => setTheme({ font_heading: e.target.value })}
+              >
+                {FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+              </select>
+            </div>
+            <div>
+              <FieldLabel>Body font</FieldLabel>
+              <select
+                className="w-full h-[42px] px-3.5 rounded-[10px] border text-[13px] outline-none"
+                style={{ borderColor: "#e2e8f0", background: "#F0FAF3", color: "#1C1C1C" }}
+                value={custom.theme.font_body}
+                onChange={(e) => setTheme({ font_body: e.target.value })}
+              >
+                {FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Layout */}
+        <div className="rounded-[14px] border p-5 space-y-5" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Layout & Style</p>
+
+          {/* Products per row */}
+          <div>
+            <FieldLabel>Products per row</FieldLabel>
+            <div className="flex gap-2">
+              {([2, 3, 4] as const).map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setTheme({ products_per_row: n })}
+                  className="flex-1 py-2 rounded-[8px] border text-[13px] font-bold transition-all"
+                  style={{
+                    borderColor: custom.theme.products_per_row === n ? "#1A7A42" : "#e2e8f0",
+                    background: custom.theme.products_per_row === n ? "#F0FAF3" : "#f8fafc",
+                    color: custom.theme.products_per_row === n ? "#1A7A42" : "#6b7280",
+                  }}
+                >
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Hero style */}
+          <div>
+            <FieldLabel>Hero style</FieldLabel>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(["full", "split", "minimal", "none"] as const).map((style) => (
+                <button
+                  key={style}
+                  type="button"
+                  onClick={() => setTheme({ hero_style: style })}
+                  className="py-2 rounded-[8px] border text-[11px] font-bold capitalize transition-all"
+                  style={{
+                    borderColor: custom.theme.hero_style === style ? "#1A7A42" : "#e2e8f0",
+                    background: custom.theme.hero_style === style ? "#F0FAF3" : "#f8fafc",
+                    color: custom.theme.hero_style === style ? "#1A7A42" : "#6b7280",
+                  }}
+                >
+                  {style}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Button style */}
+          <div>
+            <FieldLabel>Button style</FieldLabel>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { id: "rounded", label: "Rounded" },
+                { id: "sharp", label: "Sharp" },
+                { id: "pill", label: "Pill" },
+              ] as const).map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setTheme({ button_style: id })}
+                  className="py-2 border text-[11px] font-bold transition-all"
+                  style={{
+                    borderRadius: id === "rounded" ? 8 : id === "sharp" ? 2 : 999,
+                    borderColor: custom.theme.button_style === id ? "#1A7A42" : "#e2e8f0",
+                    background: custom.theme.button_style === id ? "#F0FAF3" : "#f8fafc",
+                    color: custom.theme.button_style === id ? "#1A7A42" : "#6b7280",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Toggles */}
+          <div className="space-y-3 pt-1">
+            {[
+              { key: "show_hero" as const, label: "Show hero section", sub: "Full-width banner at the top of your store" },
+              { key: "show_featured" as const, label: "Show featured products", sub: "Highlight selected products on the homepage" },
+              { key: "show_categories" as const, label: "Show categories grid", sub: "Display a grid of your product categories" },
+            ].map(({ key, label, sub }) => (
+              <div key={key} className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: "#374151" }}>{label}</p>
+                  <p className="text-[11px]" style={{ color: "#94a3b8" }}>{sub}</p>
+                </div>
+                <Toggle on={custom.theme[key] as boolean} onChange={() => setTheme({ [key]: !custom.theme[key] })} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: live preview */}
+      <div className="xl:sticky xl:top-6 self-start space-y-3">
+        <p className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: "#94a3b8" }}>Live preview</p>
+        <ThemePreview
+          storeName={storeName}
+          logoUrl={custom.logo_url || undefined}
+          heroImageUrl={custom.hero_image_url || undefined}
+          theme={custom.theme}
+        />
+        <p className="text-[10px] text-center" style={{ color: "#94a3b8" }}>
+          Preview updates as you change settings
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Social Media ─────────────────────────────────────────────────────────
+
+const SOCIAL_FIELDS: {
+  key: keyof SocialLinks;
+  label: string;
+  placeholder: string;
+  icon: React.ElementType;
+  iconColor: string;
+}[] = [
+  { key: "instagram", label: "Instagram", placeholder: "@yourstorename", icon: InstagramIcon, iconColor: "#e1306c" },
+  { key: "twitter",   label: "Twitter / X", placeholder: "@yourstorename", icon: TwitterIcon, iconColor: "#1da1f2" },
+  { key: "facebook",  label: "Facebook", placeholder: "facebook.com/yourpage", icon: FacebookIcon, iconColor: "#1877f2" },
+  { key: "tiktok",    label: "TikTok", placeholder: "@yourstorename", icon: Music, iconColor: "#010101" },
+  { key: "whatsapp",  label: "WhatsApp", placeholder: "+2348012345678", icon: Phone, iconColor: "#25d366" },
+  { key: "youtube",   label: "YouTube", placeholder: "youtube.com/c/yourchannel", icon: Video, iconColor: "#ff0000" },
+];
+
+function SocialMediaTab({
+  social,
+  setSocial,
+}: {
+  social: SocialLinks;
+  setSocial: (patch: Partial<SocialLinks>) => void;
+}) {
+  return (
+    <div className="space-y-5 max-w-2xl">
+      <div>
+        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Social Media Links</p>
+        <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
+          These links appear in your storefront footer so customers can find you everywhere.
+        </p>
+      </div>
+
+      <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+        {SOCIAL_FIELDS.map(({ key, label, placeholder, icon: Icon, iconColor }) => (
+          <div key={key}>
+            <FieldLabel>{label}</FieldLabel>
+            <div className="relative flex items-center">
+              <div
+                className="absolute left-3 w-5 h-5 flex items-center justify-center shrink-0"
+                style={{ color: iconColor }}
+              >
+                <Icon className="w-4 h-4" />
+              </div>
+              <StyledInput
+                value={social[key] ?? ""}
+                onChange={(e) => setSocial({ [key]: e.target.value || undefined })}
+                placeholder={placeholder}
+                style={{ paddingLeft: "2.25rem" }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div
+        className="rounded-[12px] p-4 text-[12px]"
+        style={{ background: "#F0FAF3", border: "1px solid rgba(26,122,66,0.15)", color: "#3D6B4F" }}
+      >
+        <strong>Tip:</strong> You can enter handles (e.g. @mystore) or full URLs. GoMarketi will display them correctly.
+      </div>
+    </div>
+  );
+}
+
+// ── Tab: Subscription ─────────────────────────────────────────────────────────
+
+function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
+  const planCfg = planDisplay[plan?.slug ?? "free"] ?? planDisplay.free;
+
+  return (
+    <div className="space-y-5 max-w-2xl">
+      <div>
+        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Your Subscription</p>
+        <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
+          Manage your GoMarketi plan and billing.
+        </p>
+      </div>
+
+      <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+        {/* Current plan */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: planCfg.bg }}>
+            <TrendingUp className="w-5 h-5" style={{ color: planCfg.color }} />
+          </div>
+          <div>
+            <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
+              {plan?.display_name ?? "Free"} plan
+            </p>
+            <p className="text-[12px]" style={{ color: "#94a3b8" }}>
+              {plan && plan.price_kobo > 0
+                ? `₦${(plan.price_kobo / 100).toLocaleString("en-NG")}/month`
+                : "Free forever"}
+            </p>
+          </div>
+          <div className="ml-auto">
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ background: planCfg.bg, color: planCfg.color }}>
+              {planCfg.label}
+            </span>
+          </div>
+        </div>
+
+        {/* Features */}
+        {plan && plan.features.length > 0 && (
+          <div className="pt-2 border-t space-y-2" style={{ borderColor: "#f1f5f9" }}>
+            <p className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: "#94a3b8" }}>Included in your plan</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {plan.features.map((f) => (
+                <div key={f} className="flex items-center gap-2 text-[12px]" style={{ color: "#374151" }}>
+                  <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: "#F0FAF3" }}>
+                    <Check className="w-2.5 h-2.5" style={{ color: "#1A7A42" }} />
+                  </div>
+                  {f}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Limits */}
+        {plan && (
+          <div className="pt-2 border-t grid grid-cols-3 gap-3" style={{ borderColor: "#f1f5f9" }}>
+            {[
+              { label: "Products", value: plan.product_limit === -1 ? "Unlimited" : plan.product_limit },
+              { label: "Team members", value: plan.team_limit === -1 ? "Unlimited" : plan.team_limit },
+              { label: "Stores", value: plan.store_limit === -1 ? "Unlimited" : plan.store_limit },
+            ].map(({ label, value }) => (
+              <div key={label} className="text-center py-3 rounded-[10px]" style={{ background: "#f8fafc" }}>
+                <p className="text-[16px] font-extrabold" style={{ color: "#1C1C1C" }}>{value}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: "#94a3b8" }}>{label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Upgrade CTA */}
+      {(!plan || plan.price_kobo === 0) && (
+        <div
+          className="rounded-[14px] p-5 space-y-3"
+          style={{ background: "#0A2E1A" }}
+        >
+          <p className="text-[15px] font-extrabold text-white">Unlock more with a paid plan</p>
+          <p className="text-[12px]" style={{ color: "rgba(240,250,243,0.7)" }}>
+            Upgrade to Starter or Growth to get higher product limits, priority support, and a GoMarketi Verified badge.
+          </p>
+          <Link
+            href={ROUTES.ONBOARDING.PLANS}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-bold transition-colors"
+            style={{ background: "#1A7A42", color: "#fff" }}
+          >
+            View plans <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+
+      {plan && plan.price_kobo > 0 && (
+        <div className="rounded-[14px] border p-4 flex items-center justify-between" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+          <div>
+            <p className="text-[13px] font-bold" style={{ color: "#1C1C1C" }}>Need a different plan?</p>
+            <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>Upgrade, downgrade, or cancel anytime.</p>
+          </div>
+          <Link
+            href={ROUTES.ONBOARDING.PLANS}
+            className="flex items-center gap-1.5 text-[12px] font-bold"
+            style={{ color: "#1A7A42" }}
+          >
+            Manage plan <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── KYC banner ────────────────────────────────────────────────────────────────
+
+const KYC_CFG = {
+  verified:   { label: "Identity verified", banner: "#0A2E1A", text: "#F0FAF3", muted: "rgba(240,250,243,0.55)", icon: ShieldCheck },
+  pending:    { label: "Verification in review", banner: "#713f12", text: "#fef08a", muted: "rgba(254,240,138,0.7)", icon: ShieldAlert },
+  unverified: { label: "Identity not verified", banner: "#713f12", text: "#fef08a", muted: "rgba(254,240,138,0.7)", icon: ShieldAlert },
+  rejected:   { label: "Verification unsuccessful", banner: "#7f1d1d", text: "#fecaca", muted: "rgba(254,202,202,0.7)", icon: ShieldAlert },
+};
+
+// ── Main component ────────────────────────────────────────────────────────────
+
 export default function Settings() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const [copied, setCopied] = useState(false);
-  const [primaryBank, setPrimaryBank] = useState<{ bank_name: string; account_number_masked: string; account_name: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("Information");
+  const [isSaving, setIsSaving] = useState(false);
+  const [showBanner, setShowBanner] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  // SWR — all cached, instant on re-visit
+  // SWR data
   const { data: store, isLoading: loadingStore } = useMyStore();
   const { data: vendorProfile, isLoading: loadingVendor } = useVendorProfile();
   const { data: subscription } = useSubscription();
-  const { data: analyticsData } = useAnalyticsOverview();
+
+  // Local state for the forms — seeded from SWR data
+  const [info, setInfo] = useState<InfoState>({
+    name: "",
+    tagline: "",
+    description: "",
+    site_description: "",
+  });
+  const [custom, setCustom] = useState<CustomState>({
+    logo_url: "",
+    hero_image_url: "",
+    theme: { ...DEFAULT_THEME },
+  });
+  const [social, setSocial] = useState<SocialLinks>({});
+
+  // Seed state from store data once loaded
+  const [seeded, setSeeded] = useState(false);
+  useEffect(() => {
+    if (!store || seeded) return;
+
+    setInfo({
+      name: store.name ?? "",
+      tagline: store.tagline ?? "",
+      description: store.description ?? "",
+      site_description: store.site_description ?? "",
+    });
+
+    // Parse theme from JSON string if present
+    let parsedTheme: Partial<ThemeConfig> = {};
+    if (store.theme_config) {
+      try {
+        const raw = JSON.parse(store.theme_config) as Record<string, unknown>;
+        // Support both the old nested format and the new flat ThemeConfig
+        if ("primary_color" in raw) {
+          parsedTheme = raw as Partial<ThemeConfig>;
+        }
+      } catch { /* use defaults */ }
+    }
+
+    setCustom({
+      logo_url: store.logo_url ?? "",
+      hero_image_url: store.hero_image_url ?? "",
+      theme: { ...DEFAULT_THEME, ...parsedTheme },
+    });
+
+    setSocial(store.social_links ?? {});
+    setSeeded(true);
+  }, [store, seeded]);
 
   const loading = loadingStore || loadingVendor;
 
-  // Banks are fetched once on mount (not SWR — rarely changes, fine with manual fetch)
-  useState(() => {
-    if (!accessToken) return;
-    identityApi.listVendorBanks(accessToken)
-      .then((banks) => {
-        const primary = banks.find((b) => b.is_primary) ?? banks[0] ?? null;
-        setPrimaryBank(primary);
-      })
-      .catch(() => {});
-  });
-
-  // Derive display values from SWR data
-  const fullName = "";   // comes from auth store user object if needed
-  const email = useAuthStore((s) => (s.user as { email?: string } | null)?.email ?? "");
-  const businessName = store?.name ?? "";
-  const businessCategory = store?.category ?? "";
-  const tagline = store?.tagline ?? "";
-  const storeSlug = store?.slug ?? "";
-  const city = store?.city ?? "";
-  const storeState = store?.state ?? "";
-  const phone = store?.support_phone ?? "";
-  const joinedAt = store?.created_at ?? "";
+  const kycRaw = vendorProfile?.kyc_status ?? "none";
+  const kycStatus = (kycRaw === "none" ? "unverified" : kycRaw) as keyof typeof KYC_CFG;
+  const kyc = KYC_CFG[kycStatus] ?? KYC_CFG.unverified;
   const plan: PlanResp | null = subscription?.plan ?? null;
-  const totalOrders = analyticsData?.total_orders ?? 0;
-  const totalCustomers = analyticsData?.total_customers ?? 0;
+  const storeUrl = store?.slug ? `${store.slug}.${STORE_DOMAIN}` : null;
 
-  const rawKyc = vendorProfile?.kyc_status ?? "none";
-  const kycStatus: KycStatus = rawKyc === "none" ? "unverified" : rawKyc as KycStatus;
+  async function handleSave() {
+    if (!accessToken || !store) return;
+    setIsSaving(true);
+    setSaveError(null);
 
-  let social: { instagram?: string; twitter?: string; facebook?: string } = {};
-  try {
-    const cfg = JSON.parse(store?.theme_config ?? "{}");
-    social = cfg?.sections?.footer?.social ?? {};
-  } catch { /* non-fatal */ }
+    // Build the payload with only the fields from active sections
+    const payload: StoreUpdatePayload = {
+      // Information fields always included
+      name: info.name || undefined,
+      tagline: info.tagline || undefined,
+      description: info.description || undefined,
+      site_description: info.site_description || undefined,
+      // Customization fields
+      logo_url: custom.logo_url || undefined,
+      hero_image_url: custom.hero_image_url || undefined,
+      theme_config: custom.theme,
+      // Social
+      social_links: social,
+    };
 
-  const kyc = KYC_CONFIG[kycStatus];
-  const planCfg = planDisplay[plan?.slug ?? "free"] ?? planDisplay.free;
-  const isVerified = kycStatus === "verified";
-  const initials = (businessName || fullName || "G")
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  const storeUrl = storeSlug ? `${storeSlug}.${STORE_DOMAIN}` : null;
-
-  function copyAccount() {
-    if (primaryBank?.account_number_masked) {
-      navigator.clipboard.writeText(primaryBank.account_number_masked);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+    try {
+      await storefrontApi.updateStore(store.id, payload, accessToken);
+      // Invalidate SWR cache
+      invalidate.store();
+      invalidate.vendorProfile();
+      setShowBanner(true);
+      setTimeout(() => setShowBanner(false), 3000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to save changes. Please try again.";
+      setSaveError(msg);
+      setTimeout(() => setSaveError(null), 4000);
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -114,288 +804,142 @@ export default function Settings() {
   }
 
   return (
-    <div className="w-full space-y-5">
-      {/* ── KYC STATUS BAND ───────────────────────────────────── */}
-      <div className="rounded-[16px] overflow-hidden" style={{ background: kyc.banner }}>
-        <div className="px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5" style={{ background: "rgba(255,255,255,0.1)" }}>
-              <kyc.icon className="w-5 h-5" style={{ color: kyc.text }} />
+    <div className="w-full">
+      {/* ── KYC status band ─────────────────────────────────────── */}
+      {kycStatus !== "verified" && (
+        <div className="mb-5 rounded-[14px] overflow-hidden" style={{ background: kyc.banner }}>
+          <div className="px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
+            <div className="flex items-center gap-3">
+              <kyc.icon className="w-5 h-5 shrink-0" style={{ color: kyc.text }} />
+              <div>
+                <p className="text-[13px] font-bold" style={{ color: kyc.text }}>{kyc.label}</p>
+                <p className="text-[11px] mt-0.5" style={{ color: kyc.muted }}>
+                  {kycStatus === "pending"
+                    ? "Your documents are under review. This usually takes 1–2 business days."
+                    : kycStatus === "rejected"
+                      ? "Your documents could not be verified. Please re-submit with clearer images."
+                      : "Verify your identity to unlock withdrawals and build customer trust."}
+                </p>
+              </div>
             </div>
+            {kycStatus !== "pending" && (
+              <Link
+                href={ROUTES.MERCHANT.KYC}
+                className="flex items-center gap-2 px-4 py-2 rounded-[8px] text-[12px] font-bold shrink-0 transition-all hover:opacity-90"
+                style={{ background: kyc.text, color: kyc.banner }}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                {kycStatus === "rejected" ? "Re-submit documents" : "Verify now"}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Page header ─────────────────────────────────────────── */}
+      <div
+        className="sticky top-0 z-10 border-b bg-white mb-5"
+        style={{ borderColor: "#e2e8f0" }}
+      >
+        <div className="px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-4">
             <div>
-              <p className="text-[15px] font-extrabold" style={{ color: kyc.text }}>{kyc.label}</p>
-              <p className="text-[13px] mt-1 max-w-lg leading-relaxed" style={{ color: kyc.muted }}>{kyc.sub}</p>
+              <h1 className="text-[18px] font-extrabold" style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}>
+                Settings
+              </h1>
+              {storeUrl && (
+                <a
+                  href={`https://${storeUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-[11px] font-semibold"
+                  style={{ color: "#1A7A42" }}
+                >
+                  <Globe className="w-3 h-3" />{storeUrl}<ExternalLink className="w-3 h-3 opacity-60 ml-0.5" />
+                </a>
+              )}
             </div>
           </div>
 
-          {!isVerified && kycStatus !== "pending" && (
-            <Link
-              href={ROUTES.MERCHANT.KYC}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-[13px] font-extrabold shrink-0 transition-all hover:opacity-90 active:scale-[0.97]"
-              style={{ background: kyc.text, color: kyc.banner }}
-            >
-              <ShieldCheck className="w-4 h-4" />
-              {kycStatus === "rejected" ? "Re-submit documents" : "Verify identity now"}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          )}
-
-          {kycStatus === "pending" && (
-            <div className="flex items-center gap-2 text-[12px] font-semibold" style={{ color: kyc.muted }}>
-              <div className="w-3 h-3 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: kyc.text, borderTopColor: "transparent" }} />
-              Under review
+          {activeTab !== "Subscription" && (
+            <div className="flex items-center gap-2">
+              {saveError && (
+                <span className="text-[11px] font-semibold max-w-[220px] truncate" style={{ color: "#ef4444" }}>
+                  {saveError}
+                </span>
+              )}
+              {showBanner && (
+                <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: "#1A7A42" }}>
+                  <Check className="w-3.5 h-3.5" /> Saved!
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-1.5 h-9 px-4 rounded-[8px] text-white text-[12px] font-bold transition-all disabled:opacity-60"
+                style={{ background: "#0A2E1A", boxShadow: "0 2px 8px rgba(26,122,66,0.25)" }}
+                onMouseOver={(e) => !isSaving && (e.currentTarget.style.background = "#239452")}
+                onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  "Save changes"
+                )}
+              </button>
             </div>
           )}
         </div>
 
-        {kycStatus === "unverified" && (
-          <div className="px-6 pb-5 grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {[
-              { icon: CreditCard, text: "Withdraw your earnings" },
-              { icon: BadgeCheck, text: "Verified badge on storefront" },
-              { icon: TrendingUp, text: "Higher payout limits" },
-            ].map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-[8px]" style={{ background: "rgba(255,255,255,0.06)" }}>
-                <Icon className="w-4 h-4 shrink-0" style={{ color: kyc.muted }} />
-                <span className="text-[12px] font-medium" style={{ color: kyc.text }}>{text}</span>
-              </div>
-            ))}
-          </div>
+        {/* Tabs */}
+        <div className="flex px-6 gap-0 overflow-x-auto">
+          {TABS.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className="px-4 py-2.5 text-[12px] font-semibold whitespace-nowrap transition-colors border-b-2"
+              style={{
+                color: activeTab === tab ? "#1A7A42" : "#94a3b8",
+                borderColor: activeTab === tab ? "#1A7A42" : "transparent",
+              }}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Tab content ─────────────────────────────────────────── */}
+      <div className="px-6 pb-12">
+        {activeTab === "Information" && (
+          <InformationTab
+            info={info}
+            setInfo={(patch) => setInfo((prev) => ({ ...prev, ...patch }))}
+          />
+        )}
+        {activeTab === "Customization" && (
+          <CustomizationTab
+            custom={custom}
+            setCustom={(patch) => setCustom((prev) => ({ ...prev, ...patch }))}
+            storeName={info.name || store?.name || "Your Store"}
+            accessToken={accessToken ?? ""}
+          />
+        )}
+        {activeTab === "Social Media" && (
+          <SocialMediaTab
+            social={social}
+            setSocial={(patch) => setSocial((prev) => ({ ...prev, ...patch }))}
+          />
+        )}
+        {activeTab === "Subscription" && (
+          <SubscriptionTab plan={plan} />
         )}
       </div>
 
-      {/* ── MAIN GRID ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5">
-        {/* ── LEFT ── */}
-        <div className="space-y-5">
-          {/* Business profile */}
-          <Section title="Business profile" action={<EditButton href={ROUTES.MERCHANT.STORE_INFO} />}>
-            <div className="flex items-start gap-4 mb-6">
-              <div className="relative shrink-0">
-                <div className="w-16 h-16 rounded-[14px] flex items-center justify-center text-[22px] font-extrabold text-white" style={{ background: "#0A2E1A" }}>
-                  {initials}
-                </div>
-                <button
-                  className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center"
-                  style={{ background: "#1A7A42" }}
-                  title="Change photo"
-                >
-                  <Camera className="w-3 h-3 text-white" />
-                </button>
-              </div>
-
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-[18px] font-extrabold" style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}>
-                    {businessName || fullName || "—"}
-                  </p>
-                  {isVerified && (
-                    <div className="flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: "#F0FAF3", color: "#1A7A42" }}>
-                      <ShieldCheck className="w-3 h-3" /> Verified
-                    </div>
-                  )}
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full" style={{ background: planCfg.bg, color: planCfg.color }}>
-                    {planCfg.label} plan
-                  </span>
-                </div>
-                <p className="text-[12px] mt-0.5" style={{ color: "#94a3b8" }}>{businessCategory || "—"}</p>
-                {storeUrl && (
-                  <a href={`https://${storeUrl}`} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-[12px] font-semibold mt-1 w-fit transition-colors"
-                    style={{ color: "#1A7A42" }}>
-                    <Globe className="w-3 h-3" />{storeUrl}<ExternalLink className="w-3 h-3 opacity-60" />
-                  </a>
-                )}
-              </div>
-            </div>
-
-            {tagline && (
-              <div className="mb-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] mb-1.5" style={{ color: "#94a3b8" }}>Tagline</p>
-                <p className="text-[13px] leading-relaxed" style={{ color: "#374151" }}>{tagline}</p>
-              </div>
-            )}
-
-            <div className="h-px mb-4" style={{ background: "#f1f5f9" }} />
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Category" value={businessCategory || "—"} />
-              <Field label="Location" value={city && storeState ? `${city}, ${storeState}` : "—"} />
-              <Field label="Member since" value={joinedAt ? new Date(joinedAt).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" }) : "—"} />
-              <Field label="Store URL" value={storeUrl ?? "—"} />
-            </div>
-          </Section>
-
-          {/* Contact details */}
-          <Section title="Contact details" action={<EditButton href={ROUTES.MERCHANT.STORE_INFO} />}>
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "#F0FAF3" }}>
-                  <Mail className="w-3.5 h-3.5" style={{ color: "#1A7A42" }} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#94a3b8" }}>Email</p>
-                  <p className="text-[13px] font-semibold truncate" style={{ color: "#1C1C1C" }}>{email || "—"}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "#F0FAF3" }}>
-                  <Phone className="w-3.5 h-3.5" style={{ color: "#1A7A42" }} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#94a3b8" }}>WhatsApp / Phone</p>
-                  <p className="text-[13px] font-semibold" style={{ color: phone ? "#1C1C1C" : "#94a3b8" }}>
-                    {phone || "Not set — add in Store Information"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </Section>
-
-          {/* Social links */}
-          <Section title="Social media" action={<EditButton href={ROUTES.MERCHANT.CUSTOMISE} />}>
-            {social.instagram || social.twitter || social.facebook ? (
-              <div className="space-y-3">
-                {social.instagram && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "#F0FAF3" }}>
-                      <InstagramIcon />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#94a3b8" }}>Instagram</p>
-                      <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>{social.instagram}</p>
-                    </div>
-                  </div>
-                )}
-                {social.twitter && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "#F0FAF3" }}>
-                      <TwitterIcon />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#94a3b8" }}>X (Twitter)</p>
-                      <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>{social.twitter}</p>
-                    </div>
-                  </div>
-                )}
-                {social.facebook && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0" style={{ background: "#F0FAF3" }}>
-                      <FacebookIcon />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wide" style={{ color: "#94a3b8" }}>Facebook</p>
-                      <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>{social.facebook}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-[13px]" style={{ color: "#94a3b8" }}>
-                No social links yet.{" "}
-                <Link href={ROUTES.MERCHANT.CUSTOMISE} className="font-semibold" style={{ color: "#1A7A42" }}>
-                  Add them in Store Customization →
-                </Link>
-              </p>
-            )}
-          </Section>
-        </div>
-
-        {/* ── RIGHT ── */}
-        <div className="space-y-5">
-          {/* Quick stats */}
-          <Section title="Store performance">
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { icon: Building2, label: "Total orders", value: totalOrders },
-                { icon: BadgeCheck, label: "Customers", value: totalCustomers },
-              ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="rounded-[12px] p-3.5" style={{ background: "#F0FAF3" }}>
-                  <Icon className="w-4 h-4 mb-2" style={{ color: "#1A7A42" }} />
-                  <p className="text-[20px] font-extrabold" style={{ color: "#1C1C1C", letterSpacing: "-0.4px" }}>{value}</p>
-                  <p className="text-[11px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: "#3D6B4F" }}>{label}</p>
-                </div>
-              ))}
-            </div>
-          </Section>
-
-          {/* Subscription plan */}
-          <Section title="Your plan" action={<EditButton href={ROUTES.ONBOARDING.PLANS} />}>
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: planCfg.bg }}>
-                <TrendingUp className="w-4 h-4" style={{ color: planCfg.color }} />
-              </div>
-              <div>
-                <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
-                  {plan?.display_name ?? "Free"} plan
-                </p>
-                <p className="text-[12px]" style={{ color: "#94a3b8" }}>
-                  {plan && plan.price_kobo > 0
-                    ? `₦${(plan.price_kobo / 100).toLocaleString("en-NG")}/month`
-                    : "Free forever"}
-                </p>
-              </div>
-            </div>
-            {plan && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {plan.features.slice(0, 3).map((f) => (
-                  <span key={f} className="text-[10px] font-semibold px-2 py-0.5 rounded-full" style={{ background: planCfg.bg, color: planCfg.color }}>{f}</span>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          {/* Settlement account */}
-          <Section title="Settlement account" action={<EditButton href={ROUTES.MERCHANT.WALLET} />}>
-            {primaryBank ? (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 rounded-[10px]" style={{ background: "#F0FAF3" }}>
-                  <div className="w-9 h-9 rounded-[9px] flex items-center justify-center shrink-0" style={{ background: "#0A2E1A" }}>
-                    <CreditCard className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-bold truncate" style={{ color: "#1C1C1C" }}>{primaryBank.bank_name}</p>
-                    <p className="text-[11px] font-mono" style={{ color: "#6b7280" }}>{primaryBank.account_number_masked}</p>
-                    <p className="text-[11px] truncate" style={{ color: "#94a3b8" }}>{primaryBank.account_name}</p>
-                  </div>
-                  <button type="button" onClick={copyAccount} className="p-1.5 rounded-[6px] hover:bg-white transition-colors" title="Copy account number">
-                    {copied ? <Check className="w-3.5 h-3.5" style={{ color: "#1A7A42" }} /> : <Copy className="w-3.5 h-3.5" style={{ color: "#94a3b8" }} />}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center py-4 gap-2">
-                <CreditCard className="w-8 h-8" style={{ color: "#d1fae5" }} />
-                <p className="text-[12px] text-center" style={{ color: "#94a3b8" }}>
-                  No bank account added yet.
-                </p>
-                <Link href={ROUTES.MERCHANT.WALLET} className="text-[12px] font-bold" style={{ color: "#1A7A42" }}>
-                  Add account in Wallet →
-                </Link>
-              </div>
-            )}
-          </Section>
-
-          {/* Quick links */}
-          <Section title="Quick links">
-            <div className="space-y-1.5">
-              {[
-                { label: "Store information", href: ROUTES.MERCHANT.STORE_INFO },
-                { label: "Customise storefront", href: ROUTES.MERCHANT.CUSTOMISE },
-                { label: "KYC verification", href: ROUTES.MERCHANT.KYC },
-                { label: "GoMarket Wallet", href: ROUTES.MERCHANT.WALLET },
-              ].map(({ label, href }) => (
-                <Link key={href} href={href}
-                  className="flex items-center justify-between px-3 py-2.5 rounded-[8px] text-[13px] font-medium transition-colors hover:bg-[#F0FAF3]"
-                  style={{ color: "#374151" }}>
-                  {label}
-                  <ArrowRight className="w-3.5 h-3.5" style={{ color: "#94a3b8" }} />
-                </Link>
-              ))}
-            </div>
-          </Section>
-        </div>
-      </div>
+      {/* Floating save banner (toast) */}
+      <SaveBanner visible={showBanner} error={saveError} />
     </div>
   );
 }

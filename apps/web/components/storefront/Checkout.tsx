@@ -1,4 +1,4 @@
-// apps/storefront/app/checkout/page.tsx
+// components/storefront/Checkout.tsx
 "use client";
 
 import { useState } from "react";
@@ -137,8 +137,9 @@ function inputStyle(hasError?: boolean): React.CSSProperties {
   };
 }
 
-export default function CheckoutPage({ storeId }: { storeId: string | null }) {
+export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoMarketi Store" }: { storeId: string | null; storeSlug?: string; storeName?: string }) {
   const router = useRouter();
+  const shopUrl = storeSlug ? `/storefront/${storeSlug}/shop` : "/shop";
   const c = { primary: "var(--store-primary, #1A7A42)", bg: "var(--store-bg, #F0FAF3)", text: "#1C1C1C", secondary: "var(--store-secondary, #0A4D2A)" };
   const { lines, subtotal, setCustomer, clearCart } = useCart();
   const [isPlacing, setIsPlacing] = useState(false);
@@ -204,8 +205,12 @@ export default function CheckoutPage({ storeId }: { storeId: string | null }) {
         payment_reference: ref,
       });
       setOrderNumber(`#${order.id.slice(0, 8).toUpperCase()}`);
-      setOrderPlaced(true);
       clearCart();
+      if (storeSlug) {
+        router.push(`/storefront/${storeSlug}/orders/${order.id}?email=${encodeURIComponent(pendingCustomer.email)}`);
+      } else {
+        setOrderPlaced(true);
+      }
     } catch {
       setOrderError("Your payment succeeded but we couldn't save your order. Please contact the store with reference " + ref + ".");
     } finally {
@@ -265,7 +270,7 @@ export default function CheckoutPage({ storeId }: { storeId: string | null }) {
           reach out shortly to confirm delivery details.
         </p>
         <Link
-          href="/shop"
+          href={shopUrl}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -314,7 +319,7 @@ export default function CheckoutPage({ storeId }: { storeId: string | null }) {
           Add some products before checking out.
         </p>
         <Link
-          href="/shop"
+          href={shopUrl}
           style={{
             color: c.primary,
             fontWeight: 700,
@@ -337,7 +342,7 @@ export default function CheckoutPage({ storeId }: { storeId: string | null }) {
       }}
     >
       <Link
-        href="/shop"
+        href={shopUrl}
         style={{
           display: "inline-flex",
           alignItems: "center",

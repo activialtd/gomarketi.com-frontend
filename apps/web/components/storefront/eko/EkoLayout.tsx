@@ -9,6 +9,7 @@ import { CartDrawer } from "@/components/storefront/CartDrawer";
 interface EkoLayoutProps {
   children: React.ReactNode;
   storeName: string;
+  slug?: string;
   primary?: string;
   secondary?: string;
   tagline?: string;
@@ -20,6 +21,7 @@ interface EkoLayoutProps {
 export default function EkoLayout({
   children,
   storeName,
+  slug = "",
   primary = "#1A7A42",
   secondary = "#0A4D2A",
   tagline,
@@ -197,7 +199,7 @@ export default function EkoLayout({
       </footer>
 
       {/* ── Cart drawer ──────────────────────────────────── */}
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />
+      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} slug={slug} />
     </div>
   );
 }

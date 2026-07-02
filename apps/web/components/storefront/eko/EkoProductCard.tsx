@@ -12,16 +12,22 @@ function fmtPrice(kobo: number): string {
 export function ProductCard({
   product,
   index = 0,
+  slug = "",
 }: {
   product: StorefrontProduct;
   index?: number;
+  slug?: string;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const hasImage = product.images.length > 0;
 
+  const productHref = slug
+    ? `/storefront/${slug}/products/${product.id}`
+    : `/products/${product.id}`;
+
   return (
     <Link
-      href={`/products/${product.id}`}
+      href={productHref}
       className="group relative block"
       style={{ animationDelay: `${index * 60}ms` }}
     >
