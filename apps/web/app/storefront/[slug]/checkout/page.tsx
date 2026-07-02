@@ -8,13 +8,13 @@ export const metadata: Metadata = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-async function getStoreId(slug: string) {
+async function getStoreData(slug: string) {
   try {
     const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`,
       { cache: "no-store" });
     if (!res.ok) return null;
-    const d = await res.json() as { id: string };
-    return d.id;
+    const d = await res.json() as { id: string; name: string };
+    return d;
   } catch { return null; }
 }
 
@@ -24,6 +24,6 @@ export default async function Page({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const storeId = await getStoreId(slug);
-  return <Checkout storeId={storeId} />;
+  const store = await getStoreData(slug);
+  return <Checkout storeId={store?.id ?? null} storeSlug={slug} storeName={store?.name ?? ""} />;
 }

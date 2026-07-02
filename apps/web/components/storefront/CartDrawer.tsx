@@ -10,9 +10,11 @@ function fmt(kobo: number) {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
 }
 
-export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function CartDrawer({ open, onClose, slug = "" }: { open: boolean; onClose: () => void; slug?: string }) {
   const { lines, updateQuantity, removeLine, subtotal } = useCart();
   const router = useRouter();
+  const cartUrl = slug ? `/storefront/${slug}/cart` : "/cart";
+  const checkoutUrl = slug ? `/storefront/${slug}/checkout` : "/checkout";
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               </div>
               <p style={{ fontWeight: 700, fontSize: "14px", color: "#1C1C1C", marginBottom: "6px" }}>Cart is empty</p>
               <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "16px" }}>Add products to get started</p>
-              <Link href="/shop" onClick={onClose}
+              <Link href={slug ? `/storefront/${slug}/shop` : "/shop"} onClick={onClose}
                 style={{ color: "var(--store-primary, #1A7A42)", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>
                 Browse products →
               </Link>
@@ -144,7 +146,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               <span style={{ fontSize: "18px", fontWeight: 900, color: "#1C1C1C" }}>{fmt(subtotal)}</span>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              <button onClick={() => { onClose(); router.push("/checkout"); }}
+              <button onClick={() => { onClose(); router.push(checkoutUrl); }}
                 style={{
                   height: "46px", borderRadius: "12px", border: "none",
                   background: "var(--store-primary, #1A7A42)", color: "#fff",
@@ -154,7 +156,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                 }}>
                 Checkout <ArrowRight style={{ width: "16px", height: "16px" }} />
               </button>
-              <Link href="/cart" onClick={onClose}
+              <Link href={cartUrl} onClick={onClose}
                 style={{
                   height: "38px", borderRadius: "10px", border: "1.5px solid #e2e8f0",
                   background: "#fff", color: "#374151", fontSize: "13px", fontWeight: 600,

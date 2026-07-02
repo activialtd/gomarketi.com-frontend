@@ -53,6 +53,7 @@ export default async function StoreLayout({
       <div style={cssVars}>
         <LagosLayout
           storeName={store.name}
+          slug={slug}
           primary={colors?.primary}
           tagline={sec?.footer?.tagline}
           whatsapp={sec?.footer?.contact?.whatsapp}
@@ -69,6 +70,7 @@ export default async function StoreLayout({
     <div style={cssVars}>
       <EkoLayout
         storeName={store.name}
+        slug={slug}
         primary={colors?.primary}
         secondary={colors?.secondary}
         tagline={sec?.footer?.tagline}

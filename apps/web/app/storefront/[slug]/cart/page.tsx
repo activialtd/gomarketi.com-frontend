@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ArrowLeft, Download, Shield } from "lucide-react";
+import { useRouter, useParams } from "next/navigation";
+import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, Shield } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 
 function fmt(kobo: number) {
@@ -10,8 +10,13 @@ function fmt(kobo: number) {
 }
 
 export default function CartPage() {
-  const { lines, updateQuantity, removeLine, subtotal, clearCart } = useCart();
+  const { lines, updateQuantity, removeLine, subtotal } = useCart();
   const router = useRouter();
+  const params = useParams<{ slug: string }>();
+  const slug = params.slug;
+
+  const shopUrl = `/storefront/${slug}/shop`;
+  const checkoutUrl = `/storefront/${slug}/checkout`;
 
   const delivery = lines.some((l) => !l.isDigital) ? 150000 : 0; // ₦1,500 for physical
   const total = subtotal + delivery;
@@ -30,7 +35,7 @@ export default function CartPage() {
         <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
           Looks like you haven&apos;t added anything yet.
         </p>
-        <Link href="/shop" style={{
+        <Link href={shopUrl} style={{
           display: "inline-flex", alignItems: "center", gap: "8px",
           background: "var(--store-primary, #1A7A42)", color: "#fff",
           borderRadius: "12px", padding: "12px 28px",
@@ -93,24 +98,15 @@ export default function CartPage() {
               }}>
                 {line.productImage
                   ? <img src={line.productImage} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  : <Download style={{ width: "24px", height: "24px", color: "var(--store-primary, #1A7A42)", opacity: 0.5 }} />
+                  : <ShoppingBag style={{ width: "24px", height: "24px", color: "var(--store-primary, #1A7A42)", opacity: 0.5 }} />
                 }
               </div>
 
-              {/* Name + type */}
+              {/* Name */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ fontWeight: 700, fontSize: "14px", color: "#1C1C1C", lineHeight: 1.3, marginBottom: "4px" }}>
                   {line.productName}
                 </p>
-                {line.isDigital && (
-                  <span style={{
-                    display: "inline-flex", alignItems: "center", gap: "4px",
-                    fontSize: "10px", fontWeight: 700, color: "var(--store-primary, #1A7A42)",
-                    background: "var(--store-bg, #F0FAF3)", borderRadius: "4px", padding: "2px 8px",
-                  }}>
-                    <Download style={{ width: "9px", height: "9px" }} /> Digital download
-                  </span>
-                )}
               </div>
 
               {/* Unit price */}
@@ -120,26 +116,22 @@ export default function CartPage() {
 
               {/* Qty */}
               <div style={{ minWidth: "110px", display: "flex", justifyContent: "center" }}>
-                {line.isDigital ? (
-                  <span style={{ fontSize: "13px", color: "#94a3b8" }}>×1</span>
-                ) : (
-                  <div style={{
-                    display: "inline-flex", alignItems: "center",
-                    border: "1.5px solid #e2e8f0", borderRadius: "9px", overflow: "hidden",
-                  }}>
-                    <button onClick={() => line.quantity > 1 ? updateQuantity(line.lineId, line.quantity - 1) : removeLine(line.lineId)}
-                      style={{ width: "34px", height: "34px", border: "none", background: "#f8fafc", cursor: "pointer", fontSize: "16px", color: "#374151" }}>
-                      −
-                    </button>
-                    <span style={{ width: "36px", textAlign: "center", fontWeight: 700, fontSize: "14px" }}>
-                      {line.quantity}
-                    </span>
-                    <button onClick={() => updateQuantity(line.lineId, line.quantity + 1)}
-                      style={{ width: "34px", height: "34px", border: "none", background: "#f8fafc", cursor: "pointer", fontSize: "16px", color: "#374151" }}>
-                      +
-                    </button>
-                  </div>
-                )}
+                <div style={{
+                  display: "inline-flex", alignItems: "center",
+                  border: "1.5px solid #e2e8f0", borderRadius: "9px", overflow: "hidden",
+                }}>
+                  <button onClick={() => updateQuantity(line.lineId, line.quantity - 1)}
+                    style={{ width: "34px", height: "34px", border: "none", background: "#f8fafc", cursor: "pointer", fontSize: "16px", color: "#374151" }}>
+                    −
+                  </button>
+                  <span style={{ width: "36px", textAlign: "center", fontWeight: 700, fontSize: "14px" }}>
+                    {line.quantity}
+                  </span>
+                  <button onClick={() => updateQuantity(line.lineId, line.quantity + 1)}
+                    style={{ width: "34px", height: "34px", border: "none", background: "#f8fafc", cursor: "pointer", fontSize: "16px", color: "#374151" }}>
+                    +
+                  </button>
+                </div>
               </div>
 
               {/* Total + remove */}
@@ -181,7 +173,7 @@ export default function CartPage() {
               </div>
             </div>
 
-            <button onClick={() => router.push("/checkout")}
+            <button onClick={() => router.push(checkoutUrl)}
               style={{
                 width: "100%", height: "50px", borderRadius: "12px", border: "none",
                 background: "var(--store-primary, #1A7A42)", color: "#fff",
@@ -193,7 +185,7 @@ export default function CartPage() {
               Proceed to checkout <ArrowRight style={{ width: "17px", height: "17px" }} />
             </button>
 
-            <Link href="/shop" style={{
+            <Link href={shopUrl} style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               height: "42px", borderRadius: "10px", border: "1.5px solid #e2e8f0",
               color: "#374151", fontSize: "13px", fontWeight: 600, textDecoration: "none",

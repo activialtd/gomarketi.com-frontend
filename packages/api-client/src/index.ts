@@ -45,6 +45,49 @@ export interface UpdateStoreReq {
   theme_config?: string; // raw JSON string stored as JSONB
 }
 
+// ── Store customization types ──────────────────────────────────────────────────
+
+export interface SocialLinks {
+  instagram?: string;
+  twitter?: string;
+  facebook?: string;
+  tiktok?: string;
+  whatsapp?: string;
+  youtube?: string;
+}
+
+export interface ThemeConfig {
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  background_color: string;
+  text_color: string;
+  font_heading: string;
+  font_body: string;
+  hero_style: "full" | "split" | "minimal" | "none";
+  products_per_row: 2 | 3 | 4;
+  button_style: "rounded" | "sharp" | "pill";
+  show_hero: boolean;
+  show_featured: boolean;
+  show_categories: boolean;
+}
+
+export interface StoreUpdatePayload {
+  name?: string;
+  description?: string;
+  tagline?: string;
+  site_description?: string;
+  logo_url?: string;
+  hero_image_url?: string;
+  social_links?: SocialLinks;
+  theme_config?: Partial<ThemeConfig>;
+}
+
+export interface StoreAssetResp {
+  url: string;
+  type: string;
+}
+
 export interface CreateProductReq {
   name: string;
   description?: string;
@@ -107,10 +150,14 @@ export interface StoreResp {
   staff_range?: string;
   tagline?: string;
   logo_url?: string;
+  hero_image_url?: string;
   support_phone?: string;
   address?: string;
   city?: string;
   state?: string;
+  description?: string;
+  site_description?: string;
+  social_links?: SocialLinks;
   theme_config?: string; // raw JSON string
   is_active: boolean;
   created_at: string;
@@ -447,7 +494,7 @@ export const storefrontApi = {
   getMyStore: (token: string) =>
     request<StoreResp>("/v1/storefront/stores/mine", {}, token),
 
-  updateStore: (id: string, data: UpdateStoreReq, token: string) =>
+  updateStore: (id: string, data: UpdateStoreReq | StoreUpdatePayload, token: string) =>
     request<StoreResp>(
       `/v1/storefront/stores/${id}`,
       { method: "PATCH", body: JSON.stringify(data) },
@@ -460,6 +507,25 @@ export const storefrontApi = {
       {},
       token,
     ),
+
+  // Upload store asset (logo or hero image) via multipart form
+  uploadStoreAsset: async (token: string, file: File, type: "logo" | "hero"): Promise<StoreAssetResp> => {
+    const form = new FormData();
+    form.append("file", file);
+    form.append("type", type);
+    // Don't pass Content-Type header — let the browser set it with the boundary for multipart
+    const res = await fetch(`${API_BASE}/v1/storefront/stores/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+      body: form,
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new ApiError(res.status, body.error ?? res.statusText);
+    }
+    return res.json() as Promise<StoreAssetResp>;
+  },
 };
 
 // ── Catalogue API ──────────────────────────────────────────────────────────────
