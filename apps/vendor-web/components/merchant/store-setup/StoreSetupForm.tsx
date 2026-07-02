@@ -377,7 +377,7 @@ export function StoreSetupForm() {
               type="button"
               onClick={() => {
                 // Clear tour flag so new users see the dashboard tour on first visit
-                if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v1");
+                if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v2");
                 router.push(ROUTES.MERCHANT.OVERVIEW);
               }}
               className="w-full flex items-center justify-center h-[44px] rounded-[12px] text-[13px] font-semibold transition-colors"
