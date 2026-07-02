@@ -178,9 +178,7 @@ export default function OverviewPage() {
   const [wallet, setWallet] = useState<WalletResp | null>(null);
 
   const accountNumber = "9740176746";
-  // Use https — subdomains are served over TLS via Cloudflare wildcard cert.
-  // http:// causes ERR_SSL_PROTOCOL_ERROR when Chrome HSTS-upgrades the URL.
-  const storefrontUrl = store ? `https://${store.slug}.${STORE_DOMAIN}` : null;
+  const storefrontUrl = store ? `http://${store.slug}.${STORE_DOMAIN}` : null;
 
   useEffect(() => {
     if (!accessToken) return;

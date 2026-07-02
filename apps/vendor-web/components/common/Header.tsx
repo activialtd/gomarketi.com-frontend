@@ -48,6 +48,23 @@ export function Header({
       .toUpperCase()
       .slice(0, 2);
 
+  // Build storefront URL based on environment:
+  // - Local dev (STORE_DOMAIN contains "localhost" or a port): path-based routing
+  //   → http://localhost:3001/storefront/{slug}  (apps/web dev server)
+  // - Production: subdomain routing
+  //   → https://{slug}.gomarketi.com
+  const isLocalDev = storeDomain.includes("localhost") || /:\d+/.test(storeDomain);
+  const storeUrl = storeSlug
+    ? isLocalDev
+      ? `http://${storeDomain}/storefront/${storeSlug}`
+      : `https://${storeSlug}.${storeDomain}`
+    : "#";
+  const storeSlugDisplay = storeSlug
+    ? isLocalDev
+      ? `${storeDomain}/storefront/${storeSlug}`
+      : `${storeSlug}.${storeDomain}`
+    : "";
+
   return (
     <header
       className="sticky top-0 z-30 flex items-center shrink-0"
@@ -85,11 +102,8 @@ export function Header({
             {storeName}
           </p>
           {storeSlug && (
-            <p
-              className="text-[10px] font-medium mt-0.5 truncate max-w-[160px]"
-              style={{ color: "#94a3b8" }}
-            >
-              {storeSlug}.{storeDomain}
+            <p className="text-[10px] font-medium mt-0.5 truncate max-w-[160px]" style={{ color: "#94a3b8" }}>
+              {storeSlugDisplay}
             </p>
           )}
         </div>
@@ -100,10 +114,12 @@ export function Header({
 
       {/* ── Right cluster ──────────────────────────────────── */}
       <div className="flex items-center gap-2">
-        {/* View Store CTA */}
+        {/* View Store CTA
+            Local dev  → http://localhost:3001/storefront/{slug}  (path-based, apps/web dev server)
+            Production → https://{slug}.gomarketi.com             (subdomain, Cloudflare SSL) */}
         {storeSlug && (
           <Link
-            href={`https://${storeSlug}.${storeDomain}`}
+            href={storeUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-[8px] text-[12px] font-bold transition-all hover:opacity-90 active:scale-[0.97]"
