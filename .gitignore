@@ -16,10 +16,20 @@ out/
 dist/
 build/
 
-# env files
+# env files — ALL .env variations blocked
 .env
+.env.*
+*.env
+*.env.*
 .env.local
+.env.development
+.env.production
+.env.staging
+.env.test
 .env.*.local
+# Allow only safe templates
+!.env.example
+!.env.sample
 
 # turbopack / next cache
 .turbo/
