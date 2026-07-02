@@ -17,7 +17,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Input } from "@gomarket/ui";
-import { authApi, ApiError } from "@gomarket/api-client";
+import { authApi, identityApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
@@ -172,28 +172,38 @@ export function SignupForm() {
       if (provider === "google") {
         const result = await googleSignIn();
 
-        // Try to log in as an existing user first
+        // Authenticate with Google — creates account on first visit, logs in on return.
+        // We can't tell new vs returning from this response alone.
+        const resp = await authApi.googleAuth(result.credential);
+        setAuth(resp.user, resp.access_token);
+        setAuthSession();
+
+        // Detect new vs returning user by checking vendor profile existence.
+        // New users have no vendor profile yet (returns 404).
+        let isNewUser = true;
         try {
-          const resp = await authApi.googleAuth(result.credential);
-          // Existing user — go straight to dashboard
-          setAuth(resp.user, resp.access_token);
-          setAuthSession();
-          router.push(ROUTES.MERCHANT.OVERVIEW);
-          return;
-        } catch (loginErr) {
-          // 404/not found = new user, continue to profile step
-          if (loginErr instanceof ApiError && loginErr.status !== 404) throw loginErr;
+          const profile = await identityApi.getVendorProfile(resp.access_token);
+          // Returning user only if they completed onboarding
+          isNewUser = !profile.is_active;
+        } catch {
+          // No vendor profile at all — definitely a new user
+          isNewUser = true;
         }
 
-        // New user — pre-fill the profile form from Google data
-        const nameParts = result.name.trim().split(" ");
-        const firstName = nameParts[0] ?? "";
-        const lastName = nameParts.slice(1).join(" ") || "";
-
-        const newUser: OAuthUser = { provider, firstName, lastName, email: result.email, credential: result.credential };
-        setOauthUser(newUser);
-        oauthForm.reset({ firstName, lastName, marketing: false });
-        setStep("OAUTH_PROFILE");
+        if (isNewUser) {
+          // New user — show profile step to collect missing info (phone, marketing)
+          // then send them through the full onboarding flow
+          const nameParts = result.name.trim().split(" ");
+          const firstName = nameParts[0] ?? "";
+          const lastName = nameParts.slice(1).join(" ") || "";
+          const newUser: OAuthUser = { provider, firstName, lastName, email: result.email, credential: result.credential };
+          setOauthUser(newUser);
+          oauthForm.reset({ firstName, lastName, marketing: false });
+          setStep("OAUTH_PROFILE");
+        } else {
+          // Returning user who already set up their store
+          router.push(ROUTES.MERCHANT.OVERVIEW);
+        }
       }
     } catch (err) {
       if (err instanceof Error && err.message !== "one_tap_unavailable" && err.message !== "Google Sign-In was cancelled") {
@@ -295,22 +305,9 @@ export function SignupForm() {
   }, [signupEmail, isLoading, resendCooldown]);
 
   async function onOAuthProfileSubmit(data: OAuthProfileData) {
-    if (!oauthUser?.credential) return;
-    setIsLoading(true);
-    setOauthApiError(null);
-    try {
-      if (data.phone) setSignupPhone(data.phone);
-      const resp = await authApi.googleAuth(oauthUser.credential);
-      setAuth(resp.user, resp.access_token);
-      setAuthSession();
-      router.push(ROUTES.ONBOARDING.WELCOME);
-    } catch (err) {
-      setOauthApiError(
-        err instanceof ApiError ? err.message : "Could not complete sign-up. Please try again."
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    // Auth was already set in handleOAuth — just save phone and begin onboarding.
+    if (data.phone) setSignupPhone(data.phone);
+    router.push(ROUTES.ONBOARDING.WELCOME);
   }
 
   function onPasswordChange(val: string) {

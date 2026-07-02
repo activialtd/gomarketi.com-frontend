@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Apple, Eye, EyeOff } from "lucide-react";
 import { Input } from "@gomarket/ui";
-import { authApi, ApiError } from "@gomarket/api-client";
+import { authApi, identityApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
@@ -70,7 +70,17 @@ export function LoginForm() {
         const resp = await authApi.googleAuth(result.credential);
         setAuth(resp.user, resp.access_token);
         setAuthSession();
-        router.push(ROUTES.MERCHANT.OVERVIEW);
+
+        // If the user never completed store setup, resume onboarding
+        let destination: string = ROUTES.MERCHANT.OVERVIEW;
+        try {
+          const profile = await identityApi.getVendorProfile(resp.access_token);
+          if (!profile.is_active) destination = ROUTES.ONBOARDING.WELCOME;
+        } catch {
+          // No vendor profile — first time user, send to onboarding
+          destination = ROUTES.ONBOARDING.WELCOME;
+        }
+        router.push(destination);
       }
     } catch (err) {
       if (err instanceof Error && err.message !== "one_tap_unavailable") {
