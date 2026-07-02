@@ -49,10 +49,6 @@ const signupSchema = z
       .regex(/[A-Z]/, "Add an uppercase letter")
       .regex(/[0-9]/, "Add a number"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
-    phone: z
-      .string()
-      .min(6, "Enter a valid number")
-      .regex(/^[\d\s\-()]+$/, "Digits only"),
     terms: z.boolean().refine((value) => value, "You must accept the terms"),
     marketing: z.boolean().optional(),
   })
@@ -61,13 +57,10 @@ const signupSchema = z
     path: ["confirmPassword"],
   });
 
+// Phone and address are collected during store setup, not signup
 const oauthProfileSchema = z.object({
   firstName: z.string().min(1, "Required"),
   lastName: z.string().min(1, "Required"),
-  phone: z
-    .string()
-    .min(7, "Enter a valid number")
-    .regex(/^\+?[\d\s\-()+]+$/, "Invalid number"),
   heardAbout: z.string().min(1, "Please select an option"),
   terms: z.boolean().refine((value) => value, "You must accept the terms"),
   marketing: z.boolean().optional(),
@@ -107,7 +100,6 @@ export function SignupForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const setSignupPhone = useAuthStore((s) => s.setSignupPhone);
   const { signIn: googleSignIn, buttonRef: googleButtonRef } = useGoogleAuth();
 
   const [step, setStep] = useState<Step>("METHOD_SELECT");
@@ -118,7 +110,6 @@ export function SignupForm() {
   const [showPw, setShowPw] = useState(false);
   const [pwStrength, setPwStrength] = useState(0);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [dialCode, setDialCode] = useState("+234");
 
   // OTP state
   const [sessionToken, setSessionToken] = useState<string | null>(null);
@@ -266,9 +257,7 @@ export function SignupForm() {
       });
       setAuth(authResp.user, authResp.access_token);
       setAuthSession();
-      // Persist the signup phone so store setup can pre-fill the WhatsApp field.
-      const rawPhone = signupForm.getValues("phone");
-      if (rawPhone) setSignupPhone(`${dialCode}${rawPhone.replace(/\D/g, "")}`);
+      // Phone and location are collected during store setup, not here.
       router.push(ROUTES.ONBOARDING.WELCOME);
     } catch (err) {
       setOtpError(
@@ -304,9 +293,8 @@ export function SignupForm() {
     }
   }, [signupEmail, isLoading, resendCooldown]);
 
-  async function onOAuthProfileSubmit(data: OAuthProfileData) {
-    // Auth was already set in handleOAuth — just save phone and begin onboarding.
-    if (data.phone) setSignupPhone(data.phone);
+  async function onOAuthProfileSubmit(_data: OAuthProfileData) {
+    // Auth was already set in handleOAuth. Phone/location are collected in store setup.
     router.push(ROUTES.ONBOARDING.WELCOME);
   }
 
@@ -548,18 +536,6 @@ export function SignupForm() {
               </Field>
             </div>
           )}
-
-          {/* Phone */}
-          <Field
-            label="Phone number"
-            error={signupForm.formState.errors.phone?.message}
-          >
-            <PhoneInput
-              dialCode={dialCode}
-              onDialCodeChange={setDialCode}
-              inputProps={signupForm.register("phone")}
-            />
-          </Field>
 
           <TermsBlock
             control={signupForm.control}
@@ -804,20 +780,6 @@ export function SignupForm() {
               Verified by {oauthUser.provider === "google" ? "Google" : "Apple"}{" "}
               — cannot be changed here.
             </p>
-          </Field>
-
-          {/* Phone */}
-          <Field
-            label="Phone number"
-            error={oauthForm.formState.errors.phone?.message}
-          >
-            <Input
-              id="oPhone"
-              type="tel"
-              autoComplete="tel"
-              placeholder="+234 800 000 0000"
-              {...oauthForm.register("phone")}
-            />
           </Field>
 
           {/* How did you hear */}
