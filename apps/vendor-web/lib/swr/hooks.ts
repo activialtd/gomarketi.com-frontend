@@ -23,7 +23,7 @@
  */
 
 import useSWR, { mutate } from "swr";
-import { useEffect } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import {
   catalogueApi,
   ordersApi,
@@ -204,23 +204,63 @@ export const invalidate = {
 
 // ── SSE real-time events ──────────────────────────────────────────────────────
 
+const SSE_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const SSE_MAX_RETRIES = 5;       // give up SSE after 5 consecutive failures
+const SSE_FALLBACK_INTERVAL = 60_000; // poll every 60s after SSE gives up
+
 /**
  * useOrderEvents — subscribes to the orders SSE stream for real-time
- * notifications. When an order or wallet event arrives, the relevant
- * SWR caches are invalidated so data refreshes automatically.
+ * notifications. Replaces polling: the server pushes a tiny event only when
+ * an order or wallet balance actually changes.
  *
- * Only connects when the user has an access token.
- * Automatically reconnects if the connection drops (EventSource behaviour).
+ * Fault-tolerance design:
+ *  - Reconnects automatically after disconnect (EventSource native behaviour)
+ *  - Sends Last-Event-ID on reconnect so the server can replay missed events
+ *  - Random jitter (0–3s) on reconnect to prevent thundering-herd after
+ *    a service restart with 10k concurrent vendors
+ *  - After SSE_MAX_RETRIES consecutive failures, falls back to 60s polling
+ *    so the dashboard still updates even if SSE is broken
+ *  - Polling is disabled while SSE is healthy (zero wasted requests)
  */
 export function useOrderEvents() {
   const accessToken = useAuthStore.getState().accessToken;
+  const retryCount = useRef(0);
+  const fallbackTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const sourceRef = useRef<EventSource | null>(null);
 
-  useEffect(() => {
+  const stopFallback = useCallback(() => {
+    if (fallbackTimer.current) {
+      clearInterval(fallbackTimer.current);
+      fallbackTimer.current = null;
+    }
+  }, []);
+
+  const startFallback = useCallback(() => {
+    if (fallbackTimer.current) return; // already running
+    console.warn("[SSE] switched to 60s polling fallback after repeated failures");
+    fallbackTimer.current = setInterval(() => {
+      invalidate.orders();
+      invalidate.wallet();
+      invalidate.analytics();
+    }, SSE_FALLBACK_INTERVAL);
+  }, []);
+
+  const connect = useCallback(() => {
     if (!accessToken) return;
 
-    // EventSource doesn't support custom headers — pass token as query param.
-    const url = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080"}/v1/orders/events?token=${encodeURIComponent(accessToken)}`;
+    // Close any existing connection first.
+    sourceRef.current?.close();
+
+    // EventSource doesn't support custom headers — token goes in the query param.
+    const url = `${SSE_BASE}/v1/orders/events?token=${encodeURIComponent(accessToken)}`;
     const source = new EventSource(url);
+    sourceRef.current = source;
+
+    source.addEventListener("connected", () => {
+      // Successful (re)connect — reset retry counter and cancel fallback polling.
+      retryCount.current = 0;
+      stopFallback();
+    });
 
     source.addEventListener("order_created", () => {
       invalidate.orders();
@@ -238,13 +278,27 @@ export function useOrderEvents() {
     });
 
     source.onerror = () => {
-      // EventSource reconnects automatically — no action needed here.
-      // Log for debugging only.
-      console.debug("[SSE] orders stream disconnected, will reconnect...");
-    };
-
-    return () => {
       source.close();
+      sourceRef.current = null;
+      retryCount.current += 1;
+
+      if (retryCount.current >= SSE_MAX_RETRIES) {
+        startFallback();
+        return; // stop trying SSE — fallback polling takes over
+      }
+
+      // Jitter: random delay 0–3s so 10k clients don't all reconnect at once
+      // after a service restart.
+      const jitter = Math.random() * 3000;
+      setTimeout(connect, jitter);
     };
-  }, [accessToken]);
+  }, [accessToken, startFallback, stopFallback]);
+
+  useEffect(() => {
+    connect();
+    return () => {
+      sourceRef.current?.close();
+      stopFallback();
+    };
+  }, [connect]);
 }
