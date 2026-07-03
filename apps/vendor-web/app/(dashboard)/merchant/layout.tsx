@@ -9,7 +9,11 @@ import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
 import { SWRProvider } from "@/lib/swr/provider";
 import { useOrderEvents } from "@/lib/swr/hooks";
-import { authApi, storefrontApi, setTokenRefreshCallback } from "@gomarket/api-client";
+import {
+  authApi,
+  storefrontApi,
+  setTokenRefreshCallback,
+} from "@gomarket/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 
@@ -85,38 +89,38 @@ export default function MerchantLayout({
     );
   }
 
-  // if (!user) {
-
-  // }
+  if (!user) {
+    router.push(ROUTES.AUTH.LOGIN);
+  }
 
   return (
     <SWRProvider>
-    <div className="flex h-screen overflow-hidden bg-[#f4f6f9]">
-      <DashboardTour />
+      <div className="flex h-screen overflow-hidden bg-[#f4f6f9]">
+        <DashboardTour />
 
-      <Sidebar
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onSignOut={handleSignOut}
-      />
-
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Header
-          onMenuClick={() => setSidebarOpen(true)}
-          merchantName={merchantName}
-          avatarInitials={avatarInitials}
-          userEmail={user?.email}
-          storeName={storeName}
-          storeSlug={storeSlug}
-          storeDomain={STORE_DOMAIN}
+        <Sidebar
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
           onSignOut={handleSignOut}
         />
 
-        <main className="flex-1 overflow-y-auto bg-[#f4f6f9]">
-          <PageWrapper className="px-5 lg:px-7 py-6">{children}</PageWrapper>
-        </main>
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <Header
+            onMenuClick={() => setSidebarOpen(true)}
+            merchantName={merchantName}
+            avatarInitials={avatarInitials}
+            userEmail={user?.email}
+            storeName={storeName}
+            storeSlug={storeSlug}
+            storeDomain={STORE_DOMAIN}
+            onSignOut={handleSignOut}
+          />
+
+          <main className="flex-1 overflow-y-auto bg-[#f4f6f9]">
+            <PageWrapper className="px-5 lg:px-7 py-6">{children}</PageWrapper>
+          </main>
+        </div>
       </div>
-    </div>
     </SWRProvider>
   );
 }
