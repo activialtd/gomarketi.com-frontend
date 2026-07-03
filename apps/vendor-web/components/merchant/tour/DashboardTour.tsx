@@ -62,6 +62,27 @@ const STEPS: {
     description:
       "Customise your storefront, complete KYC verification, manage staff and configure your payment account here.",
   },
+  {
+    target: "staff",
+    emoji: "👥",
+    title: "Manage your team",
+    description:
+      "Add, remove and manage staff members who can access your store. Set permissions and track their activity.",
+  },
+  {
+    target: "settings",
+    emoji: "⚙️",
+    title: "Settings",
+    description:
+      "Manage your store settings, preferences, notifications and account information.",
+  },
+  {
+    target: "support",
+    emoji: "💬",
+    title: "Support",
+    description:
+      "Access help resources, contact support, and get assistance with any issues you encounter.",
+  },
 ];
 
 interface Rect {
@@ -165,7 +186,8 @@ export function DashboardTour() {
           height: sh,
           borderRadius: 9,
           border: "2px solid #1A7A42",
-          boxShadow: "0 0 0 3px rgba(26,122,66,0.2), 0 0 22px rgba(26,122,66,0.4)",
+          boxShadow:
+            "0 0 0 3px rgba(26,122,66,0.2), 0 0 22px rgba(26,122,66,0.4)",
           transition: "all 0.22s ease",
         }}
       />
@@ -203,7 +225,8 @@ export function DashboardTour() {
           className="rounded-[16px] overflow-hidden"
           style={{
             background: "#fff",
-            boxShadow: "0 16px 48px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.08)",
+            boxShadow:
+              "0 16px 48px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.08)",
             border: "1px solid #e2e8f0",
           }}
         >
@@ -211,7 +234,10 @@ export function DashboardTour() {
           <div className="flex items-start justify-between px-5 pt-5 pb-3">
             <div className="flex items-center gap-2.5">
               <span className="text-[22px] select-none">{current.emoji}</span>
-              <p className="text-[14px] font-extrabold" style={{ color: "#1C1C1C", letterSpacing: "-0.2px" }}>
+              <p
+                className="text-[14px] font-extrabold"
+                style={{ color: "#1C1C1C", letterSpacing: "-0.2px" }}
+              >
                 {current.title}
               </p>
             </div>
@@ -226,7 +252,10 @@ export function DashboardTour() {
             </button>
           </div>
 
-          <p className="px-5 pb-2 text-[13px] leading-relaxed" style={{ color: "#4b5563" }}>
+          <p
+            className="px-5 pb-2 text-[13px] leading-relaxed"
+            style={{ color: "#4b5563" }}
+          >
             {current.description}
           </p>
           {current.hint && (
@@ -254,13 +283,20 @@ export function DashboardTour() {
           </div>
 
           {/* Nav */}
-          <div className="flex items-center justify-between px-4 py-3 border-t" style={{ borderColor: "#f1f5f9" }}>
+          <div
+            className="flex items-center justify-between px-4 py-3 border-t"
+            style={{ borderColor: "#f1f5f9" }}
+          >
             <button
               type="button"
               onClick={() => setStep((s) => s - 1)}
               disabled={step === 0}
               className="flex items-center gap-1 px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-all disabled:opacity-0 disabled:pointer-events-none"
-              style={{ color: "#6b7280", background: "#f8fafc", border: "1px solid #e2e8f0" }}
+              style={{
+                color: "#6b7280",
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+              }}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back
@@ -276,8 +312,12 @@ export function DashboardTour() {
                 onClick={() => setStep((s) => s + 1)}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-[8px] text-[12px] font-bold text-white transition-all"
                 style={{ background: "#1A7A42" }}
-                onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
-                onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "#239452")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "#1A7A42")
+                }
               >
                 Next
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -288,8 +328,12 @@ export function DashboardTour() {
                 onClick={dismiss}
                 className="flex items-center gap-1 px-3 py-1.5 rounded-[8px] text-[12px] font-bold text-white transition-all"
                 style={{ background: "#1A7A42" }}
-                onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
-                onMouseOut={(e) => (e.currentTarget.style.background = "#1A7A42")}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "#239452")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "#1A7A42")
+                }
               >
                 Let's go! 🎉
               </button>

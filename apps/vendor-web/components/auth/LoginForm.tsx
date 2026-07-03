@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Apple, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff } from "lucide-react";
 import { Input } from "@gomarket/ui";
 import { authApi, identityApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -14,6 +14,7 @@ import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
 import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
+import AppleIconFilled from "../common/AppleIcon";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -95,7 +96,7 @@ export function LoginForm() {
         setApiError(
           err instanceof ApiError
             ? err.message
-            : `${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`
+            : `${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`,
         );
       }
     } finally {
@@ -128,7 +129,17 @@ export function LoginForm() {
       {/* ── OAuth buttons ───────────────────────────────────── */}
       {/* Hidden div where GSI renders the real Google button — our OAuthBtn click triggers it */}
       {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
-      <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
+      <div
+        ref={googleButtonRef}
+        style={{
+          position: "fixed",
+          left: -9999,
+          top: -9999,
+          width: 360,
+          height: 44,
+        }}
+        aria-hidden
+      />
       <OAuthBtn
         onClick={() => handleOAuth("google")}
         loading={oauthLoading === "google"}
@@ -141,7 +152,7 @@ export function LoginForm() {
         onClick={() => handleOAuth("apple")}
         loading={oauthLoading === "apple"}
         disabled={busy}
-        icon={<Apple className="w-4 h-4 fill-current" />}
+        icon={<AppleIconFilled className="w-4 h-4 fill-current" />}
         label="Continue with Apple"
       />
 
