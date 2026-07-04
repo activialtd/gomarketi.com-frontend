@@ -72,7 +72,22 @@ export default function MerchantLayout({
     router.push(ROUTES.AUTH.LOGIN);
   }
 
-  if (hydrating) {
+  useEffect(() => {
+    if (hydrating) return;
+    if (!user) {
+      router.replace(ROUTES.AUTH.LOGIN);
+      return;
+    }
+    if (!user.is_email_verified) {
+      router.replace(`${ROUTES.AUTH.SIGNUP}?email=${encodeURIComponent(user.email ?? "")}`);
+      return;
+    }
+    if (!user.profile_completed) {
+      router.replace(ROUTES.ONBOARDING.WELCOME);
+    }
+  }, [hydrating, user, router]);
+
+  if (hydrating || !user || !user.is_email_verified || !user.profile_completed) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f8fafc]">
         <div
@@ -84,10 +99,6 @@ export default function MerchantLayout({
       </div>
     );
   }
-
-  // if (!user) {
-
-  // }
 
   return (
     <SWRProvider>

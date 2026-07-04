@@ -63,7 +63,13 @@ export function LoginForm() {
         const resp = await authApi.login({ email: data.email, password: data.password });
         setAuth(resp.user, resp.access_token);
         setAuthSession();
-        router.push(ROUTES.MERCHANT.OVERVIEW);
+        if (!resp.user.is_email_verified) {
+          router.push(`${ROUTES.AUTH.SIGNUP}?email=${encodeURIComponent(data.email)}`);
+        } else if (!resp.user.profile_completed) {
+          router.push(ROUTES.ONBOARDING.WELCOME);
+        } else {
+          router.push(ROUTES.MERCHANT.OVERVIEW);
+        }
       }
     } catch (err) {
       setApiError(
