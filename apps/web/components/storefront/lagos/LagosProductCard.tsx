@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
@@ -17,6 +18,7 @@ export function LagosProductCard({
   index?: number;
   tall?: boolean;
 }) {
+  const params = useParams<{ slug?: string }>();
   const [imgLoaded, setImgLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const hasImage = product.images.length > 0;
@@ -27,9 +29,13 @@ export function LagosProductCard({
     }
   }, []);
 
+  const productHref = params.slug
+    ? `/storefront/${params.slug}/products/${product.id}`
+    : `/products/${product.id}`;
+
   return (
     <Link
-      href={`/products/${product.id}`}
+      href={productHref}
       className="group relative block opacity-0 [animation-fill-mode:forwards]"
       style={{ animation: `fadeUp 0.6s ease forwards ${index * 70}ms` }}
     >
