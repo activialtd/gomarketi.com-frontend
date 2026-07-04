@@ -67,13 +67,11 @@ export default function MerchantLayout({
       .catch(() => {});
   }, [accessToken]);
 
-  async function handleSignOut() {
-    try {
-      await authApi.logout();
-    } catch {}
+  function handleSignOut() {
     clearAuth();
     clearAuthSession();
-    router.push(ROUTES.AUTH.LOGIN);
+    router.replace(ROUTES.AUTH.LOGIN);
+    authApi.logout().catch(() => {}); // best-effort server-side revocation
   }
 
   useEffect(() => {
