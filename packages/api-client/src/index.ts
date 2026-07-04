@@ -237,6 +237,54 @@ export interface AnalyticsOverviewResp {
   total_customers: number;
   pending_orders: number;
   low_stock_products: number;
+  total_discounts_kobo: number;
+  total_expenses_kobo: number;
+  storefront_visits_30d: number;
+}
+
+// ── Newsletter / Campaigns ────────────────────────────────────────────────────
+
+export interface SubscriberResp {
+  id: string;
+  email: string;
+  name: string;
+  subscribed_at: string;
+  unsubscribed: boolean;
+}
+
+export interface SubscriberListResp {
+  subscribers: SubscriberResp[];
+  total: number;
+  page: number;
+  per_page: number;
+}
+
+export interface CreateCampaignReq {
+  subject: string;
+  body_html: string;
+}
+
+export interface CampaignResp {
+  id: string;
+  subject: string;
+  status: string;
+  recipients_count: number;
+  created_at: string;
+  sent_at?: string;
+}
+
+// ── Payment gateways ──────────────────────────────────────────────────────────
+
+export interface PaymentGatewayResp {
+  gateway: string;
+  enabled: boolean;
+  config: Record<string, unknown>;
+  updated_at?: string;
+}
+
+export interface UpsertPaymentGatewayReq {
+  enabled: boolean;
+  config: Record<string, unknown>;
 }
 
 export interface CreateOrderItem {
@@ -249,6 +297,8 @@ export interface CreateOrderItem {
 
 export interface CreateOrderReq {
   store_id: string;
+  store_slug?: string;
+  store_name?: string;
   customer_name: string;
   customer_email: string;
   customer_phone?: string;
@@ -663,9 +713,39 @@ export const ordersApi = {
     if (params.per_page) qs.set("per_page", String(params.per_page));
     return request<{ carts: AbandonedCartResp[] }>(`/v1/orders/abandoned?${qs}`, {}, token);
   },
+
+  // No auth — lightweight storefront page-view beacon.
+  trackVisit: (data: { store_id: string; session_id: string; page?: string }) =>
+    request<{ ok: boolean }>("/v1/orders/public/visit", { method: "POST", body: JSON.stringify(data) }),
+
+  // No auth — storefront checkout fetches enabled payment gateways.
+  getPublicGateways: (storeId: string) =>
+    request<{ gateways: PaymentGatewayResp[] }>(`/v1/orders/public/gateways/${storeId}`)
+      .then((r) => r.gateways),
+
+  // No auth — storefront newsletter subscribe.
+  subscribe: (data: { store_id: string; email: string; name?: string }) =>
+    request<{ ok: boolean }>("/v1/orders/public/subscribe", { method: "POST", body: JSON.stringify(data) }),
+
+  // No auth — pre-payment cart summary email. Fire-and-forget from storefront checkout.
+  sendCartEmail: (data: {
+    email: string;
+    customer_name: string;
+    store_slug: string;
+    store_name: string;
+    items: Array<{ name: string; image_url?: string; quantity: number; price_kobo: number }>;
+    total_kobo: number;
+  }) =>
+    request<{ ok: boolean }>("/v1/orders/public/cart-email", { method: "POST", body: JSON.stringify(data) }),
 };
 
 // ── Analytics API ──────────────────────────────────────────────────────────────
+
+export interface RevenueTrendPoint {
+  date: string;
+  revenue_kobo: number;
+  orders: number;
+}
 
 export const analyticsApi = {
   getOverview: (token: string) =>
@@ -674,6 +754,10 @@ export const analyticsApi = {
   getTopProducts: (limit: number, token: string) =>
     request<{ products: TopProductResp[] }>(`/v1/analytics/top-products?limit=${limit}`, {}, token)
       .then((r) => r.products),
+
+  getRevenueTrend: (days: number, token: string) =>
+    request<{ trend: RevenueTrendPoint[] }>(`/v1/analytics/revenue-trend?days=${days}`, {}, token)
+      .then((r) => r.trend),
 };
 
 // ── CRM / Customers API ───────────────────────────────────────────────────────
@@ -689,6 +773,45 @@ export const crmApi = {
 
   getCustomer: (id: string, token: string) =>
     request<CustomerResp>(`/v1/crm/customers/${id}`, {}, token),
+
+  listSubscribers: (params: { page?: number; per_page?: number }, token: string) => {
+    const qs = new URLSearchParams();
+    if (params.page) qs.set("page", String(params.page));
+    if (params.per_page) qs.set("per_page", String(params.per_page));
+    return request<SubscriberListResp>(`/v1/crm/subscribers?${qs}`, {}, token);
+  },
+
+  unsubscribe: (id: string, token: string) =>
+    request<{ ok: boolean }>(`/v1/crm/subscribers/${id}`, { method: "DELETE" }, token),
+};
+
+// ── Campaigns API ─────────────────────────────────────────────────────────────
+
+export const campaignsApi = {
+  list: (token: string) =>
+    request<{ campaigns: CampaignResp[] }>("/v1/campaigns", {}, token)
+      .then((r) => r.campaigns),
+
+  create: (data: CreateCampaignReq, token: string) =>
+    request<CampaignResp>("/v1/campaigns", { method: "POST", body: JSON.stringify(data) }, token),
+
+  send: (id: string, token: string) =>
+    request<CampaignResp>(`/v1/campaigns/${id}/send`, { method: "POST" }, token),
+};
+
+// ── Payment Gateways API ──────────────────────────────────────────────────────
+
+export const paymentGatewaysApi = {
+  list: (token: string) =>
+    request<{ gateways: PaymentGatewayResp[] }>("/v1/store/payment-gateways", {}, token)
+      .then((r) => r.gateways),
+
+  upsert: (gateway: string, data: UpsertPaymentGatewayReq, token: string) =>
+    request<PaymentGatewayResp>(
+      `/v1/store/payment-gateways/${gateway}`,
+      { method: "PUT", body: JSON.stringify(data) },
+      token,
+    ),
 };
 
 // ── Wallet API ─────────────────────────────────────────────────────────────────
@@ -803,4 +926,51 @@ export const identityApi = {
       is_primary: boolean;
       is_verified: boolean;
     }>>("/v1/identity/vendor/banks", {}, token),
+};
+
+// ── Staff & Roles API ─────────────────────────────────────────────────────────
+
+export interface StaffResp {
+  id: string;
+  store_id: string;
+  full_name: string;
+  email: string;
+  role: "manager" | "fulfillment" | "support" | "analytics_only";
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CreateStaffReq {
+  full_name: string;
+  email: string;
+  password: string;
+  role: StaffResp["role"];
+}
+
+export interface UpdateStaffReq {
+  full_name?: string;
+  role?: StaffResp["role"];
+  is_active?: boolean;
+  password?: string;
+}
+
+export const staffApi = {
+  list: (token: string) =>
+    request<{ staff: StaffResp[] }>("/v1/identity/vendor/staff", {}, token)
+      .then((r) => r.staff),
+
+  create: (data: CreateStaffReq, token: string) =>
+    request<StaffResp>("/v1/identity/vendor/staff", { method: "POST", body: JSON.stringify(data) }, token),
+
+  update: (id: string, data: UpdateStaffReq, token: string) =>
+    request<StaffResp>(`/v1/identity/vendor/staff/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
+
+  remove: (id: string, token: string) =>
+    request<void>(`/v1/identity/vendor/staff/${id}`, { method: "DELETE" }, token),
+
+  staffLogin: (email: string, password: string) =>
+    request<{ access_token: string; user: { id: string; email?: string } }>("/v1/auth/staff/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
 };

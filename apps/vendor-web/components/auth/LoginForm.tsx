@@ -6,9 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Apple, Eye, EyeOff } from "lucide-react";
+import { Loader2, Apple, Eye, EyeOff, Users } from "lucide-react";
 import { Input } from "@gomarket/ui";
-import { authApi, identityApi, ApiError } from "@gomarket/api-client";
+import { authApi, identityApi, staffApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
@@ -30,6 +30,7 @@ export function LoginForm() {
   const [oauthLoading, setOauthLoading] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [isStaffMode, setIsStaffMode] = useState(false);
   const { signIn: googleSignIn, buttonRef: googleButtonRef } = useGoogleAuth();
 
   const {
@@ -50,13 +51,20 @@ export function LoginForm() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const resp = await authApi.login({
-        email: data.email,
-        password: data.password,
-      });
-      setAuth(resp.user, resp.access_token);
-      setAuthSession();
-      router.push(ROUTES.MERCHANT.OVERVIEW);
+      if (isStaffMode) {
+        const resp = await staffApi.staffLogin(data.email, data.password);
+        setAuth(
+          { id: resp.user.id, email: resp.user.email, is_email_verified: true, profile_completed: true, is_buyer: false, is_vendor: false },
+          resp.access_token,
+        );
+        setAuthSession();
+        router.push(ROUTES.MERCHANT.OVERVIEW);
+      } else {
+        const resp = await authApi.login({ email: data.email, password: data.password });
+        setAuth(resp.user, resp.access_token);
+        setAuthSession();
+        router.push(ROUTES.MERCHANT.OVERVIEW);
+      }
     } catch (err) {
       setApiError(
         err instanceof ApiError
@@ -106,56 +114,66 @@ export function LoginForm() {
   return (
     <div className="animate-in fade-in duration-500 w-full">
       {/* ── Header ──────────────────────────────────────────── */}
-      <p
-        className="text-[10px] font-extrabold uppercase mb-2.5"
-        style={{ letterSpacing: "0.18em", color: "#1A7A42" }}
-      >
-        Vendor portal
-      </p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] font-extrabold uppercase"
+          style={{ letterSpacing: "0.18em", color: isStaffMode ? "#7c3aed" : "#1A7A42" }}>
+          {isStaffMode ? "Staff portal" : "Vendor portal"}
+        </p>
+        <button
+          type="button"
+          onClick={() => { setIsStaffMode((v) => !v); setApiError(null); reset(); }}
+          className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-colors"
+          style={{ color: isStaffMode ? "#1A7A42" : "#7c3aed", background: isStaffMode ? "#f0fdf4" : "#f5f3ff", border: "none", cursor: "pointer" }}
+        >
+          <Users className="w-3 h-3" />
+          {isStaffMode ? "Vendor login" : "Staff login"}
+        </button>
+      </div>
       <h1
         className="text-[26px] font-extrabold leading-tight mb-1.5"
         style={{ letterSpacing: "-0.5px", color: "#1C1C1C" }}
       >
-        Welcome back
+        {isStaffMode ? "Staff sign in" : "Welcome back"}
       </h1>
       <p
         className="text-[13px] leading-relaxed mb-6"
         style={{ color: "#3D6B4F" }}
       >
-        Sign in to access your GoMarket dashboard.
+        {isStaffMode
+          ? "Sign in with your staff credentials assigned by your store owner."
+          : "Sign in to access your GoMarket dashboard."}
       </p>
 
-      {/* ── OAuth buttons ───────────────────────────────────── */}
-      {/* Hidden div where GSI renders the real Google button — our OAuthBtn click triggers it */}
-      {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
+      {/* ── OAuth buttons (vendor mode only) ────────────────── */}
       <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
-      <OAuthBtn
-        onClick={() => handleOAuth("google")}
-        loading={oauthLoading === "google"}
-        disabled={busy}
-        icon={<GoogleIcon />}
-        label="Continue with Google"
-      />
-      <div className="mb-2" />
-      <OAuthBtn
-        onClick={() => handleOAuth("apple")}
-        loading={oauthLoading === "apple"}
-        disabled={busy}
-        icon={<Apple className="w-4 h-4 fill-current" />}
-        label="Continue with Apple"
-      />
+      {!isStaffMode && (
+        <>
+          <OAuthBtn
+            onClick={() => handleOAuth("google")}
+            loading={oauthLoading === "google"}
+            disabled={busy}
+            icon={<GoogleIcon />}
+            label="Continue with Google"
+          />
+          <div className="mb-2" />
+          <OAuthBtn
+            onClick={() => handleOAuth("apple")}
+            loading={oauthLoading === "apple"}
+            disabled={busy}
+            icon={<Apple className="w-4 h-4 fill-current" />}
+            label="Continue with Apple"
+          />
 
-      {/* ── Divider ─────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 my-[18px]">
-        <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
-        <span
-          className="text-[10px] font-bold uppercase"
-          style={{ letterSpacing: "0.12em", color: "rgba(61,107,79,0.5)" }}
-        >
-          or
-        </span>
-        <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
-      </div>
+          {/* ── Divider ─────────────────────────────────────── */}
+          <div className="flex items-center gap-2.5 my-[18px]">
+            <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
+            <span className="text-[10px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: "rgba(61,107,79,0.5)" }}>
+              or
+            </span>
+            <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
+          </div>
+        </>
+      )}
 
       {/* ── Form ────────────────────────────────────────────── */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-3" noValidate>

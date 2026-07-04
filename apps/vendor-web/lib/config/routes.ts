@@ -31,6 +31,7 @@ export const ROUTES = {
     // CRM
     CUSTOMERS: "/merchant/customers",
     ANALYTICS: "/merchant/analytics",
+    CAMPAIGNS: "/merchant/campaigns",
 
     // Finance
     WALLET: "/merchant/wallet",

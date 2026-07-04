@@ -59,15 +59,15 @@ export function Header({
   // - Production: subdomain routing
   //   → https://{slug}.gomarketi.com
   const isLocalDev = cleanDomain.includes("localhost") || /:\d+/.test(cleanDomain);
+  // Local dev uses subdomain routing via the proxy (e.g. cobi.localhost:3001),
+  // same as production — never path-based.
   const storeUrl = storeSlug
     ? isLocalDev
-      ? `http://${cleanDomain}/storefront/${storeSlug}`
+      ? `http://${storeSlug}.${cleanDomain}`
       : `https://${storeSlug}.${cleanDomain}`
     : "#";
   const storeSlugDisplay = storeSlug
-    ? isLocalDev
-      ? `${cleanDomain}/storefront/${storeSlug}`
-      : `${storeSlug}.${cleanDomain}`
+    ? `${storeSlug}.${cleanDomain}`
     : "";
 
   return (

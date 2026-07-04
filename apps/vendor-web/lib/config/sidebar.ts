@@ -13,8 +13,10 @@ import {
   Building2,
   Layers,
   Plus,
+  Mail,
 } from "lucide-react";
 import { ROUTES } from "./routes";
+import type { StaffRole } from "@/store/useAuthStore";
 
 export type NavItem = {
   label: string;
@@ -24,6 +26,8 @@ export type NavItem = {
   badgeVariant?: "green" | "red" | "gray";
   exact?: boolean;
   children?: NavItem[];
+  /** Staff roles that may see this item. Omit = vendor-only (hidden from all staff). */
+  allowedRoles?: StaffRole[];
 };
 
 export type NavSection = {
@@ -40,10 +44,12 @@ export const NAV: NavSection[] = [
         href: ROUTES.MERCHANT.OVERVIEW,
         icon: LayoutDashboard,
         exact: true,
+        allowedRoles: ["manager", "fulfillment", "support", "analytics_only"],
       },
       {
         label: "Products",
         icon: Package,
+        allowedRoles: ["manager"],
         children: [
           {
             label: "All Products",
@@ -71,6 +77,7 @@ export const NAV: NavSection[] = [
       {
         label: "Orders",
         icon: ShoppingCart,
+        allowedRoles: ["manager", "fulfillment", "support"],
         children: [
           {
             label: "All Orders",
@@ -89,16 +96,25 @@ export const NAV: NavSection[] = [
         label: "Customers",
         href: ROUTES.MERCHANT.CUSTOMERS,
         icon: Users,
+        allowedRoles: ["manager", "support"],
       },
       {
         label: "Analytics",
         href: ROUTES.MERCHANT.ANALYTICS,
         icon: BarChart3,
+        allowedRoles: ["manager", "analytics_only"],
+      },
+      {
+        label: "Campaigns",
+        href: ROUTES.MERCHANT.CAMPAIGNS,
+        icon: Mail,
+        allowedRoles: ["manager"],
       },
       {
         label: "GoMarket Wallet",
         href: ROUTES.MERCHANT.WALLET,
         icon: Wallet,
+        allowedRoles: ["manager"],
       },
     ],
   },
@@ -109,16 +125,19 @@ export const NAV: NavSection[] = [
         label: "Store Information",
         href: ROUTES.MERCHANT.STORE_INFO,
         icon: Building2,
+        // vendor-only: staff cannot edit store information
       },
       {
         label: "Customisation",
         href: ROUTES.MERCHANT.CUSTOMISE,
         icon: Globe,
+        allowedRoles: ["manager"],
       },
       {
         label: "Staff & Roles",
         href: ROUTES.MERCHANT.STAFF,
         icon: UserCheck,
+        // vendor-only: staff cannot manage other staff
       },
     ],
   },

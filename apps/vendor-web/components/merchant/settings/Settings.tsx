@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Check,
@@ -51,7 +51,7 @@ const DEFAULT_THEME: ThemeConfig = {
   show_categories: false,
 };
 
-const TABS = ["Information", "Customization", "Social Media", "Subscription"] as const;
+const TABS = ["Information", "Customization", "Social Media", "Payments", "Staff & Roles", "Subscription"] as const;
 type Tab = typeof TABS[number];
 
 // ── Plan display config ───────────────────────────────────────────────────────
@@ -569,6 +569,21 @@ function SocialMediaTab({
   );
 }
 
+// ── Tab: Payments ─────────────────────────────────────────────────────────────
+
+function PaymentGatewaysTab() {
+  // Lazy import to keep Settings bundle slim
+  const PaymentGateways = require("./PaymentGateways").default as React.ComponentType;
+  return <div className="max-w-2xl pt-2"><PaymentGateways /></div>;
+}
+
+// ── Tab: Staff & Roles ────────────────────────────────────────────────────────
+
+function StaffRolesTab() {
+  const StaffRoles = require("./StaffRoles").default as React.ComponentType;
+  return <StaffRoles />;
+}
+
 // ── Tab: Subscription ─────────────────────────────────────────────────────────
 
 function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
@@ -932,6 +947,12 @@ export default function Settings() {
             social={social}
             setSocial={(patch) => setSocial((prev) => ({ ...prev, ...patch }))}
           />
+        )}
+        {activeTab === "Payments" && (
+          <PaymentGatewaysTab />
+        )}
+        {activeTab === "Staff & Roles" && (
+          <StaffRolesTab />
         )}
         {activeTab === "Subscription" && (
           <SubscriptionTab plan={plan} />

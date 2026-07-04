@@ -482,9 +482,9 @@ type ThemeSections = {
   announcement?: { enabled?: boolean; text?: string; bgColor?: string; textColor?: string; dismissible?: boolean };
   header?: { logoUrl?: string; sticky?: boolean; showSearch?: boolean; showStoreName?: boolean };
   nav?: { items?: Array<{ id: string; label: string; url: string }> };
-  hero?: { enabled?: boolean; headline?: string; subheadline?: string; ctaText?: string; imageUrl?: string; layout?: string; eyebrow?: string };
-  collections?: { enabled?: boolean; title?: string };
-  featured?: { enabled?: boolean; title?: string; count?: number };
+  hero?: { enabled?: boolean; layout?: string; eyebrow?: string; headline?: string; subheadline?: string; ctaText?: string; ctaUrl?: string; imageUrl?: string; overlayOpacity?: number; textPosition?: string; carouselStyle?: string; carouselAnimation?: string; carouselSlides?: Array<{ id: string; imageUrl?: string; headline?: string; subheadline?: string; ctaText?: string; ctaUrl?: string; textPosition?: string }> };
+  collections?: { enabled?: boolean; title?: string; format?: string; columns?: number };
+  featured?: { enabled?: boolean; title?: string; count?: number; layout?: string };
   newsletter?: { enabled?: boolean; headline?: string; subtext?: string; placeholder?: string };
   ctaBand?: { enabled?: boolean; headline?: string; text?: string; btnText?: string };
   footer?: {
@@ -595,9 +595,11 @@ export function LivePreview({
                 justifyContent: "space-between",
               }}
             >
-              <span style={{ color: "#fff", fontWeight: 800, fontSize: "18px", letterSpacing: "-0.3px" }}>
-                {storeName}
-              </span>
+              {sec?.header?.logoUrl ? (
+                <img src={sec.header.logoUrl} alt={storeName} style={{ height: "32px", width: "auto", maxWidth: "120px", objectFit: "contain" }} />
+              ) : (
+                <span style={{ color: "#fff", fontWeight: 800, fontSize: "18px", letterSpacing: "-0.3px" }}>{storeName}</span>
+              )}
               {!isMobile && (
                 <div style={{ display: "flex", gap: "20px" }}>
                   {(sec?.nav?.items?.length ? sec.nav.items : [{ label: "Shop" }, { label: "Collections" }]).slice(0, 4).map((item) => (
@@ -623,42 +625,105 @@ export function LivePreview({
               </button>
             </nav>
 
-            {/* Hero — shown only when enabled in config, or always in legacy mode */}
-            {(sec ? sec.hero?.enabled : true) && (
-              <div style={{
-                background: colors.bg,
-                padding: isMobile ? "32px 20px" : "52px 40px",
-                display: "flex", alignItems: "center",
-                justifyContent: "space-between", gap: "24px",
-                flexDirection: isMobile ? "column" : "row",
-              }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: colors.primary, marginBottom: "10px" }}>
-                    {storeName}
-                  </p>
-                  <h1 style={{ fontSize: isMobile ? "26px" : "36px", fontWeight: 900, letterSpacing: "-0.5px", color: colors.text, margin: "0 0 12px", lineHeight: 1.1 }}>
-                    {sec?.hero?.headline || headline || "Welcome to our store"}
-                  </h1>
-                  <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "20px", maxWidth: "340px", lineHeight: 1.6 }}>
-                    {sec?.hero?.subheadline || subheadline || "Discover amazing products."}
-                  </p>
-                  <button style={{ background: colors.primary, color: "#fff", border: "none", borderRadius: "10px", padding: "12px 24px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 14px ${colors.primary}44` }}>
-                    {sec?.hero?.ctaText || "Shop now"} →
-                  </button>
-                </div>
-                {!isMobile && (
-                  <div style={{ width: "240px", height: "200px", borderRadius: "16px", overflow: "hidden", flexShrink: 0, background: `${colors.primary}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    {sec?.hero?.imageUrl
-                      ? <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <div style={{ textAlign: "center", color: colors.primary, opacity: 0.5 }}>
-                          <div style={{ fontSize: "32px", marginBottom: "4px" }}>🖼</div>
-                          <p style={{ fontSize: "10px", fontWeight: 600 }}>Hero image</p>
+            {/* Hero */}
+            {(sec ? sec.hero?.enabled : true) && (() => {
+              const hl = sec?.hero?.layout ?? "split";
+              const heroHeadline = sec?.hero?.headline || headline || "Welcome to our store";
+              const heroSub = sec?.hero?.subheadline || subheadline || "Discover amazing products.";
+              const heroCta = sec?.hero?.ctaText || "Shop now";
+              const slides = sec?.hero?.carouselSlides ?? [];
+
+              if (hl === "carousel") {
+                const slide = slides[0];
+                return (
+                  <div style={{ position: "relative", height: isMobile ? "200px" : "260px", overflow: "hidden", background: `${colors.primary}18` }}>
+                    {slide?.imageUrl
+                      ? <img src={slide.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ width: "100%", height: "100%", background: `${colors.primary}22`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <span style={{ fontSize: "32px", opacity: 0.3 }}>🖼</span>
                         </div>
                     }
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)" }} />
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "20px 24px" }}>
+                      <p style={{ fontSize: isMobile ? "18px" : "26px", fontWeight: 900, color: "#fff", marginBottom: "8px", letterSpacing: "-0.3px" }}>
+                        {slide?.headline || heroHeadline}
+                      </p>
+                      <button style={{ background: colors.primary, color: "#fff", border: "none", borderRadius: "8px", padding: "8px 18px", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>
+                        {slide?.ctaText || heroCta} →
+                      </button>
+                    </div>
+                    {slides.length > 1 && (
+                      <div style={{ position: "absolute", bottom: "10px", right: "16px", display: "flex", gap: "5px" }}>
+                        {slides.map((_, i) => (
+                          <div key={i} style={{ width: i === 0 ? "16px" : "6px", height: "6px", borderRadius: "3px", background: i === 0 ? "#fff" : "rgba(255,255,255,0.4)" }} />
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
+                );
+              }
+
+              if (hl === "full-bleed") {
+                return (
+                  <div style={{ position: "relative", height: isMobile ? "220px" : "280px", overflow: "hidden", background: `${colors.primary}22` }}>
+                    {sec?.hero?.imageUrl
+                      ? <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ fontSize: "40px", opacity: 0.2 }}>🖼</span></div>
+                    }
+                    <div style={{ position: "absolute", inset: 0, background: `rgba(0,0,0,${sec?.hero?.overlayOpacity ?? 0.4})` }} />
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", textAlign: "center" }}>
+                      <h1 style={{ fontSize: isMobile ? "24px" : "34px", fontWeight: 900, color: "#fff", marginBottom: "10px", letterSpacing: "-0.4px" }}>{heroHeadline}</h1>
+                      <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.75)", marginBottom: "18px" }}>{heroSub}</p>
+                      <button style={{ background: "#fff", color: colors.primary, border: "none", borderRadius: "10px", padding: "11px 24px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>{heroCta}</button>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (hl === "centered") {
+                return (
+                  <div style={{ background: colors.bg, padding: isMobile ? "40px 20px" : "60px 40px", textAlign: "center" }}>
+                    {sec?.hero?.eyebrow && <p style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: colors.primary, marginBottom: "10px" }}>{sec.hero.eyebrow}</p>}
+                    <h1 style={{ fontSize: isMobile ? "28px" : "40px", fontWeight: 900, letterSpacing: "-0.5px", color: colors.text, margin: "0 0 12px", lineHeight: 1.1 }}>{heroHeadline}</h1>
+                    <p style={{ fontSize: "13px", color: "#6b7280", marginBottom: "20px", maxWidth: "380px", margin: "0 auto 20px", lineHeight: 1.6 }}>{heroSub}</p>
+                    <button style={{ background: colors.primary, color: "#fff", border: "none", borderRadius: "10px", padding: "12px 28px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>{heroCta} →</button>
+                    {sec?.hero?.imageUrl && (
+                      <div style={{ marginTop: "24px", borderRadius: "16px", overflow: "hidden", maxHeight: "160px" }}>
+                        <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", objectFit: "cover" }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              // Default: split
+              return (
+                <div style={{
+                  background: colors.bg,
+                  padding: isMobile ? "32px 20px" : "52px 40px",
+                  display: "flex", alignItems: "center",
+                  justifyContent: "space-between", gap: "24px",
+                  flexDirection: isMobile ? "column" : "row",
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <p style={{ fontSize: "10px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: colors.primary, marginBottom: "10px" }}>
+                      {sec?.hero?.eyebrow || storeName}
+                    </p>
+                    <h1 style={{ fontSize: isMobile ? "26px" : "36px", fontWeight: 900, letterSpacing: "-0.5px", color: colors.text, margin: "0 0 12px", lineHeight: 1.1 }}>{heroHeadline}</h1>
+                    <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "20px", maxWidth: "340px", lineHeight: 1.6 }}>{heroSub}</p>
+                    <button style={{ background: colors.primary, color: "#fff", border: "none", borderRadius: "10px", padding: "12px 24px", fontSize: "13px", fontWeight: 700, cursor: "pointer", boxShadow: `0 4px 14px ${colors.primary}44` }}>{heroCta} →</button>
+                  </div>
+                  {!isMobile && (
+                    <div style={{ width: "240px", height: "200px", borderRadius: "16px", overflow: "hidden", flexShrink: 0, background: `${colors.primary}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {sec?.hero?.imageUrl
+                        ? <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        : <div style={{ textAlign: "center", color: colors.primary, opacity: 0.5 }}><div style={{ fontSize: "32px", marginBottom: "4px" }}>🖼</div><p style={{ fontSize: "10px", fontWeight: 600 }}>Hero image</p></div>
+                      }
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {sec && !sec.hero?.enabled && (
               <div style={{ background: "#f8fafc", borderBottom: "1px dashed #e2e8f0", padding: "12px 40px", display: "flex", alignItems: "center", gap: "8px" }}>
                 <span style={{ fontSize: "11px", color: "#94a3b8" }}>🖼 Hero section — enable it in the Sections panel</span>
@@ -666,76 +731,66 @@ export function LivePreview({
             )}
 
             {/* Featured products */}
-            {(sec ? sec.featured?.enabled : true) && (
-            <div style={{ padding: isMobile ? "24px 16px" : "40px 40px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: colors.text, marginBottom: "20px", letterSpacing: "-0.3px" }}>
-                {sec?.featured?.title || "Featured products"}
-              </h2>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: isMobile
-                    ? "repeat(2, 1fr)"
-                    : isTablet
-                      ? "repeat(2, 1fr)"
-                      : "repeat(3, 1fr)",
-                  gap: "16px",
-                }}
-              >
-                {mockProducts.slice(0, isMobile ? 4 : 6).map((p) => (
-                  <div
-                    key={p.name}
-                    style={{
-                      borderRadius: "12px",
-                      overflow: "hidden",
-                      border: "1px solid #f1f5f9",
-                      background: "#fff",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div
-                      style={{
-                        aspectRatio: "1",
-                        overflow: "hidden",
-                        background: colors.bg,
-                      }}
-                    >
-                      <img
-                        src={p.img}
-                        alt=""
-                        style={{
-                          width: "100%",
-                          height: "100%",
-                          objectFit: "cover",
-                        }}
-                      />
-                    </div>
-                    <div style={{ padding: "12px" }}>
-                      <p
-                        style={{
-                          fontSize: "13px",
-                          fontWeight: 600,
-                          color: colors.text,
-                          marginBottom: "4px",
-                        }}
-                      >
-                        {p.name}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "14px",
-                          fontWeight: 800,
-                          color: colors.primary,
-                        }}
-                      >
-                        {p.price}
-                      </p>
-                    </div>
+            {(sec ? sec.featured?.enabled : true) && (() => {
+              const fl = sec?.featured?.layout ?? "grid";
+              const featTitle = sec?.featured?.title || "Featured products";
+              const shown = mockProducts.slice(0, isMobile ? 4 : 6);
+              const card = (p: typeof mockProducts[0], key: string, style?: React.CSSProperties) => (
+                <div key={key} style={{ borderRadius: "12px", overflow: "hidden", border: "1px solid #f1f5f9", background: "#fff", cursor: "pointer", ...style }}>
+                  <div style={{ aspectRatio: fl === "split" ? "1.5" : "1", overflow: "hidden", background: colors.bg }}>
+                    <img src={p.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                   </div>
-                ))}
-              </div>
-            </div>
-            )}
+                  <div style={{ padding: "10px 12px" }}>
+                    <p style={{ fontSize: "12px", fontWeight: 600, color: colors.text, marginBottom: "3px" }}>{p.name}</p>
+                    <p style={{ fontSize: "13px", fontWeight: 800, color: colors.primary }}>{p.price}</p>
+                  </div>
+                </div>
+              );
+
+              return (
+                <div style={{ padding: isMobile ? "24px 16px" : "40px 40px" }}>
+                  <h2 style={{ fontSize: "18px", fontWeight: 800, color: colors.text, marginBottom: "20px", letterSpacing: "-0.3px" }}>{featTitle}</h2>
+
+                  {fl === "bento" ? (
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "2fr 1fr 1fr", gridTemplateRows: "auto auto", gap: "12px" }}>
+                      {shown.map((p, i) => card(p, p.name, i === 0 && !isMobile ? { gridRow: "1 / span 2" } : undefined))}
+                    </div>
+                  ) : fl === "split" ? (
+                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                      {shown.slice(0, 4).map((p) => (
+                        <div key={p.name} style={{ display: "flex", gap: "12px", border: "1px solid #f1f5f9", borderRadius: "12px", overflow: "hidden", background: "#fff", cursor: "pointer" }}>
+                          <div style={{ width: "80px", flexShrink: 0, overflow: "hidden", background: colors.bg }}>
+                            <img src={p.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          </div>
+                          <div style={{ padding: "12px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                            <p style={{ fontSize: "12px", fontWeight: 700, color: colors.text, marginBottom: "4px" }}>{p.name}</p>
+                            <p style={{ fontSize: "13px", fontWeight: 800, color: colors.primary }}>{p.price}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : fl === "carousel" ? (
+                    <div style={{ display: "flex", gap: "12px", overflowX: "auto", paddingBottom: "4px" }}>
+                      {shown.map((p) => (
+                        <div key={p.name} style={{ flexShrink: 0, width: isMobile ? "140px" : "180px", borderRadius: "12px", overflow: "hidden", border: "1px solid #f1f5f9", background: "#fff" }}>
+                          <div style={{ height: isMobile ? "140px" : "180px", overflow: "hidden", background: colors.bg }}>
+                            <img src={p.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          </div>
+                          <div style={{ padding: "10px 12px" }}>
+                            <p style={{ fontSize: "12px", fontWeight: 600, color: colors.text, marginBottom: "3px" }}>{p.name}</p>
+                            <p style={{ fontSize: "13px", fontWeight: 800, color: colors.primary }}>{p.price}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2,1fr)" : isTablet ? "repeat(2,1fr)" : "repeat(3,1fr)", gap: "16px" }}>
+                      {shown.map((p) => card(p, p.name))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {sec && !sec.featured?.enabled && (
               <div style={{ background: "#f8fafc", borderTop: "1px dashed #e2e8f0", padding: "12px 40px" }}>
                 <span style={{ fontSize: "11px", color: "#94a3b8" }}>📦 Featured products — enable in Sections panel</span>
@@ -821,61 +876,148 @@ export function LivePreview({
               </div>
             )}
 
-            {/* Hero — split layout, matches LagosHome exactly */}
-            {(sec ? sec.hero?.enabled : true) && (
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr",
-                gap: isMobile ? "20px" : "32px",
-                padding: isMobile ? "32px 20px" : "48px 32px",
-                alignItems: "stretch",
-              }}>
-                <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                  {sec?.hero?.eyebrow && (
-                    <p style={{
-                      fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em",
-                      textTransform: "uppercase", color: colors.primary, marginBottom: "10px",
-                    }}>
-                      {sec.hero.eyebrow}
-                    </p>
-                  )}
-                  <h1 style={{
-                    fontSize: isMobile ? "30px" : "44px", fontWeight: 600,
-                    lineHeight: 0.98, letterSpacing: "-0.5px", color: "#F7F4EE",
-                    fontFamily: "'Playfair Display', Georgia, serif", marginBottom: "16px",
-                  }}>
-                    {sec?.hero?.headline || headline || "Welcome to our store"}
-                  </h1>
-                  <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(247,244,238,0.55)", marginBottom: "22px", maxWidth: "320px" }}>
-                    {sec?.hero?.subheadline || subheadline || "Discover amazing products."}
-                  </p>
-                  <button style={{
-                    background: "transparent", color: "#F7F4EE",
-                    border: "1px solid #F7F4EE", borderRadius: 0,
-                    padding: "12px 24px", fontSize: "11px", fontWeight: 600,
-                    letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", alignSelf: "flex-start",
-                  }}>
-                    {sec?.hero?.ctaText || "Explore the edit"} →
-                  </button>
-                </div>
+            {/* Hero — all layouts */}
+            {(sec ? sec.hero?.enabled : true) && (() => {
+              const hl = sec?.hero?.layout ?? "split";
+              const heroHeadline = sec?.hero?.headline || headline || "Welcome to our store";
+              const heroSub = sec?.hero?.subheadline || subheadline || "";
+              const heroCta = sec?.hero?.ctaText || "Explore the edit";
+              const heroImg = sec?.hero?.imageUrl;
+              const slides = sec?.hero?.carouselSlides ?? [];
+              const carouselStyle = sec?.hero?.carouselStyle ?? "normal";
 
-                <div style={{ position: "relative", aspectRatio: "4/5", overflow: "hidden" }}>
-                  {sec?.hero?.imageUrl ? (
-                    <img src={sec.hero.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                  ) : (
-                    <div style={{
-                      width: "100%", height: "100%", background: "#1a1a1a",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px",
-                    }}>
-                      <span style={{ fontSize: "28px", opacity: 0.2 }}>🖼</span>
-                      <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Hero image</p>
+              if (hl === "carousel") {
+                const slide = slides[0];
+                if (carouselStyle === "editorial") {
+                  // Editorial: numbered slide numbers left + Up Next bar bottom
+                  return (
+                    <div style={{ position: "relative", overflow: "hidden", background: "#0E0E0E" }}>
+                      {/* Main image area */}
+                      <div style={{ position: "relative", height: isMobile ? "220px" : "300px" }}>
+                        {slide?.imageUrl
+                          ? <img src={slide.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} />
+                          : <div style={{ width: "100%", height: "100%", background: "#1a1a1a" }} />
+                        }
+                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.7) 100%)" }} />
+                        {/* Slide numbers */}
+                        <div style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {(slides.length || 1) <= 1
+                            ? <span style={{ fontSize: "9px", fontFamily: "monospace", color: "#F7F4EE", fontWeight: 700, opacity: 1 }}>01</span>
+                            : slides.map((_, i) => (
+                              <span key={i} style={{ fontSize: "9px", fontFamily: "monospace", color: "#F7F4EE", fontWeight: 700, opacity: i === 0 ? 1 : 0.3 }}>
+                                {String(i + 1).padStart(2, "0")}
+                              </span>
+                            ))
+                          }
+                        </div>
+                        {/* Content */}
+                        <div style={{ position: "absolute", bottom: "20px", left: "32px", right: "12px" }}>
+                          <p style={{ fontSize: isMobile ? "18px" : "26px", fontWeight: 600, color: "#F7F4EE", fontFamily: "'Playfair Display', Georgia, serif", lineHeight: 0.95, marginBottom: "10px" }}>
+                            {slide?.headline || heroHeadline}
+                          </p>
+                          <button style={{ background: "transparent", color: "#F7F4EE", border: "1px solid #F7F4EE", padding: "6px 14px", fontSize: "9px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>
+                            {slide?.ctaText || heroCta} →
+                          </button>
+                        </div>
+                      </div>
+                      {/* Up Next bar */}
+                      {slides.length > 1 && (
+                        <div style={{ background: "rgba(0,0,0,0.8)", borderTop: "1px solid rgba(255,255,255,0.08)", display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px" }}>
+                          <div style={{ width: "32px", height: "32px", flexShrink: 0, overflow: "hidden", outline: "1px solid rgba(255,255,255,0.1)" }}>
+                            {slides[1]?.imageUrl
+                              ? <img src={slides[1].imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.7 }} />
+                              : <div style={{ width: "100%", height: "100%", background: "#1a1a1a" }} />
+                            }
+                          </div>
+                          <div>
+                            <p style={{ fontSize: "8px", fontWeight: 700, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.15em" }}>Up next</p>
+                            <p style={{ fontSize: "11px", fontWeight: 600, color: "#F7F4EE" }}>{slides[1]?.headline || storeName}</p>
+                          </div>
+                          <div style={{ marginLeft: "auto", display: "flex", gap: 0 }}>
+                            <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px", borderRight: "1px solid rgba(255,255,255,0.08)" }}>← Prev</span>
+                            <span style={{ fontSize: "9px", fontWeight: 600, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em", padding: "4px 8px" }}>Next →</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  <div style={{ position: "absolute", inset: "10px", border: "1px solid rgba(255,255,255,0.2)", pointerEvents: "none" }} />
+                  );
+                }
+                // Standard Lagos carousel
+                return (
+                  <div style={{ position: "relative", height: isMobile ? "200px" : "280px", overflow: "hidden", background: "#0E0E0E" }}>
+                    {slide?.imageUrl
+                      ? <img src={slide.imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.8 }} />
+                      : <div style={{ width: "100%", height: "100%", background: "#1a1a1a" }} />
+                    }
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 60%)" }} />
+                    <div style={{ position: "absolute", bottom: "20px", left: "24px", right: "24px", textAlign: "center" }}>
+                      <p style={{ fontSize: isMobile ? "18px" : "26px", fontWeight: 600, color: "#F7F4EE", fontFamily: "'Playfair Display', Georgia, serif", marginBottom: "10px" }}>
+                        {slide?.headline || heroHeadline}
+                      </p>
+                      <button style={{ background: "transparent", color: "#F7F4EE", border: "1px solid #F7F4EE", padding: "7px 16px", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>
+                        {slide?.ctaText || heroCta} →
+                      </button>
+                    </div>
+                    {slides.length > 1 && (
+                      <div style={{ position: "absolute", bottom: "8px", left: 0, right: 0, display: "flex", justifyContent: "center", gap: "5px" }}>
+                        {slides.map((_, i) => <div key={i} style={{ width: i === 0 ? "16px" : "6px", height: "2px", background: i === 0 ? "#F7F4EE" : "rgba(255,255,255,0.3)" }} />)}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              if (hl === "full-bleed") {
+                return (
+                  <div style={{ position: "relative", height: isMobile ? "220px" : "300px", overflow: "hidden", background: "#0E0E0E" }}>
+                    {heroImg ? <img src={heroImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", opacity: 0.75 }} /> : <div style={{ width: "100%", height: "100%", background: "#1a1a1a" }} />}
+                    <div style={{ position: "absolute", inset: 0, background: `rgba(0,0,0,${sec?.hero?.overlayOpacity ?? 0.55})` }} />
+                    <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "24px", textAlign: "center" }}>
+                      <h1 style={{ fontSize: isMobile ? "24px" : "36px", fontWeight: 600, color: "#F7F4EE", fontFamily: "'Playfair Display', Georgia, serif", lineHeight: 0.95, marginBottom: "12px" }}>{heroHeadline}</h1>
+                      {heroSub && <p style={{ fontSize: "12px", color: "rgba(247,244,238,0.55)", marginBottom: "18px" }}>{heroSub}</p>}
+                      <button style={{ background: "transparent", color: "#F7F4EE", border: "1px solid #F7F4EE", padding: "10px 22px", fontSize: "10px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>{heroCta} →</button>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (hl === "centered") {
+                return (
+                  <div style={{ padding: isMobile ? "40px 20px" : "64px 40px", textAlign: "center", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                    {sec?.hero?.eyebrow && <p style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: colors.primary, marginBottom: "12px" }}>{sec.hero.eyebrow}</p>}
+                    <h1 style={{ fontSize: isMobile ? "28px" : "44px", fontWeight: 600, color: "#F7F4EE", fontFamily: "'Playfair Display', Georgia, serif", lineHeight: 0.93, marginBottom: "14px" }}>{heroHeadline}</h1>
+                    {heroSub && <p style={{ fontSize: "13px", color: "rgba(247,244,238,0.5)", marginBottom: "20px", maxWidth: "320px", margin: "0 auto 20px", lineHeight: 1.5 }}>{heroSub}</p>}
+                    <button style={{ background: "transparent", color: "#F7F4EE", border: "1px solid #F7F4EE", padding: "11px 24px", fontSize: "11px", fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", cursor: "pointer" }}>{heroCta} →</button>
+                    {heroImg && <div style={{ marginTop: "24px", overflow: "hidden", maxHeight: "200px" }}><img src={heroImg} alt="" style={{ width: "100%", objectFit: "cover" }} /></div>}
+                  </div>
+                );
+              }
+
+              // Default: split
+              return (
+                <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.1fr 0.9fr", gap: isMobile ? "20px" : "32px", padding: isMobile ? "32px 20px" : "48px 32px", alignItems: "stretch" }}>
+                  <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                    {sec?.hero?.eyebrow && <p style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: colors.primary, marginBottom: "10px" }}>{sec.hero.eyebrow}</p>}
+                    <h1 style={{ fontSize: isMobile ? "30px" : "44px", fontWeight: 600, lineHeight: 0.98, letterSpacing: "-0.5px", color: "#F7F4EE", fontFamily: "'Playfair Display', Georgia, serif", marginBottom: "16px" }}>
+                      {heroHeadline}
+                    </h1>
+                    {heroSub && <p style={{ fontSize: "13px", lineHeight: 1.6, color: "rgba(247,244,238,0.55)", marginBottom: "22px", maxWidth: "320px" }}>{heroSub}</p>}
+                    <button style={{ background: "transparent", color: "#F7F4EE", border: "1px solid #F7F4EE", borderRadius: 0, padding: "12px 24px", fontSize: "11px", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", cursor: "pointer", alignSelf: "flex-start" }}>
+                      {heroCta} →
+                    </button>
+                  </div>
+                  <div style={{ position: "relative", aspectRatio: "4/5", overflow: "hidden" }}>
+                    {heroImg ? <img src={heroImg} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : (
+                      <div style={{ width: "100%", height: "100%", background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.1)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "28px", opacity: 0.2 }}>🖼</span>
+                        <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Hero image</p>
+                      </div>
+                    )}
+                    <div style={{ position: "absolute", inset: "10px", border: "1px solid rgba(255,255,255,0.2)", pointerEvents: "none" }} />
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             {sec && !sec.hero?.enabled && (
               <div style={{ padding: "12px 32px", textAlign: "center" }}>
                 <span style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>🖼 Hero section — enable it in the Sections panel</span>

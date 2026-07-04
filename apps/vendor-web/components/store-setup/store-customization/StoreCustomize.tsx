@@ -6,7 +6,7 @@ import {
   ChevronDown, Eye, Palette, Type, Globe, Image as ImageIcon,
   AlignLeft, Megaphone, Package, Phone, Save, Undo2, Plus, Trash2,
   GripVertical, Layout, Link2, Search, Layers, Mail, MapPin,
-  Share2,
+  Share2, Lock, Zap,
 } from "lucide-react";
 import {
   LivePreview, COLOR_PRESETS, FONT_PRESETS, FONT_FAMILIES,
@@ -15,6 +15,7 @@ import {
 import { storefrontApi, authApi } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { FileUpload } from "@/components/common/FileUpload";
+import { useSubscription } from "@/lib/swr/hooks";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -42,15 +43,22 @@ export interface ThemeConfig {
     nav: { items: NavMenuItem[]; };
     hero: {
       enabled: boolean;
-      layout: "split" | "centered" | "full-bleed";
+      layout: "split" | "centered" | "full-bleed" | "carousel";
       eyebrow?: string; headline: string; subheadline: string;
-      ctaText: string; secondaryCtaText?: string; imageUrl?: string;
-      overlayOpacity: number;
+      ctaText: string; ctaUrl?: string; secondaryCtaText?: string; secondaryCtaUrl?: string;
+      imageUrl?: string; overlayOpacity: number;
+      textPosition?: "bottom-left" | "center" | "bottom-right";
+      carouselStyle?: "normal" | "editorial";
+      carouselAnimation?: "slide" | "fade" | "zoom";
+      carouselSlides?: Array<{
+        id: string; imageUrl?: string; headline?: string; subheadline?: string;
+        ctaText?: string; ctaUrl?: string; textPosition?: "bottom-left" | "center" | "bottom-right";
+      }>;
     };
-    collections: { enabled: boolean; title: string; subtitle?: string; columns: 2 | 3 | 4; };
+    collections: { enabled: boolean; title: string; subtitle?: string; columns: 2 | 3 | 4; format: "grid" | "bento" | "split"; };
     featured: {
       enabled: boolean; title: string; subtitle?: string;
-      count: number; layout: "grid" | "carousel";
+      count: number; layout: "grid" | "carousel" | "bento" | "split";
     };
     newsletter: { enabled: boolean; headline: string; subtext: string; placeholder: string; };
     ctaBand: { enabled: boolean; headline: string; text: string; btnText: string; };
@@ -77,8 +85,8 @@ const DEFAULT_CONFIG: ThemeConfig = {
       { id: "1", label: "Shop", url: "/shop", type: "custom" },
       { id: "2", label: "Collections", url: "/collections", type: "custom" },
     ]},
-    hero: { enabled: false, layout: "split", headline: "Welcome to our store", subheadline: "Discover amazing products.", ctaText: "Shop now", overlayOpacity: 0.4 },
-    collections: { enabled: false, title: "Shop by collection", columns: 3 },
+    hero: { enabled: false, layout: "split", headline: "Welcome to our store", subheadline: "Discover amazing products.", ctaText: "Shop now", ctaUrl: "/shop", overlayOpacity: 0.4, textPosition: "center", carouselStyle: "normal", carouselAnimation: "slide", carouselSlides: [] },
+    collections: { enabled: false, title: "Shop by collection", columns: 3, format: "grid" },
     featured: { enabled: false, title: "Featured products", count: 6, layout: "grid" },
     newsletter: { enabled: false, headline: "Stay in the loop", subtext: "Get updates on new arrivals and exclusive deals.", placeholder: "Enter your email" },
     ctaBand: { enabled: false, headline: "Have a question?", text: "Message us on WhatsApp — we reply fast.", btnText: "Chat on WhatsApp" },
@@ -153,6 +161,36 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
   );
 }
 
+// ─── Tier gating ─────────────────────────────────────────────────────────────
+
+const PLAN_ORDER: Record<string, number> = { free: 0, starter: 1, growth: 2 };
+function planGte(current: string | undefined, required: string) {
+  return (PLAN_ORDER[current ?? "free"] ?? 0) >= (PLAN_ORDER[required] ?? 0);
+}
+
+function PlanGate({ required, current, label, children }: { required: string; current?: string; label?: string; children?: React.ReactNode }) {
+  if (planGte(current, required)) return <>{children}</>;
+  const planLabel = required.charAt(0).toUpperCase() + required.slice(1);
+  return (
+    <div className="rounded-[8px] border border-dashed p-3 flex flex-col items-center gap-1.5 text-center" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
+      <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "#fef3c7" }}>
+        <Lock className="w-3.5 h-3.5" style={{ color: "#f59e0b" }} />
+      </div>
+      <p className="text-[11px] font-bold" style={{ color: "#374151" }}>{label ?? `${planLabel} plan required`}</p>
+      <a href="/merchant/plans" className="text-[10px] font-bold px-3 py-1 rounded-[5px] text-white" style={{ background: "#1A7A42" }}>
+        Upgrade <Zap className="w-2.5 h-2.5 inline" />
+      </a>
+    </div>
+  );
+}
+
+const CTA_PAGES = [
+  { label: "Shop all", value: "/shop" },
+  { label: "Collections", value: "/collections" },
+  { label: "About", value: "/about" },
+  { label: "Contact", value: "/contact" },
+] as const;
+
 // ─── Panel components ─────────────────────────────────────────────────────────
 
 function AnnouncementPanel({ s, set }: { s: ThemeConfig["sections"]["announcement"]; set: (v: Partial<ThemeConfig["sections"]["announcement"]>) => void }) {
@@ -185,6 +223,7 @@ function HeaderPanel({ s, set, accessToken }: { s: ThemeConfig["sections"]["head
           label="Upload logo"
           hint="Drag & drop or click · PNG/SVG recommended"
           accessToken={accessToken}
+          purpose="logo"
           shape="square"
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
           maxMB={2}
@@ -293,45 +332,249 @@ function NavBuilder({ items, onChange }: { items: NavMenuItem[]; onChange: (item
   );
 }
 
-function HeroPanel({ s, set }: { s: ThemeConfig["sections"]["hero"]; set: (v: Partial<ThemeConfig["sections"]["hero"]>) => void }) {
+type HeroSlide = NonNullable<ThemeConfig["sections"]["hero"]["carouselSlides"]>[number];
+
+function SlideTextPositionPicker({ value, onChange }: { value?: string; onChange: (v: "bottom-left" | "center" | "bottom-right") => void }) {
+  const opts = [
+    { v: "bottom-left" as const, label: "↙ Left" },
+    { v: "center" as const, label: "⊡ Center" },
+    { v: "bottom-right" as const, label: "↘ Right" },
+  ];
+  return (
+    <div className="grid grid-cols-3 gap-1">
+      {opts.map(({ v, label }) => (
+        <button key={v} type="button" onClick={() => onChange(v)}
+          className="py-1 rounded-[5px] border text-[9px] font-bold transition-all"
+          style={{ borderColor: (value ?? "center") === v ? "#1A7A42" : "#e2e8f0", background: (value ?? "center") === v ? "#F0FAF3" : "#fff", color: (value ?? "center") === v ? "#1A7A42" : "#6b7280" }}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function CtaDestPicker({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
+  const isCustom = value && !CTA_PAGES.find(p => p.value === value);
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap gap-1">
+        {CTA_PAGES.map(p => (
+          <button key={p.value} type="button" onClick={() => onChange(p.value)}
+            className="px-2 py-1 text-[9px] font-bold rounded-[5px] border transition-all"
+            style={{ borderColor: value === p.value ? "#1A7A42" : "#e2e8f0", background: value === p.value ? "#F0FAF3" : "#fff", color: value === p.value ? "#1A7A42" : "#6b7280" }}>
+            {p.label}
+          </button>
+        ))}
+        <button type="button" onClick={() => onChange(isCustom ? (value ?? "") : "")}
+          className="px-2 py-1 text-[9px] font-bold rounded-[5px] border transition-all"
+          style={{ borderColor: isCustom ? "#1A7A42" : "#e2e8f0", background: isCustom ? "#F0FAF3" : "#fff", color: isCustom ? "#1A7A42" : "#6b7280" }}>
+          Custom
+        </button>
+      </div>
+      {isCustom && (
+        <TextInput value={value ?? ""} onChange={onChange} placeholder="https://… or /page" />
+      )}
+    </div>
+  );
+}
+
+function HeroPanel({ s, set, accessToken, planSlug, template }: {
+  s: ThemeConfig["sections"]["hero"];
+  set: (v: Partial<ThemeConfig["sections"]["hero"]>) => void;
+  accessToken: string;
+  planSlug?: string;
+  template: TemplateId;
+}) {
+  const slides = s.carouselSlides ?? [];
+  const addSlide = () => set({ carouselSlides: [...slides, { id: Date.now().toString(), ctaUrl: "/shop", textPosition: "center" }] });
+  const removeSlide = (id: string) => set({ carouselSlides: slides.filter(sl => sl.id !== id) });
+  const updateSlide = (id: string, patch: Partial<HeroSlide>) =>
+    set({ carouselSlides: slides.map(sl => sl.id === id ? { ...sl, ...patch } : sl) });
+
+  const hasStarter = planGte(planSlug, "starter");
+  const hasGrowth = planGte(planSlug, "growth");
+
   return (
     <div className="space-y-3 pt-1">
+
+      {/* Layout picker */}
       <Field label="Layout">
-        <div className="grid grid-cols-3 gap-1.5">
-          {(["split", "centered", "full-bleed"] as const).map((l) => (
-            <button key={l} type="button" onClick={() => set({ layout: l })}
-              className="py-1.5 rounded-[6px] border text-[10px] font-bold capitalize transition-all"
-              style={{ borderColor: s.layout === l ? "#1A7A42" : "#e2e8f0", background: s.layout === l ? "#F0FAF3" : "#fff", color: s.layout === l ? "#1A7A42" : "#6b7280" }}
-            >{l}</button>
+        <div className="grid grid-cols-2 gap-1.5">
+          {(["split", "centered", "full-bleed", "carousel"] as const).map((l) => {
+            const needsStarter = l === "carousel";
+            const locked = needsStarter && !hasStarter;
+            return (
+              <button key={l} type="button"
+                onClick={() => !locked && set({ layout: l })}
+                className="relative py-1.5 rounded-[6px] border text-[10px] font-bold capitalize transition-all"
+                style={{ borderColor: s.layout === l && !locked ? "#1A7A42" : "#e2e8f0", background: s.layout === l && !locked ? "#F0FAF3" : "#fff", color: locked ? "#d1d5db" : s.layout === l ? "#1A7A42" : "#6b7280", cursor: locked ? "not-allowed" : "pointer" }}>
+                {l === "full-bleed" ? "Full bleed" : l}
+                {locked && <Lock className="w-2.5 h-2.5 inline ml-1" style={{ color: "#d1d5db" }} />}
+              </button>
+            );
+          })}
+        </div>
+        {!hasStarter && (
+          <p className="text-[9px] mt-1" style={{ color: "#94a3b8" }}>
+            Carousel requires Starter plan.{" "}
+            <a href="/merchant/plans" className="font-bold" style={{ color: "#1A7A42" }}>Upgrade</a>
+          </p>
+        )}
+      </Field>
+
+      {/* ── Carousel settings ─────────────────────────── */}
+      {s.layout === "carousel" && (
+        <div className="space-y-3">
+
+          {/* Style: Normal vs Editorial (Lagos editorial = geometric dark panels feel) */}
+          <Field label="Carousel style">
+            <div className="grid grid-cols-2 gap-1.5">
+              {(["normal", "editorial"] as const).map((style) => {
+                const locked = style === "editorial" && !hasGrowth;
+                return (
+                  <button key={style} type="button"
+                    onClick={() => !locked && set({ carouselStyle: style })}
+                    className="py-1.5 rounded-[6px] border text-[10px] font-bold capitalize transition-all"
+                    style={{ borderColor: (s.carouselStyle ?? "normal") === style && !locked ? "#1A7A42" : "#e2e8f0", background: (s.carouselStyle ?? "normal") === style && !locked ? "#F0FAF3" : "#fff", color: locked ? "#d1d5db" : (s.carouselStyle ?? "normal") === style ? "#1A7A42" : "#6b7280", cursor: locked ? "not-allowed" : "pointer" }}>
+                    {style === "normal" ? "Standard" : template === "lagos" ? "Editorial" : "Bento panel"}
+                    {locked && <Lock className="w-2.5 h-2.5 inline ml-1" style={{ color: "#d1d5db" }} />}
+                  </button>
+                );
+              })}
+            </div>
+            {!hasGrowth && (
+              <p className="text-[9px] mt-1" style={{ color: "#94a3b8" }}>
+                Editorial style requires Growth plan.{" "}
+                <a href="/merchant/plans" className="font-bold" style={{ color: "#1A7A42" }}>Upgrade</a>
+              </p>
+            )}
+          </Field>
+
+          {/* Animation */}
+          {hasStarter ? (
+            <Field label="Slide transition">
+              <div className="grid grid-cols-3 gap-1.5">
+                {(["slide", "fade", "zoom"] as const).map(a => (
+                  <button key={a} type="button" onClick={() => set({ carouselAnimation: a })}
+                    className="py-1.5 rounded-[6px] border text-[10px] font-bold capitalize transition-all"
+                    style={{ borderColor: (s.carouselAnimation ?? "slide") === a ? "#1A7A42" : "#e2e8f0", background: (s.carouselAnimation ?? "slide") === a ? "#F0FAF3" : "#fff", color: (s.carouselAnimation ?? "slide") === a ? "#1A7A42" : "#6b7280" }}>
+                    {a}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          ) : (
+            <PlanGate required="starter" current={planSlug} label="Slide transitions (Starter plan)" />
+          )}
+
+          {/* Slides list */}
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold" style={{ color: "#374151" }}>Slides ({slides.length}/5)</p>
+            {slides.length < 5 && (
+              <button type="button" onClick={addSlide}
+                className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-[5px]"
+                style={{ background: "#F0FAF3", color: "#1A7A42" }}>
+                <Plus className="w-3 h-3" /> Add slide
+              </button>
+            )}
+          </div>
+          {slides.length === 0 && (
+            <p className="text-[11px] text-center py-3" style={{ color: "#94a3b8" }}>Add at least one slide to build your carousel.</p>
+          )}
+          {slides.map((sl, i) => (
+            <div key={sl.id} className="rounded-[8px] border p-3 space-y-2" style={{ borderColor: "#e2e8f0", background: "#fff" }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold" style={{ color: "#374151" }}>Slide {i + 1}</span>
+                <button type="button" onClick={() => removeSlide(sl.id)} className="p-0.5 rounded hover:bg-red-50">
+                  <Trash2 className="w-3.5 h-3.5" style={{ color: "#f87171" }} />
+                </button>
+              </div>
+              <div>
+                <FieldLabel>Image</FieldLabel>
+                <FileUpload
+                  value={sl.imageUrl}
+                  onChange={(url) => updateSlide(sl.id, { imageUrl: url })}
+                  label="Upload slide image"
+                  hint="16:9 landscape · Max 5 MB"
+                  accessToken={accessToken}
+                  purpose="banners"
+                  accept="image/png,image/jpeg,image/webp"
+                  maxMB={5}
+                />
+              </div>
+              <Field label="Headline">
+                <TextInput value={sl.headline ?? ""} onChange={(v) => updateSlide(sl.id, { headline: v || undefined })} placeholder="Shop the summer edit" />
+              </Field>
+              <Field label="Subheadline (optional)">
+                <TextInput value={sl.subheadline ?? ""} onChange={(v) => updateSlide(sl.id, { subheadline: v || undefined })} placeholder="New arrivals just dropped" />
+              </Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="CTA label">
+                  <TextInput value={sl.ctaText ?? ""} onChange={(v) => updateSlide(sl.id, { ctaText: v || undefined })} placeholder="Shop now" />
+                </Field>
+              </div>
+              <Field label="CTA goes to">
+                <CtaDestPicker value={sl.ctaUrl} onChange={(v) => updateSlide(sl.id, { ctaUrl: v })} />
+              </Field>
+              <Field label="Text position">
+                <SlideTextPositionPicker value={sl.textPosition} onChange={(v) => updateSlide(sl.id, { textPosition: v })} />
+              </Field>
+            </div>
           ))}
         </div>
-      </Field>
-      <Field label="Eyebrow text (optional)">
-        <TextInput value={s.eyebrow ?? ""} onChange={(v) => set({ eyebrow: v || undefined })} placeholder="New collection" />
-      </Field>
-      <Field label="Headline">
-        <TextInput value={s.headline} onChange={(v) => set({ headline: v })} placeholder="Welcome to our store" />
-      </Field>
-      <Field label="Subheadline">
-        <Textarea value={s.subheadline} onChange={(v) => set({ subheadline: v })} placeholder="A short description…" />
-      </Field>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label="Primary CTA">
-          <TextInput value={s.ctaText} onChange={(v) => set({ ctaText: v })} placeholder="Shop now" />
-        </Field>
-        <Field label="Secondary CTA">
-          <TextInput value={s.secondaryCtaText ?? ""} onChange={(v) => set({ secondaryCtaText: v || undefined })} placeholder="Learn more" />
-        </Field>
-      </div>
-      <Field label="Hero image URL">
-        <TextInput value={s.imageUrl ?? ""} onChange={(v) => set({ imageUrl: v || undefined })} placeholder="https://…/banner.jpg" />
-      </Field>
-      {s.layout === "full-bleed" && (
-        <Field label={`Overlay opacity: ${Math.round(s.overlayOpacity * 100)}%`}>
-          <input type="range" min={0} max={100} value={Math.round(s.overlayOpacity * 100)}
-            onChange={(e) => set({ overlayOpacity: Number(e.target.value) / 100 })}
-            className="w-full h-1.5 rounded-full accent-[#1A7A42]" />
-        </Field>
+      )}
+
+      {/* ── Non-carousel settings ─────────────────────── */}
+      {s.layout !== "carousel" && (
+        <>
+          <Field label="Eyebrow text (optional)">
+            <TextInput value={s.eyebrow ?? ""} onChange={(v) => set({ eyebrow: v || undefined })} placeholder="New collection" />
+          </Field>
+          <Field label="Headline">
+            <TextInput value={s.headline} onChange={(v) => set({ headline: v })} placeholder="Welcome to our store" />
+          </Field>
+          <Field label="Subheadline">
+            <Textarea value={s.subheadline} onChange={(v) => set({ subheadline: v })} placeholder="A short description…" />
+          </Field>
+          <Field label="Primary CTA label">
+            <TextInput value={s.ctaText} onChange={(v) => set({ ctaText: v })} placeholder="Shop now" />
+          </Field>
+          <Field label="CTA goes to">
+            <CtaDestPicker value={s.ctaUrl} onChange={(v) => set({ ctaUrl: v })} />
+          </Field>
+          <Field label="Secondary CTA (optional)">
+            <TextInput value={s.secondaryCtaText ?? ""} onChange={(v) => set({ secondaryCtaText: v || undefined })} placeholder="View collections" />
+          </Field>
+          <div>
+            <FieldLabel>Hero image</FieldLabel>
+            <FileUpload
+              value={s.imageUrl}
+              onChange={(url) => set({ imageUrl: url })}
+              label="Upload hero image"
+              hint="16:9 or wider · JPG/PNG/WebP · Max 5 MB"
+              accessToken={accessToken}
+              purpose="banners"
+              accept="image/png,image/jpeg,image/webp"
+              maxMB={5}
+            />
+          </div>
+          {(s.layout === "full-bleed" || s.layout === "centered") && (
+            hasStarter ? (
+              <Field label="Text position">
+                <SlideTextPositionPicker value={s.textPosition} onChange={(v) => set({ textPosition: v })} />
+              </Field>
+            ) : (
+              <PlanGate required="starter" current={planSlug} label="Text positioning (Starter plan)" />
+            )
+          )}
+          {s.layout === "full-bleed" && (
+            <Field label={`Overlay opacity: ${Math.round(s.overlayOpacity * 100)}%`}>
+              <input type="range" min={0} max={100} value={Math.round(s.overlayOpacity * 100)}
+                onChange={(e) => set({ overlayOpacity: Number(e.target.value) / 100 })}
+                className="w-full h-1.5 rounded-full accent-[#1A7A42]" />
+            </Field>
+          )}
+        </>
       )}
     </div>
   );
@@ -342,7 +585,17 @@ function CollectionsPanel({ s, set }: { s: ThemeConfig["sections"]["collections"
     <div className="space-y-3 pt-1">
       <Field label="Section title"><TextInput value={s.title} onChange={(v) => set({ title: v })} placeholder="Shop by collection" /></Field>
       <Field label="Subtitle (optional)"><TextInput value={s.subtitle ?? ""} onChange={(v) => set({ subtitle: v || undefined })} /></Field>
-      <Field label="Columns">
+      <Field label="Display format">
+        <div className="grid grid-cols-3 gap-1.5">
+          {(["grid", "bento", "split"] as const).map((f) => (
+            <button key={f} type="button" onClick={() => set({ format: f })}
+              className="py-1.5 rounded-[6px] border text-[10px] font-bold capitalize transition-all"
+              style={{ borderColor: s.format === f ? "#1A7A42" : "#e2e8f0", background: s.format === f ? "#F0FAF3" : "#fff", color: s.format === f ? "#1A7A42" : "#6b7280" }}
+            >{f}</button>
+          ))}
+        </div>
+      </Field>
+      <Field label="Columns (grid mode)">
         <div className="flex gap-2">
           {([2, 3, 4] as const).map((n) => (
             <button key={n} type="button" onClick={() => set({ columns: n })}
@@ -372,11 +625,11 @@ function FeaturedPanel({ s, set }: { s: ThemeConfig["sections"]["featured"]; set
           ))}
         </div>
       </Field>
-      <Field label="Display layout">
-        <div className="grid grid-cols-2 gap-2">
-          {(["grid", "carousel"] as const).map((l) => (
+      <Field label="Display format">
+        <div className="grid grid-cols-2 gap-1.5">
+          {(["grid", "carousel", "bento", "split"] as const).map((l) => (
             <button key={l} type="button" onClick={() => set({ layout: l })}
-              className="py-1.5 rounded-[6px] border text-[11px] font-bold capitalize transition-all"
+              className="py-1.5 rounded-[6px] border text-[10px] font-bold capitalize transition-all"
               style={{ borderColor: s.layout === l ? "#1A7A42" : "#e2e8f0", background: s.layout === l ? "#F0FAF3" : "#fff", color: s.layout === l ? "#1A7A42" : "#6b7280" }}
             >{l}</button>
           ))}
@@ -542,6 +795,8 @@ export default function StoreCustomize() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const setAuth = useAuthStore((s) => s.setAuth);
   const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+  const { data: subscription } = useSubscription();
+  const planSlug: string = subscription?.plan?.slug ?? "free";
 
   const [store, setStore] = useState<{ id: string; name: string; slug: string } | null>(null);
   const [storeLoading, setStoreLoading] = useState(true);
@@ -558,18 +813,20 @@ export default function StoreCustomize() {
 
   useEffect(() => {
     if (!accessToken) return;
-    storefrontApi.getMyStore(accessToken).then((s) => {
+
+    function applyStore(s: { id: string; name: string; slug: string; theme_config?: string | null }) {
       setStore({ id: s.id, name: s.name, slug: s.slug });
       setStoreLoading(false);
       if (s.theme_config) {
         try {
           const cfg = JSON.parse(s.theme_config) as ThemeConfig;
-          // Merge with defaults so new fields are populated
           const merged: ThemeConfig = {
             ...DEFAULT_CONFIG,
             ...cfg,
-            sections: { ...DEFAULT_CONFIG.sections, ...cfg.sections,
-              footer: { ...DEFAULT_CONFIG.sections.footer, ...cfg.sections?.footer,
+            sections: {
+              ...DEFAULT_CONFIG.sections, ...cfg.sections,
+              footer: {
+                ...DEFAULT_CONFIG.sections.footer, ...cfg.sections?.footer,
                 contact: { ...DEFAULT_CONFIG.sections.footer.contact, ...cfg.sections?.footer?.contact },
                 social: { ...DEFAULT_CONFIG.sections.footer.social, ...cfg.sections?.footer?.social },
                 customLinks: cfg.sections?.footer?.customLinks ?? DEFAULT_CONFIG.sections.footer.customLinks,
@@ -582,8 +839,24 @@ export default function StoreCustomize() {
           setPublished(merged);
         } catch { /* use defaults */ }
       }
-    }).catch(() => { setStoreLoading(false); });
-  }, [accessToken]);
+    }
+
+    storefrontApi.getMyStore(accessToken).then(applyStore).catch(async (e: unknown) => {
+      const msg = e instanceof Error ? e.message : "";
+      if (msg.includes("401") || msg.toLowerCase().includes("unauthorized")) {
+        try {
+          const fresh = await authApi.refreshTokens();
+          setAuth(fresh.user, fresh.access_token);
+          const s = await storefrontApi.getMyStore(fresh.access_token);
+          applyStore(s);
+        } catch {
+          setStoreLoading(false);
+        }
+      } else {
+        setStoreLoading(false);
+      }
+    });
+  }, [accessToken]); // setAuth is a stable Zustand setter — safe to omit from deps
 
   // setIsDirty must be called outside the setDraft functional updater —
   // calling state setters inside another state setter's updater is a React anti-pattern
@@ -760,7 +1033,7 @@ export default function StoreCustomize() {
                           {def.key === "announcement" && <AnnouncementPanel s={draft.sections.announcement} set={(v) => setSection("announcement", v)} />}
                           {def.key === "header" && <HeaderPanel s={draft.sections.header} set={(v) => setSection("header", v)} accessToken={accessToken ?? ""} />}
                           {def.key === "nav" && <NavBuilder items={draft.sections.nav.items} onChange={(items) => setSection("nav", { items })} />}
-                          {def.key === "hero" && <HeroPanel s={draft.sections.hero} set={(v) => setSection("hero", v)} />}
+                          {def.key === "hero" && <HeroPanel s={draft.sections.hero} set={(v) => setSection("hero", v)} accessToken={accessToken ?? ""} planSlug={planSlug} template={draft.template} />}
                           {def.key === "collections" && <CollectionsPanel s={draft.sections.collections} set={(v) => setSection("collections", v)} />}
                           {def.key === "featured" && <FeaturedPanel s={draft.sections.featured} set={(v) => setSection("featured", v)} />}
                           {def.key === "newsletter" && <NewsletterPanel s={draft.sections.newsletter} set={(v) => setSection("newsletter", v)} />}

@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import EkoShop from "@/components/storefront/eko/EkoShop";
 import LagosShop from "@/components/storefront/lagos/LagosShop";
 import type { StorefrontProduct, ThemeConfig } from "@/app/storefront/[slug]/page";
+
+export const metadata: Metadata = { title: "Shop" };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
