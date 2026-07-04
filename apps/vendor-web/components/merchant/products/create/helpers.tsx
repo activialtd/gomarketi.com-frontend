@@ -9,7 +9,7 @@ import {
   GripVertical,
   Trash2,
 } from "lucide-react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useFieldArray } from "react-hook-form";
 
 export const CATEGORIES = [
@@ -198,7 +198,8 @@ const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 interface UploadState {
   id: string;
   name: string;
-  progress: number; // 0–100, -1 = error
+  previewUrl: string; // local object URL for instant preview
+  progress: number;   // 0–100, -1 = error
   error?: string;
   retries: number;
 }
@@ -227,7 +228,7 @@ async function uploadToR2(
         xhr.open("PUT", upload_url);
         xhr.setRequestHeader("Content-Type", file.type);
         xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100)); };
-        xhr.onload = () => xhr.status === 200 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
         xhr.onerror = () => reject(new Error("Network error"));
         xhr.send(file);
       });
@@ -256,8 +257,14 @@ export function ImageUpload({
   const [uploading, setUploading] = useState<UploadState[]>([]);
   const [dragging, setDragging] = useState(false);
 
-  const remaining = MAX_IMAGES - images.length;
-  const isAtLimit = images.length >= MAX_IMAGES;
+  const totalSlots = images.length + uploading.length;
+  const remaining = MAX_IMAGES - totalSlots;
+  const isAtLimit = totalSlots >= MAX_IMAGES;
+
+  // Revoke object URLs on unmount to avoid memory leaks.
+  useEffect(() => {
+    return () => { uploading.forEach((u) => URL.revokeObjectURL(u.previewUrl)); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function processFiles(files: File[]) {
     const toUpload = files
@@ -267,6 +274,7 @@ export function ImageUpload({
     const states: UploadState[] = toUpload.map((f) => ({
       id: `${f.name}-${Date.now()}-${Math.random()}`,
       name: f.name,
+      previewUrl: URL.createObjectURL(f),
       progress: 0,
       retries: 0,
     }));
@@ -274,7 +282,7 @@ export function ImageUpload({
 
     await Promise.all(
       toUpload.map(async (file, idx) => {
-        const id = states[idx].id;
+        const { id, previewUrl } = states[idx];
         try {
           const url = await uploadToR2(
             file,
@@ -283,6 +291,7 @@ export function ImageUpload({
           );
           onAdd(url);
           setUploading((prev) => prev.filter((u) => u.id !== id));
+          URL.revokeObjectURL(previewUrl);
         } catch (err) {
           const msg = err instanceof Error ? err.message : "Upload failed";
           setUploading((prev) => prev.map((u) => u.id === id ? { ...u, progress: -1, error: msg } : u));
@@ -295,6 +304,8 @@ export function ImageUpload({
     if (e.target.files) processFiles(Array.from(e.target.files));
     e.target.value = "";
   }
+
+  const showGrid = images.length > 0 || uploading.length > 0;
 
   return (
     <div className="space-y-3">
@@ -324,31 +335,12 @@ export function ImageUpload({
       )}
       <input ref={fileRef} type="file" accept={ACCEPT} multiple className="hidden" onChange={handleFileInput} />
 
-      {/* Uploading progress items */}
-      {uploading.map((u) => (
-        <div key={u.id} className="flex items-center gap-3 px-3 py-2 rounded-[8px] border" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold truncate" style={{ color: "#374151" }}>{u.name}</p>
-            {u.progress >= 0 ? (
-              <div className="mt-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#f1f5f9" }}>
-                <div className="h-full rounded-full transition-all" style={{ width: `${u.progress}%`, background: "#1A7A42" }} />
-              </div>
-            ) : (
-              <p className="text-[10px] mt-0.5" style={{ color: "#ef4444" }}>{u.error}</p>
-            )}
-          </div>
-          {u.progress >= 0
-            ? <span className="text-[10px] font-bold shrink-0" style={{ color: "#94a3b8" }}>{u.progress}%</span>
-            : <button type="button" onClick={() => { setUploading((p) => p.filter((x) => x.id !== u.id)); }} className="text-[10px] font-bold shrink-0" style={{ color: "#ef4444" }}>✕</button>
-          }
-        </div>
-      ))}
-
-      {/* Preview grid */}
-      {images.length > 0 && (
+      {/* Grid: completed images + in-flight uploads shown as live previews */}
+      {showGrid && (
         <div className="grid grid-cols-4 gap-2">
+          {/* Completed uploads */}
           {images.map((src, i) => (
-            <div key={i} className="relative aspect-square rounded-[8px] overflow-hidden group border" style={{ borderColor: "#e2e8f0" }}>
+            <div key={src} className="relative aspect-square rounded-[8px] overflow-hidden group border" style={{ borderColor: "#e2e8f0" }}>
               <img src={src} alt="" className="w-full h-full object-cover" />
               {i === 0 && (
                 <div className="absolute top-1 left-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "#1A7A42", color: "#fff" }}>
@@ -365,6 +357,51 @@ export function ImageUpload({
               </button>
             </div>
           ))}
+
+          {/* In-flight uploads — show local preview with progress/error overlay */}
+          {uploading.map((u) => (
+            <div key={u.id} className="relative aspect-square rounded-[8px] overflow-hidden border" style={{ borderColor: "#e2e8f0" }}>
+              <img
+                src={u.previewUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                style={{ opacity: u.progress === -1 ? 0.35 : 0.65 }}
+              />
+
+              {/* Progress bar at bottom */}
+              {u.progress >= 0 && (
+                <div className="absolute bottom-0 inset-x-0 p-1.5">
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.35)" }}>
+                    <div
+                      className="h-full rounded-full transition-all duration-150"
+                      style={{ width: `${u.progress}%`, background: "#fff" }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Error overlay */}
+              {u.progress === -1 && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-2" style={{ background: "rgba(239,68,68,0.12)" }}>
+                  <AlertCircle className="w-4 h-4 shrink-0" style={{ color: "#ef4444" }} />
+                  <p className="text-[9px] text-center leading-tight" style={{ color: "#dc2626" }}>{u.error}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      URL.revokeObjectURL(u.previewUrl);
+                      setUploading((p) => p.filter((x) => x.id !== u.id));
+                    }}
+                    className="text-[9px] font-bold mt-0.5"
+                    style={{ color: "#dc2626" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* Add more slot */}
           {!isAtLimit && (
             <button
               type="button"

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ShoppingBag, Plus, Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
@@ -12,18 +12,25 @@ function fmtPrice(kobo: number): string {
 export function ProductCard({
   product,
   index = 0,
-  slug = "",
 }: {
   product: StorefrontProduct;
   index?: number;
-  slug?: string;
+  slug?: string; // kept for call-site compatibility
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const hasImage = product.images.length > 0;
 
-  const productHref = slug
-    ? `/storefront/${slug}/products/${product.id}`
-    : `/products/${product.id}`;
+  // When the image is already in the browser cache it decodes synchronously
+  // before React attaches onLoad, so the handler never fires. Check img.complete
+  // after mount to catch that case.
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setImgLoaded(true);
+    }
+  }, []);
+
+  const productHref = `/products/${product.id}`;
 
   return (
     <Link
@@ -40,9 +47,11 @@ export function ProductCard({
 
           {hasImage ? (
             <img
+              ref={imgRef}
               src={product.images[0]}
               alt={product.name}
               onLoad={() => setImgLoaded(true)}
+              onError={() => setImgLoaded(true)}
               className={`h-full w-full object-cover transition-all duration-700 ease-out group-hover:scale-[1.06] ${imgLoaded ? "opacity-100" : "opacity-0"}`}
             />
           ) : (

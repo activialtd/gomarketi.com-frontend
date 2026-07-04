@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
@@ -18,7 +18,14 @@ export function LagosProductCard({
   tall?: boolean;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const hasImage = product.images.length > 0;
+
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setImgLoaded(true);
+    }
+  }, []);
 
   return (
     <Link
@@ -33,9 +40,11 @@ export function LagosProductCard({
 
         {hasImage ? (
           <img
+            ref={imgRef}
             src={product.images[0]}
             alt={product.name}
             onLoad={() => setImgLoaded(true)}
+            onError={() => setImgLoaded(true)}
             className={`h-full w-full object-cover transition-all duration-[900ms] ease-out group-hover:scale-[1.04] ${imgLoaded ? "opacity-100" : "opacity-0"}`}
           />
         ) : (

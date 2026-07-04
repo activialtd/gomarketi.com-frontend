@@ -30,8 +30,11 @@ import {
   analyticsApi,
   walletApi,
   crmApi,
+  campaignsApi,
+  paymentGatewaysApi,
   storefrontApi,
   identityApi,
+  staffApi,
   type PlanResp,
 } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -127,6 +130,15 @@ export function useTopProducts(limit = 5) {
   );
 }
 
+export function useRevenueTrend(days = 30) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useSWR(
+    accessToken ? `analytics:revenue-trend:${days}` : null,
+    () => analyticsApi.getRevenueTrend(days, tok()),
+    { revalidateOnFocus: false, dedupingInterval: 120_000 } // 2 min
+  );
+}
+
 // ── Wallet ────────────────────────────────────────────────────────────────────
 
 export function useWallet() {
@@ -187,6 +199,51 @@ export function usePlans() {
   );
 }
 
+// ── Newsletter subscribers ────────────────────────────────────────────────────
+
+export function useSubscribers(params: { page?: number; per_page?: number } = {}) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const key = accessToken ? `subscribers:${JSON.stringify(params)}` : null;
+  return useSWR(
+    key,
+    () => crmApi.listSubscribers({ per_page: 100, ...params }, tok()),
+    { revalidateOnFocus: false, dedupingInterval: 60_000 }
+  );
+}
+
+// ── Email campaigns ───────────────────────────────────────────────────────────
+
+export function useCampaigns() {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useSWR(
+    accessToken ? "campaigns" : null,
+    () => campaignsApi.list(tok()),
+    { revalidateOnFocus: false, dedupingInterval: 30_000 }
+  );
+}
+
+// ── Payment gateways ──────────────────────────────────────────────────────────
+
+export function usePaymentGateways() {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useSWR(
+    accessToken ? "payment-gateways" : null,
+    () => paymentGatewaysApi.list(tok()),
+    { revalidateOnFocus: false, dedupingInterval: 300_000 } // 5 min
+  );
+}
+
+// ── Staff ─────────────────────────────────────────────────────────────────────
+
+export function useStaff() {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useSWR(
+    accessToken ? "staff" : null,
+    () => staffApi.list(tok()),
+    { revalidateOnFocus: false, dedupingInterval: 60_000 }
+  );
+}
+
 // ── Invalidation helpers ──────────────────────────────────────────────────────
 // Call these after mutations to force an immediate fresh fetch.
 
@@ -200,33 +257,40 @@ export const invalidate = {
   wallet: () => mutate("wallet:balance"),
   store: () => mutate("store:mine"),
   vendorProfile: () => mutate("identity:vendor-profile"),
+  subscribers: () => mutate((key: string) => key?.startsWith("subscribers"), undefined, { revalidate: true }),
+  campaigns: () => mutate("campaigns"),
+  paymentGateways: () => mutate("payment-gateways"),
+  staff: () => mutate("staff"),
 };
 
 // ── SSE real-time events ──────────────────────────────────────────────────────
 
-const SSE_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-const SSE_MAX_RETRIES = 5;       // give up SSE after 5 consecutive failures
-const SSE_FALLBACK_INTERVAL = 60_000; // poll every 60s after SSE gives up
+const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(
+  /^http/,
+  "ws",
+);
+const WS_MAX_RETRIES = 5;
+const WS_FALLBACK_INTERVAL = 60_000;
 
 /**
- * useOrderEvents — subscribes to the orders SSE stream for real-time
+ * useOrderEvents — subscribes to the orders WebSocket stream for real-time
  * notifications. Replaces polling: the server pushes a tiny event only when
  * an order or wallet balance actually changes.
  *
  * Fault-tolerance design:
- *  - Reconnects automatically after disconnect (EventSource native behaviour)
- *  - Sends Last-Event-ID on reconnect so the server can replay missed events
- *  - Random jitter (0–3s) on reconnect to prevent thundering-herd after
- *    a service restart with 10k concurrent vendors
- *  - After SSE_MAX_RETRIES consecutive failures, falls back to 60s polling
- *    so the dashboard still updates even if SSE is broken
- *  - Polling is disabled while SSE is healthy (zero wasted requests)
+ *  - Reconnects automatically with exponential backoff + jitter on close
+ *  - Sends ?last_id= on reconnect so the server can replay missed events
+ *  - After WS_MAX_RETRIES consecutive failures, falls back to 60s polling
+ *    so the dashboard still updates even if WebSocket is broken
+ *  - Polling is disabled while WebSocket is healthy (zero wasted requests)
  */
 export function useOrderEvents() {
   const accessToken = useAuthStore.getState().accessToken;
   const retryCount = useRef(0);
+  const lastIdRef = useRef("");
   const fallbackTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sourceRef = useRef<EventSource | null>(null);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
 
   const stopFallback = useCallback(() => {
     if (fallbackTimer.current) {
@@ -236,68 +300,90 @@ export function useOrderEvents() {
   }, []);
 
   const startFallback = useCallback(() => {
-    if (fallbackTimer.current) return; // already running
-    console.warn("[SSE] switched to 60s polling fallback after repeated failures");
+    if (fallbackTimer.current) return;
+    console.warn("[WS] switched to 60s polling fallback after repeated failures");
     fallbackTimer.current = setInterval(() => {
       invalidate.orders();
       invalidate.wallet();
       invalidate.analytics();
-    }, SSE_FALLBACK_INTERVAL);
+    }, WS_FALLBACK_INTERVAL);
   }, []);
 
   const connect = useCallback(() => {
     if (!accessToken) return;
 
-    // Close any existing connection first.
-    sourceRef.current?.close();
+    // Null wsRef BEFORE closing so the old socket's onclose fires with
+    // wsRef.current !== ws and skips the reconnect logic.
+    const prev = wsRef.current;
+    wsRef.current = null;
+    prev?.close();
 
-    // EventSource doesn't support custom headers — token goes in the query param.
-    const url = `${SSE_BASE}/v1/orders/events?token=${encodeURIComponent(accessToken)}`;
-    const source = new EventSource(url);
-    sourceRef.current = source;
+    const params = new URLSearchParams({ token: accessToken });
+    if (lastIdRef.current) params.set("last_id", lastIdRef.current);
+    const ws = new WebSocket(`${WS_BASE}/v1/orders/ws?${params}`);
+    wsRef.current = ws;
 
-    source.addEventListener("connected", () => {
-      // Successful (re)connect — reset retry counter and cancel fallback polling.
+    ws.onopen = () => {
       retryCount.current = 0;
       stopFallback();
-    });
+    };
 
-    source.addEventListener("order_created", () => {
-      invalidate.orders();
-      invalidate.wallet();
-      invalidate.analytics();
-    });
+    ws.onmessage = (event) => {
+      try {
+        const msg: { type: string; id?: string } = JSON.parse(event.data as string);
+        if (msg.id) lastIdRef.current = msg.id;
+        switch (msg.type) {
+          case "order_created":
+            invalidate.orders();
+            invalidate.wallet();
+            invalidate.analytics();
+            break;
+          case "order_updated":
+            invalidate.orders();
+            invalidate.analytics();
+            break;
+          case "wallet_updated":
+            invalidate.wallet();
+            break;
+        }
+      } catch {
+        // ignore malformed frames
+      }
+    };
 
-    source.addEventListener("order_updated", () => {
-      invalidate.orders();
-      invalidate.analytics();
-    });
+    ws.onerror = () => {
+      // onclose always fires after onerror — handle reconnect there.
+    };
 
-    source.addEventListener("wallet_updated", () => {
-      invalidate.wallet();
-    });
-
-    source.onerror = () => {
-      source.close();
-      sourceRef.current = null;
+    ws.onclose = () => {
+      // If wsRef no longer points to this socket, it was either superseded by
+      // a newer connect() call or deliberately closed by the cleanup function.
+      // Either way, do not schedule a reconnect.
+      if (wsRef.current !== ws) return;
+      wsRef.current = null;
       retryCount.current += 1;
 
-      if (retryCount.current >= SSE_MAX_RETRIES) {
+      if (retryCount.current >= WS_MAX_RETRIES) {
         startFallback();
-        return; // stop trying SSE — fallback polling takes over
+        return;
       }
 
-      // Jitter: random delay 0–3s so 10k clients don't all reconnect at once
-      // after a service restart.
-      const jitter = Math.random() * 3000;
-      setTimeout(connect, jitter);
+      // Exponential backoff capped at 30s, plus up to 1s of jitter.
+      const delay =
+        Math.min(1000 * 2 ** retryCount.current, 30_000) + Math.random() * 1000;
+      reconnectTimer.current = setTimeout(connect, delay);
     };
   }, [accessToken, startFallback, stopFallback]);
 
   useEffect(() => {
     connect();
     return () => {
-      sourceRef.current?.close();
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      // Null wsRef BEFORE closing so onclose sees it as superseded and
+      // does not schedule a reconnect into the dead component.
+      const closing = wsRef.current;
+      wsRef.current = null;
+      closing?.close();
       stopFallback();
     };
   }, [connect]);

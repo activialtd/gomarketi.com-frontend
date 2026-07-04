@@ -86,7 +86,7 @@ export default async function CategoryPage({
     getProductsByCategory(storeId!, categoryId),
   ]);
 
-  const shopUrl = `/storefront/${slug}/shop`;
+  const shopUrl = "/shop";
 
   return (
     <div style={{ minHeight: '60vh', background: '#fff' }}>

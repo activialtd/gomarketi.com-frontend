@@ -3,10 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, ChevronDown, Store, HelpCircle, LogOut } from "lucide-react";
+import { Settings, ChevronDown, Store, HelpCircle, LogOut, ShieldCheck } from "lucide-react";
 import { ROUTES } from "@/lib/config/routes";
 import { cn } from "@gomarket/ui";
 import { NAV, NavItem } from "@/lib/config/sidebar";
+import { useAuthStore, type StaffRole } from "@/store/useAuthStore";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -14,8 +15,23 @@ interface SidebarProps {
   onSignOut?: () => void;
 }
 
+const ROLE_LABELS: Record<StaffRole, string> = {
+  manager: "Manager",
+  fulfillment: "Fulfillment",
+  support: "Support",
+  analytics_only: "Analytics",
+};
+
+function canSeeItem(item: NavItem, staffRole: StaffRole | null): boolean {
+  if (staffRole === null) return true; // vendor — sees everything
+  if (!item.allowedRoles) return false; // vendor-only section
+  return item.allowedRoles.includes(staffRole);
+}
+
 export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
   const pathname = usePathname();
+  const staffRole = useAuthStore((s) => s.staffRole);
+  const user = useAuthStore((s) => s.user);
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(["Products", "Orders"]),
   );
@@ -68,26 +84,40 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
         >
           <div
             className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0"
-            style={{ background: "rgba(255,255,255,0.12)" }}
+            style={{ background: staffRole ? "rgba(124,58,237,0.3)" : "rgba(255,255,255,0.12)" }}
           >
-            <Store className="w-[17px] h-[17px]" style={{ color: "#fff" }} />
+            {staffRole
+              ? <ShieldCheck className="w-[17px] h-[17px]" style={{ color: "#c4b5fd" }} />
+              : <Store className="w-[17px] h-[17px]" style={{ color: "#fff" }} />}
           </div>
           <div>
             <p className="text-[15px] font-extrabold tracking-tight text-white leading-none">
               GoMarket
             </p>
-            <p
-              className="text-[10px] font-medium mt-0.5"
-              style={{ color: "rgba(255,255,255,0.4)" }}
-            >
-              Vendor dashboard
+            <p className="text-[10px] font-medium mt-0.5" style={{ color: staffRole ? "#c4b5fd" : "rgba(255,255,255,0.4)" }}>
+              {staffRole ? `${ROLE_LABELS[staffRole]} · Staff` : "Vendor dashboard"}
             </p>
           </div>
         </div>
 
+        {/* ── Staff identity banner ─────────────────────────── */}
+        {staffRole && user && (
+          <div style={{ margin: "0 12px 0", padding: "10px 12px", borderRadius: "10px", background: "rgba(124,58,237,0.15)", border: "1px solid rgba(124,58,237,0.25)", marginTop: "12px" }}>
+            <p style={{ margin: 0, fontSize: "10px", fontWeight: 700, color: "#c4b5fd", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              Signed in as staff
+            </p>
+            <p style={{ margin: "2px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.75)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {user.email ?? "Staff member"}
+            </p>
+          </div>
+        )}
+
         {/* ── Nav ───────────────────────────────────────────── */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-0.5">
-          {NAV.map((section, si) => (
+          {NAV.map((section, si) => {
+            const visibleItems = section.items.filter((item) => canSeeItem(item, staffRole));
+            if (visibleItems.length === 0) return null;
+            return (
             <div key={si} className={si > 0 ? "pt-4" : ""}>
               {/* Section header */}
               {section.title && (
@@ -103,7 +133,7 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
               )}
 
               <div className="space-y-0.5">
-                {section.items.map((item) => {
+                {visibleItems.map((item) => {
                   const sectionActive = isSectionActive(item);
                   const open = expanded.has(item.label);
                   const hasChildren = !!item.children?.length;
@@ -263,7 +293,8 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
                 })}
               </div>
             </div>
-          ))}
+          );
+          })}
         </nav>
 
         {/* ── Bottom actions ─────────────────────────────────── */}
@@ -272,11 +303,8 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
         >
           {[
-            {
-              href: ROUTES.MERCHANT.SETTINGS,
-              Icon: Settings,
-              label: "Settings",
-            },
+            // Settings is vendor-only — staff manage via store owner
+            ...(!staffRole ? [{ href: ROUTES.MERCHANT.SETTINGS, Icon: Settings, label: "Settings" }] : []),
             {
               href: ROUTES.MERCHANT.HELP,
               Icon: HelpCircle,

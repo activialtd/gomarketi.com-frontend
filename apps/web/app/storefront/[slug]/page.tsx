@@ -11,10 +11,19 @@ export interface ThemeSections {
   announcement?: { enabled?: boolean; text?: string; bgColor?: string; textColor?: string; dismissible?: boolean };
   header?: { logoUrl?: string; sticky?: boolean; showSearch?: boolean; showStoreName?: boolean };
   nav?: { items?: Array<{ id: string; label: string; url: string }> };
-  hero?: { enabled?: boolean; headline?: string; subheadline?: string; ctaText?: string; secondaryCtaText?: string; imageUrl?: string; eyebrow?: string; layout?: string; overlayOpacity?: number };
-  collections?: { enabled?: boolean; title?: string; subtitle?: string; columns?: number };
+  hero?: {
+    enabled?: boolean; layout?: string; eyebrow?: string;
+    headline?: string; subheadline?: string;
+    ctaText?: string; ctaUrl?: string; secondaryCtaText?: string; secondaryCtaUrl?: string;
+    imageUrl?: string; overlayOpacity?: number;
+    textPosition?: "bottom-left" | "center" | "bottom-right";
+    carouselStyle?: "normal" | "editorial";
+    carouselAnimation?: "slide" | "fade" | "zoom";
+    carouselSlides?: Array<{ id: string; imageUrl?: string; headline?: string; subheadline?: string; ctaText?: string; ctaUrl?: string; textPosition?: "bottom-left" | "center" | "bottom-right" }>;
+  };
+  collections?: { enabled?: boolean; title?: string; subtitle?: string; columns?: number; format?: string };
   featured?: { enabled?: boolean; title?: string; subtitle?: string; count?: number; layout?: string };
-  newsletter?: { enabled?: boolean; headline?: string; subtext?: string; placeholder?: string };
+  newsletter?: { enabled?: boolean; eyebrow?: string; headline?: string; subtext?: string; placeholder?: string };
   ctaBand?: { enabled?: boolean; headline?: string; text?: string; btnText?: string };
   footer?: {
     tagline?: string; showPoweredBy?: boolean; copyright?: string;
@@ -31,6 +40,7 @@ export interface ThemeConfig {
   colors: { primary: string; secondary: string; bg: string; text: string };
   font: string;
   sections: ThemeSections;
+  seo?: { metaTitle?: string; metaDescription?: string };
 }
 
 export interface StoreData {
@@ -91,8 +101,9 @@ export async function generateMetadata({
   const store = await getStore(slug);
   if (!store) return { title: "Store not found" };
   return {
-    title: store.name,
-    description: store.tagline ?? `Shop at ${store.name} on GoMarketi`,
+    // Use absolute so the layout template doesn't produce "StoreName | StoreName"
+    title: { absolute: store.name },
+    description: store.tagline ?? `Shop at ${store.name}`,
   };
 }
 

@@ -22,8 +22,13 @@ export function proxy(req: NextRequest) {
   }
 
   if (subdomain && !RESERVED.has(subdomain)) {
-    url.pathname = `/storefront/${subdomain}${url.pathname === "/" ? "" : url.pathname}`;
-    return NextResponse.rewrite(url);
+    const alreadyRouted =
+      url.pathname === `/storefront/${subdomain}` ||
+      url.pathname.startsWith(`/storefront/${subdomain}/`);
+    if (!alreadyRouted) {
+      url.pathname = `/storefront/${subdomain}${url.pathname === "/" ? "" : url.pathname}`;
+      return NextResponse.rewrite(url);
+    }
   }
 
   // ── Custom vendor domain: cobi.com (not a gomarketi.com subdomain) ───────
