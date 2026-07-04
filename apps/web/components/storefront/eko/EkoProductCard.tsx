@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { ShoppingBag, Plus, Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
@@ -17,6 +18,7 @@ export function ProductCard({
   index?: number;
   slug?: string; // kept for call-site compatibility
 }) {
+  const params = useParams<{ slug?: string }>();
   const [imgLoaded, setImgLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const hasImage = product.images.length > 0;
@@ -30,7 +32,9 @@ export function ProductCard({
     }
   }, []);
 
-  const productHref = `/products/${product.id}`;
+  const productHref = params.slug
+    ? `/storefront/${params.slug}/products/${product.id}`
+    : `/products/${product.id}`;
 
   return (
     <Link
