@@ -65,8 +65,6 @@ export function LoginForm() {
         setAuthSession();
         if (!resp.user.is_email_verified) {
           router.push(`${ROUTES.AUTH.SIGNUP}?email=${encodeURIComponent(data.email)}`);
-        } else if (!resp.user.profile_completed) {
-          router.push(ROUTES.ONBOARDING.WELCOME);
         } else {
           router.push(ROUTES.MERCHANT.OVERVIEW);
         }
