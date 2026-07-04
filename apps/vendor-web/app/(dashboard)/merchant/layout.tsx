@@ -84,12 +84,9 @@ export default function MerchantLayout({
       router.replace(`${ROUTES.AUTH.SIGNUP}?email=${encodeURIComponent(user.email ?? "")}`);
       return;
     }
-    if (!user.profile_completed) {
-      router.replace(ROUTES.ONBOARDING.WELCOME);
-    }
   }, [hydrating, user, router]);
 
-  if (hydrating || !user || !user.is_email_verified || !user.profile_completed) {
+  if (hydrating || !user || !user.is_email_verified) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f8fafc]">
         <div
