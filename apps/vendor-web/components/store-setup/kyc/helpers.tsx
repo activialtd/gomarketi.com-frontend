@@ -17,12 +17,11 @@ import {
   FileText,
   X,
   Shield,
-  ShieldCheck,
   Zap,
   Building2,
+  Smartphone,
+  RefreshCw,
 } from "lucide-react";
-import Link from "next/link";
-import { ROUTES } from "@/lib/config/routes";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,7 +49,9 @@ export const identitySchema = z
     method: z.enum(["bvn", "nin"]),
     bvn: z.string().optional(),
     nin: z.string().optional(),
-    consent: z.boolean().refine((v) => v, "You must consent to data processing"),
+    consent: z
+      .boolean()
+      .refine((v) => v, "You must consent to data processing"),
   })
   .superRefine((d, ctx) => {
     const val = d.method === "bvn" ? d.bvn : d.nin;
@@ -183,7 +184,7 @@ export const inputClass =
   "w-full h-[44px] px-3.5 rounded-[10px] border text-[13px] font-medium outline-none transition-all bg-[#F0FAF3] focus:bg-white focus:border-[#1A7A42] focus:outline-[2px] focus:outline-[#1A7A42] focus:outline-offset-[-2px]";
 export const inputStyle = { borderColor: "#e2e8f0", color: "#1C1C1C" };
 
-// ─── Step indicator ───────────────────────────────────────────────────────────
+// ─── Step indicator — "boarding pass" perforated rail ─────────────────────────
 
 export function StepIndicator({
   current,
@@ -193,41 +194,53 @@ export function StepIndicator({
   steps: string[];
 }) {
   return (
-    <div className="flex items-center">
-      {steps.map((label, i) => {
-        const done = i < current;
-        const active = i === current;
-        return (
-          <div key={label} className="flex items-center">
-            <div className="flex flex-col items-center gap-1.5">
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-extrabold transition-all duration-300"
-                style={{
-                  background: done ? "#0A2E1A" : active ? "#0A2E1A" : "#f1f5f9",
-                  color: done || active ? "#fff" : "#94a3b8",
-                  boxShadow: active ? "0 0 0 3px rgba(26,122,66,0.2)" : "none",
-                }}
-              >
-                {done ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
+    <div className="w-full">
+      <p
+        className="text-center text-[10px] font-bold uppercase tracking-[0.2em] mb-3"
+        style={{ color: "#94a3b8" }}
+      >
+        Step {current + 1} of {steps.length}
+      </p>
+      <div className="flex items-center justify-center">
+        {steps.map((label, i) => {
+          const done = i < current;
+          const active = i === current;
+          return (
+            <div key={label} className="flex items-center">
+              <div className="flex flex-col items-center gap-1.5">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-extrabold transition-all duration-300"
+                  style={{
+                    background: done || active ? "#0A2E1A" : "#f1f5f9",
+                    color: done || active ? "#fff" : "#94a3b8",
+                    boxShadow: active
+                      ? "0 0 0 3px rgba(26,122,66,0.2)"
+                      : "none",
+                  }}
+                >
+                  {done ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
+                </div>
+                <p
+                  className="text-[10px] font-bold whitespace-nowrap"
+                  style={{
+                    color: active ? "#0A2E1A" : done ? "#1A7A42" : "#94a3b8",
+                  }}
+                >
+                  {label}
+                </p>
               </div>
-              <p
-                className="text-[10px] font-bold whitespace-nowrap"
-                style={{
-                  color: active ? "#0A2E1A" : done ? "#1A7A42" : "#94a3b8",
-                }}
-              >
-                {label}
-              </p>
+              {i < steps.length - 1 && (
+                <div
+                  className="w-12 sm:w-20 h-0 mb-5 mx-1 transition-all duration-500"
+                  style={{
+                    borderTop: `2px dashed ${done ? "#1A7A42" : "#e2e8f0"}`,
+                  }}
+                />
+              )}
             </div>
-            {i < steps.length - 1 && (
-              <div
-                className="w-12 sm:w-20 h-px mb-5 mx-1 transition-all duration-500"
-                style={{ background: done ? "#1A7A42" : "#e2e8f0" }}
-              />
-            )}
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -342,12 +355,34 @@ export function AnimatedShield({ filled }: { filled: boolean }) {
   );
 }
 
-// ─── Step NIN ─────────────────────────────────────────────────────────────────
+// ─── Decorative MRZ (machine-readable-zone) strip — signature passport motif ──
 
-// StepNIN is now the Tier 1 individual identity step (BVN or NIN — CBN framework)
-export function StepNIN({ onNext, onVerify }: {
+export function MRZStrip({ line1, line2 }: { line1: string; line2: string }) {
+  return (
+    <div
+      className="px-4 py-2.5 rounded-[8px] font-mono text-[10px] sm:text-[11px] tracking-[0.14em] leading-relaxed overflow-x-auto whitespace-nowrap"
+      style={{ background: "#0A2E1A", color: "#7fd9a0" }}
+    >
+      <div>{line1}</div>
+      <div>{line2}</div>
+    </div>
+  );
+}
+
+// ─── Step NIN / BVN — Tier 1 individual identity ──────────────────────────────
+
+export function StepNIN({
+  onNext,
+  onVerify,
+}: {
   onNext: () => void;
-  onVerify?: (idValue: string, method: "bvn" | "nin", firstName: string, lastName: string, dob: string) => Promise<void>;
+  onVerify?: (
+    idValue: string,
+    method: "bvn" | "nin",
+    firstName: string,
+    lastName: string,
+    dob: string,
+  ) => Promise<void>;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const [verifying, setVerifying] = useState(false);
@@ -359,7 +394,10 @@ export function StepNIN({ onNext, onVerify }: {
     watch,
     setValue,
     formState: { errors },
-  } = useForm<IdentityValues>({ resolver: zodResolver(identitySchema), defaultValues: { method: "bvn" } });
+  } = useForm<IdentityValues>({
+    resolver: zodResolver(identitySchema),
+    defaultValues: { method: "bvn" },
+  });
 
   const method = watch("method");
 
@@ -368,7 +406,14 @@ export function StepNIN({ onNext, onVerify }: {
     gsap.fromTo(
       formRef.current.querySelectorAll("[data-field]"),
       { opacity: 0, y: 18 },
-      { opacity: 1, y: 0, stagger: 0.07, duration: 0.45, ease: "power2.out", delay: 0.1 },
+      {
+        opacity: 1,
+        y: 0,
+        stagger: 0.07,
+        duration: 0.45,
+        ease: "power2.out",
+        delay: 0.1,
+      },
     );
   }, []);
 
@@ -378,116 +423,436 @@ export function StepNIN({ onNext, onVerify }: {
     try {
       const idValue = data.method === "bvn" ? data.bvn! : data.nin!;
       if (onVerify) {
-        await onVerify(idValue, data.method, data.firstName, data.lastName, data.dateOfBirth);
+        await onVerify(
+          idValue,
+          data.method,
+          data.firstName,
+          data.lastName,
+          data.dateOfBirth,
+        );
       } else {
         await new Promise((r) => setTimeout(r, 1500));
       }
       onNext();
     } catch {
-      setVerifyError(`Verification failed. Please check your ${method.toUpperCase()} and try again.`);
+      setVerifyError(
+        `We couldn't reach that ${method.toUpperCase()}. Double check the digits and try again.`,
+      );
     } finally {
       setVerifying(false);
     }
   }
 
-  const idError = method === "bvn" ? (errors as Record<string, { message?: string }>).bvn?.message : (errors as Record<string, { message?: string }>).nin?.message;
+  const idError =
+    method === "bvn"
+      ? (errors as Record<string, { message?: string }>).bvn?.message
+      : (errors as Record<string, { message?: string }>).nin?.message;
 
   return (
-    <div ref={formRef} className="space-y-5">
-      {/* CBN Tier 1 info */}
-      <div data-field className="flex items-start gap-3 p-4 rounded-[10px]" style={{ background: "#eff6ff", border: "1px solid rgba(59,130,246,0.2)" }}>
-        <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#3b82f6" }} />
-        <p className="text-[12.5px] leading-relaxed" style={{ color: "#1e40af" }}>
-          This is your <strong>Tier 1 CBN verification</strong> — required for automated payouts up to ₦50,000/day.
-          Your BVN or NIN is encrypted end-to-end and never shared with third parties.
-        </p>
-      </div>
-
+    <div ref={formRef} className="space-y-4">
       {/* BVN vs NIN choice */}
       <div data-field>
-        <p className="text-[11px] font-bold uppercase tracking-[0.1em] mb-2.5" style={{ color: "#3D6B4F" }}>
+        <p
+          className="text-[11px] font-bold uppercase tracking-[0.1em] mb-2.5"
+          style={{ color: "#3D6B4F" }}
+        >
           Verification method
         </p>
         <div className="grid grid-cols-2 gap-2">
           {(["bvn", "nin"] as const).map((m) => (
-            <button key={m} type="button" onClick={() => setValue("method", m)}
+            <button
+              key={m}
+              type="button"
+              onClick={() => setValue("method", m)}
               className="flex flex-col items-start px-4 py-3 rounded-[10px] border text-left transition-all"
-              style={{ borderColor: method === m ? "#1A7A42" : "#e2e8f0", background: method === m ? "rgba(26,122,66,0.04)" : "#fafafa" }}>
-              <p className="text-[13px] font-bold" style={{ color: method === m ? "#1A7A42" : "#1C1C1C" }}>
+              style={{
+                borderColor: method === m ? "#1A7A42" : "#e2e8f0",
+                background: method === m ? "rgba(26,122,66,0.04)" : "#fafafa",
+              }}
+            >
+              <p
+                className="text-[13px] font-bold"
+                style={{ color: method === m ? "#1A7A42" : "#1C1C1C" }}
+              >
                 {m === "bvn" ? "BVN" : "NIN"}
               </p>
               <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                {m === "bvn" ? "Bank Verification Number" : "National ID Number"}
+                {m === "bvn"
+                  ? "Bank Verification Number"
+                  : "National ID Number"}
               </p>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Name fields */}
-      <div data-field className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Name + DOB in one row */}
+      <div data-field className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <KYCInput label="First name" required error={errors.firstName?.message}>
-          <input className={inputClass} style={inputStyle} placeholder="As on your ID" {...register("firstName")} />
+          <input
+            className={inputClass}
+            style={inputStyle}
+            placeholder="As on your ID"
+            {...register("firstName")}
+          />
         </KYCInput>
         <KYCInput label="Last name" required error={errors.lastName?.message}>
-          <input className={inputClass} style={inputStyle} placeholder="As on your ID" {...register("lastName")} />
+          <input
+            className={inputClass}
+            style={inputStyle}
+            placeholder="As on your ID"
+            {...register("lastName")}
+          />
         </KYCInput>
-      </div>
-
-      {/* Date of birth */}
-      <div data-field>
-        <KYCInput label="Date of birth" required error={errors.dateOfBirth?.message}>
-          <input className={inputClass} style={inputStyle} type="date" {...register("dateOfBirth")} />
+        <KYCInput
+          label="Date of birth"
+          required
+          error={errors.dateOfBirth?.message}
+        >
+          <input
+            className={inputClass}
+            style={inputStyle}
+            type="date"
+            {...register("dateOfBirth")}
+          />
         </KYCInput>
       </div>
 
       {/* BVN / NIN field */}
       <div data-field>
         <KYCInput
-          label={method === "bvn" ? "BVN (Bank Verification Number)" : "NIN (National Identification Number)"}
+          label={
+            method === "bvn"
+              ? "BVN (Bank Verification Number)"
+              : "NIN (National Identification Number)"
+          }
           required
-          hint={method === "bvn" ? "11-digit number — dial *565*0# on your registered phone" : "11-digit number on your NIMC card or slip"}
+          hint={
+            method === "bvn"
+              ? "11-digit number — dial *565*0# on your registered phone"
+              : "11-digit number on your NIMC card or slip"
+          }
           error={idError}
         >
           <div className="relative">
             <input
               className={`${inputClass} pr-10`}
-              style={{ ...inputStyle, letterSpacing: valueVisible ? "normal" : "0.2em", fontFamily: "monospace" }}
+              style={{
+                ...inputStyle,
+                letterSpacing: valueVisible ? "normal" : "0.2em",
+                fontFamily: "monospace",
+              }}
               type={valueVisible ? "text" : "password"}
               placeholder="00000000000"
               maxLength={11}
               {...register(method)}
             />
-            <button type="button" onClick={() => setValueVisible((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[#F0FAF3] transition-colors">
-              {valueVisible ? <EyeOff className="w-4 h-4" style={{ color: "#94a3b8" }} /> : <Eye className="w-4 h-4" style={{ color: "#94a3b8" }} />}
+            <button
+              type="button"
+              onClick={() => setValueVisible((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[#F0FAF3] transition-colors"
+            >
+              {valueVisible ? (
+                <EyeOff className="w-4 h-4" style={{ color: "#94a3b8" }} />
+              ) : (
+                <Eye className="w-4 h-4" style={{ color: "#94a3b8" }} />
+              )}
             </button>
           </div>
         </KYCInput>
       </div>
 
       {/* NDPA Consent — required by Nigeria Data Protection Act */}
-      <div data-field className="flex items-start gap-3 p-3.5 rounded-[10px] border" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
-        <input type="checkbox" id="id-consent" className="w-4 h-4 mt-0.5 accent-[#1A7A42] shrink-0" {...register("consent")} />
-        <label htmlFor="id-consent" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: "#374151" }}>
-          I consent to GoMarketi processing my {method === "bvn" ? "BVN" : "NIN"} for identity verification purposes
-          in accordance with the <strong>Nigeria Data Protection Act (NDPA)</strong>. My data is encrypted
-          and will only be used to verify my identity on this platform.
+      <div
+        data-field
+        className="flex items-start gap-3 p-3.5 rounded-[10px] border"
+        style={{ borderColor: "#e2e8f0", background: "#fafafa" }}
+      >
+        <input
+          type="checkbox"
+          id="id-consent"
+          className="w-4 h-4 mt-0.5 accent-[#1A7A42] shrink-0"
+          {...register("consent")}
+        />
+        <label
+          htmlFor="id-consent"
+          className="text-[12px] leading-relaxed cursor-pointer"
+          style={{ color: "#374151" }}
+        >
+          I consent to GoMarket processing my {method === "bvn" ? "BVN" : "NIN"}{" "}
+          for identity verification, in line with the{" "}
+          <strong>Nigeria Data Protection Act (NDPA)</strong>.
         </label>
       </div>
-      {errors.consent && <p className="text-[11px]" style={{ color: "#dc2626" }}>{errors.consent.message}</p>}
+      {errors.consent && (
+        <p className="text-[11px]" style={{ color: "#dc2626" }}>
+          {errors.consent.message}
+        </p>
+      )}
 
-      <button type="button" onClick={handleSubmit(onSubmit)} disabled={verifying}
+      <button
+        type="button"
+        onClick={handleSubmit(onSubmit)}
+        disabled={verifying}
         className="w-full h-[48px] rounded-[12px] text-[14px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
-        style={{ background: "#0A2E1A", boxShadow: "0 4px 14px rgba(26,122,66,0.3)" }}
-        onMouseOver={(e) => !verifying && (e.currentTarget.style.background = "#239452")}
+        style={{
+          background: "#0A2E1A",
+          boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
+        }}
+        onMouseOver={(e) =>
+          !verifying && (e.currentTarget.style.background = "#239452")
+        }
         onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
       >
-        {verifying ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying…</> : <>Verify {method.toUpperCase()} <ChevronRight className="w-4 h-4" /></>}
+        {verifying ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> Sending code…
+          </>
+        ) : (
+          <>
+            Continue with {method.toUpperCase()}{" "}
+            <ChevronRight className="w-4 h-4" />
+          </>
+        )}
       </button>
-      {verifyError && <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>{verifyError}</p>}
+      {verifyError && (
+        <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>
+          {verifyError}
+        </p>
+      )}
       <p className="text-center text-[11px]" style={{ color: "#94a3b8" }}>
-        🔒 AES-256 encrypted · Verified via licensed KYC provider · NDPA compliant
+        🔒 AES-256 encrypted · NDPA compliant · We&apos;ll text a code to
+        confirm it&apos;s you
+      </p>
+    </div>
+  );
+}
+
+// ─── Step OTP — confirms the code sent to the phone linked to the BVN/NIN ─────
+
+export function StepOTP({
+  method,
+  maskedPhone,
+  onVerify,
+  onResend,
+}: {
+  method: "bvn" | "nin";
+  maskedPhone?: string;
+  onVerify: (otp: string) => Promise<void>;
+  onResend: () => Promise<void>;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const [digits, setDigits] = useState<string[]>(Array(6).fill(""));
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState("");
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(45);
+
+  useEffect(() => {
+    if (!wrapRef.current) return;
+    gsap.fromTo(
+      wrapRef.current.querySelectorAll("[data-field]"),
+      { opacity: 0, y: 16 },
+      {
+        opacity: 1,
+        y: 0,
+        stagger: 0.08,
+        duration: 0.4,
+        ease: "power2.out",
+        delay: 0.1,
+      },
+    );
+    inputsRef.current[0]?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  function setDigit(i: number, val: string) {
+    const clean = val.replace(/\D/g, "").slice(-1);
+    const next = [...digits];
+    next[i] = clean;
+    setDigits(next);
+    if (clean && i < 5) inputsRef.current[i + 1]?.focus();
+  }
+
+  function handleKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !digits[i] && i > 0) {
+      inputsRef.current[i - 1]?.focus();
+    }
+  }
+
+  function handlePaste(e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!text) return;
+    e.preventDefault();
+    const next = Array(6).fill("");
+    text.split("").forEach((c, i) => (next[i] = c));
+    setDigits(next);
+    inputsRef.current[Math.min(text.length, 5)]?.focus();
+  }
+
+  function shakeRow() {
+    if (rowRef.current) {
+      gsap.fromTo(
+        rowRef.current,
+        { x: -6 },
+        { x: 0, duration: 0.45, ease: "elastic.out(1, 0.3)" },
+      );
+    }
+  }
+
+  async function handleVerify() {
+    const otp = digits.join("");
+    if (otp.length !== 6) {
+      setError("Enter the full 6-digit code");
+      shakeRow();
+      return;
+    }
+    setVerifying(true);
+    setError("");
+    try {
+      await onVerify(otp);
+    } catch {
+      setError("That code didn't match. Check your messages and try again.");
+      shakeRow();
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleResend() {
+    setResending(true);
+    try {
+      await onResend();
+      setCooldown(45);
+      setDigits(Array(6).fill(""));
+      inputsRef.current[0]?.focus();
+    } finally {
+      setResending(false);
+    }
+  }
+
+  return (
+    <div ref={wrapRef} className="space-y-5">
+      <div
+        data-field
+        className="flex items-start gap-3 p-4 rounded-[10px]"
+        style={{
+          background: "#eff6ff",
+          border: "1px solid rgba(59,130,246,0.2)",
+        }}
+      >
+        <Smartphone
+          className="w-4 h-4 shrink-0 mt-0.5"
+          style={{ color: "#3b82f6" }}
+        />
+        <p
+          className="text-[12.5px] leading-relaxed"
+          style={{ color: "#1e40af" }}
+        >
+          {method === "bvn" ? "Your bank" : "NIMC"} sent a 6-digit code to the
+          phone number linked to your {method.toUpperCase()}
+          {maskedPhone ? (
+            <>
+              {" "}
+              — <strong>{maskedPhone}</strong>
+            </>
+          ) : null}
+          . Enter it below to confirm it's you.
+        </p>
+      </div>
+
+      <div
+        data-field
+        ref={rowRef}
+        className="flex items-center justify-center gap-2 sm:gap-2.5"
+      >
+        {digits.map((d, i) => (
+          <input
+            key={i}
+            ref={(el) => {
+              inputsRef.current[i] = el;
+            }}
+            value={d}
+            onChange={(e) => setDigit(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+            onPaste={handlePaste}
+            inputMode="numeric"
+            maxLength={1}
+            className="w-11 sm:w-12 text-center text-[20px] font-extrabold rounded-[10px] border-2 outline-none transition-all bg-[#F0FAF3] focus:bg-white"
+            style={{
+              height: "56px",
+              borderColor: error ? "#dc2626" : d ? "#1A7A42" : "#e2e8f0",
+              borderStyle: "dashed",
+              color: "#0A2E1A",
+            }}
+          />
+        ))}
+      </div>
+      {error && (
+        <p
+          data-field
+          className="text-[12px] text-center"
+          style={{ color: "#dc2626" }}
+        >
+          {error}
+        </p>
+      )}
+
+      <div
+        data-field
+        className="flex items-center justify-center gap-1.5 text-[12px]"
+        style={{ color: "#6b7280" }}
+      >
+        <span>Didn&apos;t get it?</span>
+        <button
+          type="button"
+          onClick={handleResend}
+          disabled={cooldown > 0 || resending}
+          className="font-bold disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1"
+          style={{ color: "#1A7A42" }}
+        >
+          {resending ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <RefreshCw className="w-3 h-3" />
+          )}
+          {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleVerify}
+        disabled={verifying}
+        className="w-full h-[48px] rounded-[12px] text-[14px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+        style={{
+          background: "#0A2E1A",
+          boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
+        }}
+        onMouseOver={(e) =>
+          !verifying && (e.currentTarget.style.background = "#239452")
+        }
+        onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
+      >
+        {verifying ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> Confirming…
+          </>
+        ) : (
+          <>
+            Confirm code <ChevronRight className="w-4 h-4" />
+          </>
+        )}
+      </button>
+      <p className="text-center text-[11px]" style={{ color: "#94a3b8" }}>
+        🔒 One-time code · Expires in 10 minutes · Never share this with anyone
       </p>
     </div>
   );
@@ -495,18 +860,35 @@ export function StepNIN({ onNext, onVerify }: {
 
 // ─── Step CAC / KYB — Tier 2 Business Verification (CBN framework) ────────────
 
-export function StepCAC({ onNext, onVerify }: { onNext: () => void; onVerify?: (cac_number: string) => Promise<void> }) {
+export function StepCAC({
+  onNext,
+  onVerify,
+}: {
+  onNext: () => void;
+  onVerify?: (cac_number: string) => Promise<void>;
+}) {
   const formRef = useRef<HTMLDivElement>(null);
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
-  const { register, handleSubmit, formState: { errors } } = useForm<KYBValues>({ resolver: zodResolver(kybSchema) });
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<KYBValues>({ resolver: zodResolver(kybSchema) });
 
   useEffect(() => {
     if (!formRef.current) return;
     gsap.fromTo(
       formRef.current.querySelectorAll("[data-field]"),
       { opacity: 0, y: 18 },
-      { opacity: 1, y: 0, stagger: 0.07, duration: 0.45, ease: "power2.out", delay: 0.1 },
+      {
+        opacity: 1,
+        y: 0,
+        stagger: 0.07,
+        duration: 0.45,
+        ease: "power2.out",
+        delay: 0.1,
+      },
     );
   }, []);
 
@@ -518,7 +900,9 @@ export function StepCAC({ onNext, onVerify }: { onNext: () => void; onVerify?: (
       else await new Promise((r) => setTimeout(r, 1600));
       onNext();
     } catch {
-      setVerifyError("Business verification failed. Please check your RC number and try again.");
+      setVerifyError(
+        "Business verification failed. Please check your RC number and try again.",
+      );
     } finally {
       setVerifying(false);
     }
@@ -526,62 +910,133 @@ export function StepCAC({ onNext, onVerify }: { onNext: () => void; onVerify?: (
 
   return (
     <div ref={formRef} className="space-y-5">
-      {/* KYB info banner */}
-      <div data-field className="flex items-start gap-3 p-4 rounded-[10px]" style={{ background: "#F0FAF3", border: "1px solid rgba(26,122,66,0.2)" }}>
-        <Info className="w-4 h-4 shrink-0 mt-0.5" style={{ color: "#1A7A42" }} />
-        <p className="text-[12.5px] leading-relaxed" style={{ color: "#0A2E1A" }}>
-          This is your <strong>Tier 2 KYB (Know Your Business)</strong> check — required for unlimited payouts.
-          We verify directly against the CAC and FIRS databases.
-        </p>
-      </div>
-
       {/* Business name */}
       <div data-field>
-        <KYCInput label="Registered business name" required error={errors.businessName?.message} hint="Exactly as it appears on your Certificate of Incorporation">
-          <input className={inputClass} style={inputStyle} placeholder="Eko Fashion House Limited" {...register("businessName")} />
+        <KYCInput
+          label="Registered business name"
+          required
+          error={errors.businessName?.message}
+          hint="Exactly as it appears on your Certificate of Incorporation"
+        >
+          <input
+            className={inputClass}
+            style={inputStyle}
+            placeholder="Eko Fashion House Limited"
+            {...register("businessName")}
+          />
         </KYCInput>
       </div>
 
       {/* RC Number */}
       <div data-field>
-        <KYCInput label="CAC RC Number" required error={errors.rcNumber?.message} hint="On your Certificate of Incorporation (e.g. RC1234567)">
-          <input className={inputClass} style={inputStyle} placeholder="RC1234567" {...register("rcNumber")} />
+        <KYCInput
+          label="CAC RC Number"
+          required
+          error={errors.rcNumber?.message}
+          hint="On your Certificate of Incorporation (e.g. RC1234567)"
+        >
+          <input
+            className={inputClass}
+            style={inputStyle}
+            placeholder="RC1234567"
+            {...register("rcNumber")}
+          />
         </KYCInput>
       </div>
 
       {/* TIN */}
       <div data-field>
-        <KYCInput label="Tax Identification Number (TIN)" required error={errors.tin?.message} hint="From the FIRS TIN portal (tin.firs.gov.ng)">
-          <input className={inputClass} style={inputStyle} placeholder="1234567-0001" {...register("tin")} />
+        <KYCInput
+          label="Tax Identification Number (TIN)"
+          required
+          error={errors.tin?.message}
+          hint="From the FIRS TIN portal (tin.firs.gov.ng)"
+        >
+          <input
+            className={inputClass}
+            style={inputStyle}
+            placeholder="1234567-0001"
+            {...register("tin")}
+          />
         </KYCInput>
       </div>
 
       {/* Director info */}
       <div data-field>
-        <KYCInput label="Director / Beneficial owner full name" required error={errors.directorName?.message} hint="A person with 25% or more ownership of the business">
-          <input className={inputClass} style={inputStyle} placeholder="Akachi Ezekiel Okonkwo" {...register("directorName")} />
+        <KYCInput
+          label="Director / Beneficial owner full name"
+          required
+          error={errors.directorName?.message}
+          hint="A person with 25% or more ownership of the business"
+        >
+          <input
+            className={inputClass}
+            style={inputStyle}
+            placeholder="Akachi Ezekiel Okonkwo"
+            {...register("directorName")}
+          />
         </KYCInput>
       </div>
 
       {/* NDPA Consent */}
-      <div data-field className="flex items-start gap-3 p-3.5 rounded-[10px] border" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
-        <input type="checkbox" id="kyb-consent" className="w-4 h-4 mt-0.5 accent-[#1A7A42] shrink-0" {...register("consent")} />
-        <label htmlFor="kyb-consent" className="text-[12px] leading-relaxed cursor-pointer" style={{ color: "#374151" }}>
-          I confirm that the business information provided is accurate and I am authorised to submit this on behalf of the company.
-          I consent to GoMarketi verifying this information via CAC and FIRS databases in accordance with the <strong>Nigeria Data Protection Act (NDPA)</strong>.
+      <div
+        data-field
+        className="flex items-start gap-3 p-3.5 rounded-[10px] border"
+        style={{ borderColor: "#e2e8f0", background: "#fafafa" }}
+      >
+        <input
+          type="checkbox"
+          id="kyb-consent"
+          className="w-4 h-4 mt-0.5 accent-[#1A7A42] shrink-0"
+          {...register("consent")}
+        />
+        <label
+          htmlFor="kyb-consent"
+          className="text-[12px] leading-relaxed cursor-pointer"
+          style={{ color: "#374151" }}
+        >
+          I confirm that the business information provided is accurate and I am
+          authorised to submit this on behalf of the company. I consent to
+          GoMarket verifying this information via CAC and FIRS databases in
+          accordance with the{" "}
+          <strong>Nigeria Data Protection Act (NDPA)</strong>.
         </label>
       </div>
-      {errors.consent && <p className="text-[11px]" style={{ color: "#dc2626" }}>{errors.consent.message}</p>}
+      {errors.consent && (
+        <p className="text-[11px]" style={{ color: "#dc2626" }}>
+          {errors.consent.message}
+        </p>
+      )}
 
-      <button type="button" onClick={handleSubmit(onSubmit)} disabled={verifying}
+      <button
+        type="button"
+        onClick={handleSubmit(onSubmit)}
+        disabled={verifying}
         className="w-full h-[48px] rounded-[12px] text-[14px] font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
-        style={{ background: "#0A2E1A", boxShadow: "0 4px 14px rgba(26,122,66,0.3)" }}
-        onMouseOver={(e) => !verifying && (e.currentTarget.style.background = "#239452")}
+        style={{
+          background: "#0A2E1A",
+          boxShadow: "0 4px 14px rgba(26,122,66,0.3)",
+        }}
+        onMouseOver={(e) =>
+          !verifying && (e.currentTarget.style.background = "#239452")
+        }
         onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
       >
-        {verifying ? <><Loader2 className="w-4 h-4 animate-spin" /> Verifying with CAC…</> : <>Submit business verification <ChevronRight className="w-4 h-4" /></>}
+        {verifying ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" /> Verifying with CAC…
+          </>
+        ) : (
+          <>
+            Submit business verification <ChevronRight className="w-4 h-4" />
+          </>
+        )}
       </button>
-      {verifyError && <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>{verifyError}</p>}
+      {verifyError && (
+        <p className="text-[12px] text-center" style={{ color: "#dc2626" }}>
+          {verifyError}
+        </p>
+      )}
       <p className="text-center text-[11px]" style={{ color: "#94a3b8" }}>
         🔒 Verified directly against CAC & FIRS databases · NDPA compliant
       </p>
@@ -589,7 +1044,7 @@ export function StepCAC({ onNext, onVerify }: { onNext: () => void; onVerify?: (
   );
 }
 
-// ─── Step Bank Statement (single file) ────────────────────────────────────────
+// ─── Step Bank Statement (single file, kept for future tiers) ─────────────────
 
 export function StepBankStatement({ onNext }: { onNext: () => void }) {
   const dropRef = useRef<HTMLDivElement>(null);
@@ -607,7 +1062,6 @@ export function StepBankStatement({ onNext }: { onNext: () => void }) {
     );
   }, []);
 
-  // Animate file row in
   useEffect(() => {
     if (!file) return;
     const el = document.getElementById("file-row");
@@ -789,7 +1243,7 @@ export function StepBankStatement({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── Step Success ─────────────────────────────────────────────────────────────
+// ─── Step Success — ink-stamp seal + MRZ strip ─────────────────────────────────
 
 export function StepSuccess({
   tier,
@@ -798,29 +1252,61 @@ export function StepSuccess({
   tier: 2 | 3;
   onDone: () => void;
 }) {
+  const stampRef = useRef<HTMLDivElement>(null);
   const shieldRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!shieldRef.current || !contentRef.current) return;
+    if (!shieldRef.current || !contentRef.current || !stampRef.current) return;
     const tl = gsap.timeline();
     tl.fromTo(
-      shieldRef.current,
-      { scale: 0.5, opacity: 0 },
-      { scale: 1, opacity: 1, duration: 0.6, ease: "back.out(2)" },
-    ).fromTo(
-      contentRef.current.querySelectorAll("[data-line]"),
-      { opacity: 0, y: 14 },
-      { opacity: 1, y: 0, stagger: 0.1, duration: 0.4, ease: "power2.out" },
-      "-=0.2",
-    );
+      stampRef.current,
+      { scale: 1.7, opacity: 0, rotate: -20 },
+      { scale: 1, opacity: 1, rotate: -8, duration: 0.55, ease: "power3.out" },
+    )
+      .fromTo(
+        shieldRef.current,
+        { scale: 0.5, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.5, ease: "back.out(2)" },
+        "-=0.3",
+      )
+      .fromTo(
+        contentRef.current.querySelectorAll("[data-line]"),
+        { opacity: 0, y: 14 },
+        { opacity: 1, y: 0, stagger: 0.1, duration: 0.4, ease: "power2.out" },
+        "-=0.2",
+      );
   }, []);
+
+  const today = new Date();
+  const mrzDate = `${String(today.getFullYear()).slice(2)}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
 
   return (
     <div className="flex flex-col items-center text-center py-6">
-      <div ref={shieldRef}>
-        <AnimatedShield filled />
+      <div className="relative flex items-center justify-center w-[140px] h-[140px]">
+        <div
+          ref={stampRef}
+          className="absolute inset-0 rounded-full flex items-center justify-center"
+          style={{ border: "2px dashed #1A7A42" }}
+        >
+          <span
+            className="absolute text-[8.5px] font-extrabold tracking-[0.25em]"
+            style={{ color: "#1A7A42", top: "16px" }}
+          >
+            VERIFIED
+          </span>
+          <span
+            className="absolute text-[8.5px] font-extrabold tracking-[0.25em]"
+            style={{ color: "#1A7A42", bottom: "16px" }}
+          >
+            GOMARKET
+          </span>
+        </div>
+        <div ref={shieldRef}>
+          <AnimatedShield filled />
+        </div>
       </div>
+
       <div ref={contentRef} className="mt-6 space-y-3 w-full">
         <p
           data-line
@@ -835,9 +1321,17 @@ export function StepSuccess({
           style={{ color: "#6b7280" }}
         >
           {tier === 2
-            ? "Our team will verify your NIN within 1–2 business days and notify you by email."
-            : "Your CAC registration and bank statement are under review. This takes 2–3 business days."}
+            ? "Your identity is confirmed. Our team does a final check within 1–2 business days and will notify you by email."
+            : "Your CAC and TIN details are under review. This takes 2–3 business days."}
         </p>
+
+        <div data-line className="max-w-sm mx-auto">
+          <MRZStrip
+            line1={`P<NGA<GOMARKET<<VENDOR<<TIER${tier}${"<".repeat(20)}`}
+            line2={`${mrzDate}<NGA<TIER${tier}<STATUS<PENDING${"<".repeat(6)}`}
+          />
+        </div>
+
         <div data-line className="grid grid-cols-3 gap-3 mt-6">
           {["Documents submitted", "Team review", "Email notification"].map(
             (s, i) => (

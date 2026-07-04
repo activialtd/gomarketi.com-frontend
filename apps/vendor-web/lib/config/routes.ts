@@ -43,7 +43,7 @@ export const ROUTES = {
 
     // Account
     SETTINGS: "/merchant/settings",
-    HELP: "/merchant/help",
+    HELP: "https://www.gomarketi.com/help",
 
     // KYC
     KYC: "/merchant/kyc",

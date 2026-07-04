@@ -14,6 +14,7 @@ import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
 import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
+import AppleIconFilled from "../common/AppleIcon";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -103,7 +104,7 @@ export function LoginForm() {
         setApiError(
           err instanceof ApiError
             ? err.message
-            : `${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`
+            : `${provider === "google" ? "Google" : "Apple"} sign-in failed. Please try again.`,
         );
       }
     } finally {
