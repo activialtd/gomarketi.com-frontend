@@ -364,7 +364,7 @@ function EkoNewsletterSection({
 
   return (
     <section className="mx-auto max-w-6xl px-5 pb-16">
-      <div className="overflow-hidden rounded-3xl px-8 py-12 sm:py-14" style={{ background: "var(--store-bg)", border: "1.5px solid var(--store-primary)", borderOpacity: 0.15 }}>
+      <div className="overflow-hidden rounded-3xl px-8 py-12 sm:py-14" style={{ background: "var(--store-bg)", border: `1.5px solid ${primary}26` }}>
         <div className="mx-auto max-w-lg text-center">
           <p className="text-[11px] font-bold uppercase tracking-[0.18em]" style={{ color: primary }}>{sec.eyebrow ?? "Newsletter"}</p>
           <h2 className="mt-2 text-[22px] font-extrabold tracking-tight text-[var(--store-text)]">

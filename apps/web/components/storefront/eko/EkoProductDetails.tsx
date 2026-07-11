@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import {
   Download, ShoppingBag, Check, Share2,
   Shield, Zap, RotateCcw, ChevronRight,
@@ -18,12 +18,16 @@ function fmt(kobo: number) {
 export default function EkoProductDetails({
   product,
   related = [],
+  slug,
 }: {
   product: StorefrontProduct;
   related?: StorefrontProduct[];
+  slug?: string;
 }) {
   const { addToCart } = useCart();
   const router = useRouter();
+  const params = useParams<{ slug?: string }>();
+  const activeSlug = slug || params.slug;
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
@@ -36,7 +40,7 @@ export default function EkoProductDetails({
 
   function handleBuyNow() {
     addToCart(product, qty);
-    router.push("/checkout");
+    router.push(activeSlug ? `/storefront/${activeSlug}/checkout` : "/checkout");
   }
 
   return (
@@ -45,9 +49,9 @@ export default function EkoProductDetails({
       {/* Breadcrumb */}
       <div style={{ background: "#f8fafc", borderBottom: "1px solid #f1f5f9", padding: "10px 24px" }}>
         <div style={{ maxWidth: "1200px", margin: "0 auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          <Link href="/" style={{ color: "#6b7280", fontSize: "12px", textDecoration: "none" }}>Home</Link>
+          <Link href={activeSlug ? `/storefront/${activeSlug}` : "/"} style={{ color: "#6b7280", fontSize: "12px", textDecoration: "none" }}>Home</Link>
           <ChevronRight style={{ width: "12px", height: "12px", color: "#d1d5db" }} />
-          <Link href="/shop" style={{ color: "#6b7280", fontSize: "12px", textDecoration: "none" }}>Shop</Link>
+          <Link href={activeSlug ? `/storefront/${activeSlug}/shop` : "/shop"} style={{ color: "#6b7280", fontSize: "12px", textDecoration: "none" }}>Shop</Link>
           <ChevronRight style={{ width: "12px", height: "12px", color: "#d1d5db" }} />
           <span style={{ color: "#374151", fontSize: "12px", fontWeight: 600 }}>{product.name}</span>
         </div>
@@ -238,7 +242,7 @@ export default function EkoProductDetails({
               <h2 style={{ fontSize: "22px", fontWeight: 900, color: "#1C1C1C", letterSpacing: "-0.3px" }}>
                 You may also like
               </h2>
-              <Link href="/shop" style={{ fontSize: "13px", fontWeight: 700, color: "var(--store-primary, #1A7A42)", textDecoration: "none" }}>
+              <Link href={activeSlug ? `/storefront/${activeSlug}/shop` : "/shop"} style={{ fontSize: "13px", fontWeight: 700, color: "var(--store-primary, #1A7A42)", textDecoration: "none" }}>
                 View all →
               </Link>
             </div>

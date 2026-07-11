@@ -10,11 +10,11 @@ function fmt(kobo: number) {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
 }
 
-export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void; slug?: string }) {
+export function CartDrawer({ open, onClose, slug }: { open: boolean; onClose: () => void; slug?: string }) {
   const { lines, updateQuantity, removeLine, subtotal } = useCart();
   const router = useRouter();
-  const cartUrl = "/cart";
-  const checkoutUrl = "/checkout";
+  const cartUrl = slug ? `/storefront/${slug}/cart` : "/cart";
+  const checkoutUrl = slug ? `/storefront/${slug}/checkout` : "/checkout";
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
               </div>
               <p style={{ fontWeight: 700, fontSize: "14px", color: "#1C1C1C", marginBottom: "6px" }}>Cart is empty</p>
               <p style={{ fontSize: "12px", color: "#6b7280", marginBottom: "16px" }}>Add products to get started</p>
-              <Link href="/shop" onClick={onClose}
+              <Link href={slug ? `/storefront/${slug}/shop` : "/shop"} onClick={onClose}
                 style={{ color: "var(--store-primary, #1A7A42)", fontWeight: 700, fontSize: "13px", textDecoration: "none" }}>
                 Browse products →
               </Link>

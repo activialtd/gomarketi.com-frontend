@@ -29,6 +29,7 @@ export function proxy(req: NextRequest) {
       url.pathname = `/storefront/${subdomain}${url.pathname === "/" ? "" : url.pathname}`;
       return NextResponse.rewrite(url);
     }
+    return NextResponse.next();
   }
 
   // ── Custom vendor domain: cobi.com (not a gomarketi.com subdomain) ───────

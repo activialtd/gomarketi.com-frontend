@@ -61,6 +61,7 @@ export default async function ProductDetailPage({
   params: Promise<{ slug: string; productDetails: string }>;
 }) {
   const { slug, productDetails } = await params;
+
   const storeId = await getStoreId(slug);
   if (!storeId) notFound();
 
@@ -71,5 +72,5 @@ export default async function ProductDetailPage({
 
   if (!product) notFound();
 
-  return <EkoProductDetails product={product} related={related} />;
+  return <EkoProductDetails product={product} related={related} slug={slug} />;
 }
