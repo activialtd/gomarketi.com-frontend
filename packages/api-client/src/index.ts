@@ -392,6 +392,25 @@ export function setTokenRefreshCallback(cb: RefreshCallback) {
   _onTokenExpired = cb;
 }
 
+// Refresh tokens are single-use with rotation + reuse detection: if two
+// requests 401 around the same moment and each independently calls
+// /v1/auth/token/refresh, the second one reuses an already-rotated cookie
+// and looks like token theft, revoking the whole session. This makes every
+// concurrent 401 share one in-flight refresh instead of firing its own.
+let _refreshInFlight: Promise<string | null> | null = null;
+
+function refreshOnce(): Promise<string | null> {
+  if (!_onTokenExpired) return Promise.resolve(null);
+  if (!_refreshInFlight) {
+    _refreshInFlight = _onTokenExpired()
+      .catch(() => null)
+      .finally(() => {
+        _refreshInFlight = null;
+      });
+  }
+  return _refreshInFlight;
+}
+
 // ── Fetch wrapper ──────────────────────────────────────────────────────────────
 
 async function request<T>(
@@ -415,7 +434,7 @@ async function request<T>(
 
   // Auto-refresh: if 401 and a refresh callback is registered, retry once
   if (res.status === 401 && _onTokenExpired) {
-    const newToken = await _onTokenExpired().catch(() => null);
+    const newToken = await refreshOnce();
     if (newToken) {
       const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` };
       const retry = await fetch(`${API_BASE}${path}`, {
