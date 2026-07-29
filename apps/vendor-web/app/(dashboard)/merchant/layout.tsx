@@ -9,7 +9,7 @@ import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
 import { SWRProvider } from "@/lib/swr/provider";
 import { useOrderEvents } from "@/lib/swr/hooks";
-import { authApi, storefrontApi, setTokenRefreshCallback } from "@gomarket/api-client";
+import { authApi, storefrontApi } from "@gomarket/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 
@@ -24,22 +24,11 @@ export default function MerchantLayout({
   const [storeName, setStoreName] = useState("My Store");
   const [storeSlug, setStoreSlug] = useState("");
   const router = useRouter();
-  const { user, hydrating, clearAuth, accessToken, setAuth } = useAuthStore();
+  const { user, hydrating, clearAuth, accessToken } = useAuthStore();
 
-  // Register a global token-refresh callback so any API call that gets a 401
-  // silently refreshes the JWT and retries — no manual handling needed per-page.
-  useEffect(() => {
-    setTokenRefreshCallback(async () => {
-      try {
-        const fresh = await authApi.refreshTokens();
-        setAuth(fresh.user, fresh.access_token);
-        return fresh.access_token;
-      } catch {
-        clearAuth();
-        return null;
-      }
-    });
-  }, [setAuth, clearAuth]);
+  // Token-refresh callback is registered app-wide in AuthProvider now (it
+  // used to only be registered here, which left onboarding routes with no
+  // way to silently refresh an expired token).
 
   // Subscribe to real-time order/wallet SSE updates for the entire dashboard.
   useOrderEvents();
