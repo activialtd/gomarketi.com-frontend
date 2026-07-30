@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { authApi, ApiError, setTokenRefreshCallback } from "@gomarket/api-client";
+import { authApi, setTokenRefreshCallback, refreshOnce } from "@gomarket/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -36,20 +36,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (attempted.current) return;
     attempted.current = true;
 
-    authApi
-      .refreshTokens()
-      .then((resp) => {
-        setAuth(resp.user, resp.access_token);
-      })
-      .catch((err) => {
-        if (err instanceof ApiError && err.status === 401) {
-          clearAuth();
-          clearAuthSession();
-        }
-      })
-      .finally(() => {
-        setHydrated();
-      });
+    // Goes through the same in-flight guard as every other 401-triggered
+    // refresh (setAuth/clearAuth already happen inside the registered
+    // callback above) — calling authApi.refreshTokens() directly here would
+    // race against those, since it wouldn't share that guard.
+    refreshOnce().finally(() => {
+      setHydrated();
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <>{children}</>;
