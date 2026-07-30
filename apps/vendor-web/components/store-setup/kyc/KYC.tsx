@@ -363,31 +363,18 @@ export default function KYCPage() {
     );
   }
 
-  // TODO: wire these to the actual endpoints once available on identityApi —
-  // named to mirror submitKYC's (payload, accessToken) signature.
+  // TEMPORARY TEST-ONLY STUB — identityApi.verifyKycOtp/resendKycOtp don't
+  // exist yet (no backend endpoint, no real SMS dispatch). Until the real
+  // Smile ID phone-OTP flow is built, accept any 6-digit entry so onboarding
+  // can still be tested end to end. Remove this stub once the real
+  // verify/resend endpoints exist on identityApi.
   async function verifyOtp(otp: string) {
-    if (!accessToken) return;
-    await (
-      identityApi as unknown as {
-        verifyKycOtp: (
-          payload: { method: "bvn" | "nin"; otp: string },
-          token: string,
-        ) => Promise<unknown>;
-      }
-    ).verifyKycOtp({ method: otpMethod, otp }, accessToken);
+    if (otp.length !== 6) return;
     nextStep();
   }
 
   async function resendOtp() {
-    if (!accessToken) return;
-    await (
-      identityApi as unknown as {
-        resendKycOtp: (
-          payload: { method: "bvn" | "nin" },
-          token: string,
-        ) => Promise<unknown>;
-      }
-    ).resendKycOtp({ method: otpMethod }, accessToken);
+    // No-op for now — nothing is actually sent yet.
   }
 
   async function verifyCAC(cac_number: string) {
