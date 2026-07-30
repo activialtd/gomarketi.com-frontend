@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useFieldArray } from "react-hook-form";
+import { refreshOnce } from "@gomarket/api-client";
 
 export const CATEGORIES = [
   "fashion",
@@ -204,6 +205,38 @@ interface UploadState {
   retries: number;
 }
 
+// This is a raw fetch, not the shared api-client request() wrapper, so it
+// doesn't get that wrapper's automatic 401-refresh-and-retry for free — an
+// expired access token would otherwise fail here immediately with no
+// refresh attempt at all. Retries once through the same shared refresh
+// guard the rest of the app uses, so uploads survive an expired token the
+// same way every other authenticated call does.
+async function presignUpload(
+  file: File,
+  accessToken: string,
+): Promise<{ upload_url: string; public_url: string }> {
+  let token = accessToken;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await fetch(`${API_BASE}/v1/storefront/uploads/presign`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size, purpose: "products" }),
+    });
+    if (res.status === 401 && attempt === 0) {
+      const fresh = await refreshOnce();
+      if (!fresh) break;
+      token = fresh;
+      continue;
+    }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error ?? "Could not get upload URL");
+    }
+    return res.json() as Promise<{ upload_url: string; public_url: string }>;
+  }
+  throw new Error("Your session has expired — please log in again");
+}
+
 async function uploadToR2(
   file: File,
   accessToken: string,
@@ -212,16 +245,7 @@ async function uploadToR2(
 ): Promise<string> {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      const presignRes = await fetch(`${API_BASE}/v1/storefront/uploads/presign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ filename: file.name, content_type: file.type, size: file.size, purpose: "products" }),
-      });
-      if (!presignRes.ok) {
-        const body = await presignRes.json().catch(() => ({})) as { error?: string };
-        throw new Error(body.error ?? "Could not get upload URL");
-      }
-      const { upload_url, public_url } = await presignRes.json() as { upload_url: string; public_url: string };
+      const { upload_url, public_url } = await presignUpload(file, accessToken);
 
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
