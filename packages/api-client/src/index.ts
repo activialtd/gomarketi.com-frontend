@@ -399,7 +399,12 @@ export function setTokenRefreshCallback(cb: RefreshCallback) {
 // concurrent 401 share one in-flight refresh instead of firing its own.
 let _refreshInFlight: Promise<string | null> | null = null;
 
-function refreshOnce(): Promise<string | null> {
+// Exported so callers OTHER than the request() wrapper (e.g. AuthProvider's
+// on-load session restore) can trigger a refresh through the same in-flight
+// guard, instead of calling authApi.refreshTokens() directly — two refresh
+// paths that don't share this guard can still race each other even though
+// each individually de-duplicates its own concurrent callers.
+export function refreshOnce(): Promise<string | null> {
   if (!_onTokenExpired) return Promise.resolve(null);
   if (!_refreshInFlight) {
     _refreshInFlight = _onTokenExpired()
