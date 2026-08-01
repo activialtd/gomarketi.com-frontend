@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { View, Text, Pressable, Image, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Product } from "../../lib/mock-products";
+import { formatNaira } from "../../lib/cart-context";
 import { color, type, space, tint, HIT } from "../../theme/tokens";
 
 export function ProductCard({
@@ -52,7 +53,7 @@ export function ProductCard({
           </Text>
 
           <View style={s.row}>
-            <Text style={s.price}>${product.price.toFixed(2)}</Text>
+            <Text style={s.price}>{formatNaira(product.price)}</Text>
             <Pressable
               onPress={() => onAdd?.(product)}
               hitSlop={HIT}

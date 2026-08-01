@@ -6,48 +6,70 @@ import {
   TextInput,
   Pressable,
   ScrollView,
+  ActivityIndicator,
   Animated,
   Dimensions,
   Easing,
   StyleSheet,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { ProductCard } from "./ProductCard";
-import { searchProducts, Product } from "../../lib/mock-products";
-import { VENDORS } from "../../lib/mock-vendors";
-import { useCart } from "../../lib/cart-context";
-import { color, type, space, HIT } from "../../theme/tokens";
+import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
+import { searchStores, StoreResult } from "../../lib/api-client";
+import { categoryMeta } from "../../lib/store-category";
+import { useKeyboardHeight } from "../../hooks/useKeyboardHeight";
+import { color, tint, type, space, HIT } from "../../theme/tokens";
 
 const { height } = Dimensions.get("window");
 const SHEET_H = height * 0.9;
+const REFINE_DEBOUNCE_MS = 350;
 
 /**
  * Results sheet (90%). Opens ONLY after the walk-to-market animation finishes;
- * results are computed up-front so the door opens onto answers, not a spinner.
- * Vendors stack vertically; products sit in the grid below. Refining the query
- * inside the sheet updates results instantly (no walk replay — the trip
- * already happened).
+ * the initial search fires as soon as the walk starts so results are ready
+ * by the time the door opens. Refining the query inside the sheet re-queries
+ * (debounced) — no walk replay, the trip already happened.
  */
 export function SearchModal({
   visible,
   initialQuery,
+  lat,
+  lng,
   onClose,
-  onOpenProduct,
+  onOpenStore,
 }: {
   visible: boolean;
   initialQuery: string;
+  lat?: number;
+  lng?: number;
   onClose: () => void;
-  onOpenProduct: (p: Product) => void;
+  onOpenStore: (s: StoreResult) => void;
 }) {
-  const { add } = useCart();
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<Product[]>([]);
+  const [results, setResults] = useState<StoreResult[]>([]);
+  const [loading, setLoading] = useState(false);
   const reveal = useRef(new Animated.Value(0)).current;
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const keyboardHeight = useKeyboardHeight();
+
+  // The sheet rises by the keyboard's own height as it appears, so the
+  // refine bar always ends up sitting just above the qwerty keys instead of
+  // being covered or leaving an awkward gap.
+  const keyboardStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -keyboardHeight.value }],
+  }));
+
+  const runSearch = (q: string) => {
+    setLoading(true);
+    searchStores({ q: q || undefined, lat, lng })
+      .then((page) => setResults(page.stores))
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
     if (!visible) return;
     setQuery(initialQuery);
-    setResults(searchProducts(initialQuery)); // TODO(backend): results fetched during the walk
+    runSearch(initialQuery);
     reveal.setValue(0);
     Animated.timing(reveal, {
       toValue: 1,
@@ -59,16 +81,9 @@ export function SearchModal({
 
   const refine = (q: string) => {
     setQuery(q);
-    setResults(searchProducts(q));
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => runSearch(q), REFINE_DEBOUNCE_MS);
   };
-
-  const q = query.trim().toLowerCase();
-  const vendorHits = VENDORS.filter(
-    (v) =>
-      q &&
-      (v.name.toLowerCase().includes(q) ||
-        v.category.toLowerCase().includes(q)),
-  );
 
   const rise = {
     opacity: reveal,
@@ -95,7 +110,7 @@ export function SearchModal({
         accessibilityLabel="Close search"
       />
 
-      <View style={s.sheet}>
+      <Reanimated.View style={[s.sheet, keyboardStyle]}>
         <View style={s.grabber} />
 
         {/* refine bar */}
@@ -125,41 +140,15 @@ export function SearchModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 60 }}
           >
-            {/* vendors — vertical stack */}
-            {vendorHits.length > 0 && (
-              <>
-                <Text style={[type.section, s.section]}>Vendors</Text>
-                {vendorHits.map((v) => (
-                  <View key={v.id} style={s.vendorCard}>
-                    <View style={[s.vendorChip, { backgroundColor: v.chipBg }]}>
-                      <Text style={[s.vendorChipText, { color: v.chipText }]}>
-                        {v.category}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1, marginLeft: space.md }}>
-                      <Text style={s.vendorName}>{v.name}</Text>
-                      <Text style={type.meta}>{v.activity}</Text>
-                    </View>
-                    <View style={s.vendorRight}>
-                      <View style={s.vendorRating}>
-                        <Ionicons name="star" size={11} color={color.ink} />
-                        <Text style={s.vendorRatingText}>
-                          {v.rating.toFixed(1)}
-                        </Text>
-                      </View>
-                      <Text style={type.meta}>{v.eta}</Text>
-                    </View>
-                  </View>
-                ))}
-              </>
-            )}
-
-            {/* products — grid */}
             <Text style={[type.section, s.section]}>
-              {q ? `Results for “${query}”` : "Popular right now"}
+              {query ? `Stores for "${query}"` : "Stores near you"}
             </Text>
 
-            {results.length === 0 ? (
+            {loading ? (
+              <View style={s.empty}>
+                <ActivityIndicator color={color.primary} />
+              </View>
+            ) : results.length === 0 ? (
               <View style={s.empty}>
                 <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
                   Nothing matched
@@ -169,21 +158,38 @@ export function SearchModal({
                 </Text>
               </View>
             ) : (
-              <View style={s.grid}>
-                {results.map((p) => (
-                  <View key={p.id} style={s.cell}>
-                    <ProductCard
-                      product={p}
-                      onAdd={(prod) => add(prod)}
-                      onOpen={onOpenProduct}
-                    />
-                  </View>
-                ))}
-              </View>
+              results.map((st) => {
+                const meta = categoryMeta(st.category);
+                return (
+                  <Pressable
+                    key={st.id}
+                    style={s.vendorCard}
+                    onPress={() => onOpenStore(st)}
+                  >
+                    <View style={[s.vendorChip, { backgroundColor: tint[meta.tint] }]}>
+                      <Ionicons name={meta.icon} size={20} color={color.ink} />
+                    </View>
+                    <View style={{ flex: 1, marginLeft: space.md }}>
+                      <Text style={s.vendorName}>{st.name}</Text>
+                      <Text style={type.meta} numberOfLines={1}>
+                        {st.tagline ?? st.address ?? meta.label}
+                      </Text>
+                    </View>
+                    <View style={s.vendorRight}>
+                      <Text style={[type.meta, { fontFamily: "Jakarta_600", color: color.ink }]}>
+                        {meta.label}
+                      </Text>
+                      {typeof st.distance_km === "number" && (
+                        <Text style={type.meta}>{st.distance_km.toFixed(1)} km away</Text>
+                      )}
+                    </View>
+                  </Pressable>
+                );
+              })
             )}
           </ScrollView>
         </Animated.View>
-      </View>
+      </Reanimated.View>
     </Modal>
   );
 }
@@ -241,7 +247,6 @@ const s = StyleSheet.create({
 
   section: { marginTop: space.xl, marginBottom: space.md },
 
-  /* vendors — vertical rows, soft-morphism */
   vendorCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -257,22 +262,16 @@ const s = StyleSheet.create({
     shadowRadius: 14,
     elevation: 3,
   },
-  vendorChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
-  vendorChipText: {
-    fontFamily: "Jakarta_600",
-    fontSize: 10,
-    letterSpacing: 0.8,
+  vendorChip: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: color.panel,
+    alignItems: "center",
+    justifyContent: "center",
   },
   vendorName: { fontFamily: "Jakarta_600", fontSize: 15, color: color.text },
   vendorRight: { alignItems: "flex-end", gap: 3 },
-  vendorRating: { flexDirection: "row", alignItems: "center", gap: 3 },
-  vendorRatingText: {
-    fontFamily: "Jakarta_700",
-    fontSize: 12,
-    color: color.ink,
-  },
 
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
-  cell: { width: "47.6%" },
   empty: { alignItems: "center", paddingTop: 40 },
 });

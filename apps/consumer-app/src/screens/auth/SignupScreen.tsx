@@ -16,17 +16,22 @@ export function SignupScreen({
   onGoToLogin: () => void;
   onNeedsVerification: (email: string) => void;
 }) {
-  const { signUpWithEmail, sendOtp, signInWithGoogle, signInWithApple, isLoading } = useAuth();
+  const { signUpWithEmail, sendOtp, signInWithGoogle, signInWithApple, isLoading, authError } =
+    useAuth();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const valid = fullName.trim().length > 1 && email.includes("@") && password.length >= 6;
+  const valid = fullName.trim().length > 1 && email.includes("@") && password.length >= 8;
 
   const submit = async () => {
-    await signUpWithEmail(fullName, email, password);
-    await sendOtp(email);
-    onNeedsVerification(email);
+    try {
+      await signUpWithEmail(fullName, email, password);
+      await sendOtp(email);
+      onNeedsVerification(email);
+    } catch {
+      // authError is already set by the context — nothing else to do here.
+    }
   };
 
   return (
@@ -63,13 +68,19 @@ export function SignupScreen({
             />
             <Input
               label="Password"
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               isPassword
               autoComplete="new-password"
               value={password}
               onChangeText={setPassword}
             />
           </View>
+
+          {authError && (
+            <Text style={[type.meta, { color: color.danger, marginTop: space.sm }]}>
+              {authError}
+            </Text>
+          )}
 
           <View style={s.divider}>
             <View style={s.rule} />

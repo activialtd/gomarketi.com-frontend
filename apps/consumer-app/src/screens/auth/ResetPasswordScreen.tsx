@@ -1,18 +1,34 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
-  View, Text, TextInput, Pressable, Image, KeyboardAvoidingView, Platform, StyleSheet,
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { useAuth } from "../../lib/auth-context";
 import { color, radius, type, space, HIT } from "../../theme/tokens";
 
 const CELLS = 6;
 
-export function VerifyEmailScreen({ email, onBack }: { email: string; onBack: () => void }) {
-  const { verifyOtp, sendOtp, isLoading, authError } = useAuth();
+export function ResetPasswordScreen({
+  email,
+  onBack,
+  onDone,
+}: {
+  email: string;
+  onBack: () => void;
+  onDone: () => void;
+}) {
+  const { resetPassword, requestPasswordReset, isLoading, authError } = useAuth();
   const [digits, setDigits] = useState<string[]>(Array(CELLS).fill(""));
+  const [password, setPassword] = useState("");
   const [left, setLeft] = useState(45);
   const refs = useRef<(TextInput | null)[]>([]);
 
@@ -23,6 +39,7 @@ export function VerifyEmailScreen({ email, onBack }: { email: string; onBack: ()
   }, [left]);
 
   const code = digits.join("");
+  const valid = code.length === CELLS && password.length >= 8;
 
   const set = (text: string, i: number) => {
     const clean = text.replace(/[^0-9]/g, "");
@@ -59,6 +76,15 @@ export function VerifyEmailScreen({ email, onBack }: { email: string; onBack: ()
     }
   };
 
+  const submit = async () => {
+    try {
+      await resetPassword(code, password);
+      onDone();
+    } catch {
+      // authError is already set by the context.
+    }
+  };
+
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
@@ -69,16 +95,10 @@ export function VerifyEmailScreen({ email, onBack }: { email: string; onBack: ()
           <Ionicons name="arrow-back" size={20} color={color.foreground} />
         </Pressable>
 
-        <Image
-          source={require("../../../assets/illustrations/verify-email.png")}
-          style={{ width: 150, height: 150, alignSelf: "center", marginTop: 20 }}
-          resizeMode="contain"
-        />
-
-        <Text style={[type.eyebrow, { marginTop: 20 }]}>VERIFY EMAIL</Text>
+        <Text style={[type.eyebrow, { marginTop: 20 }]}>RESET PASSWORD</Text>
         <Text style={[type.display, { marginTop: space.sm }]}>Enter the code</Text>
         <Text style={[type.body, { marginTop: space.sm }]}>
-          We sent a 6-digit code to {email}.
+          We sent a 6-digit code to {email}. Enter it below with your new password.
         </Text>
 
         <View style={s.cells}>
@@ -98,24 +118,35 @@ export function VerifyEmailScreen({ email, onBack }: { email: string; onBack: ()
           ))}
         </View>
 
+        <View style={s.form}>
+          <Input
+            label="New password"
+            placeholder="At least 8 characters"
+            isPassword
+            autoComplete="new-password"
+            value={password}
+            onChangeText={setPassword}
+          />
+        </View>
+
         {authError && (
-          <Text style={[type.meta, { color: color.danger, marginTop: space.md }]}>
+          <Text style={[type.meta, { color: color.danger, marginTop: space.sm }]}>
             {authError}
           </Text>
         )}
 
         <Button
-          label="Verify"
+          label="Reset password"
           loading={isLoading}
-          disabled={code.length < CELLS}
-          onPress={() => verifyOtp(email, code).catch(() => {})}
+          disabled={!valid}
+          onPress={submit}
           style={{ marginTop: 32 }}
         />
 
         <View style={s.resend}>
           <Text style={type.meta}>Didn't get it? </Text>
           <Pressable
-            onPress={() => { sendOtp(email).catch(() => {}); setLeft(45); }}
+            onPress={() => { requestPasswordReset(email).catch(() => {}); setLeft(45); }}
             disabled={left > 0}
             hitSlop={HIT}
           >
@@ -160,5 +191,6 @@ const s = StyleSheet.create({
     fontSize: 20,
     color: color.foreground,
   },
+  form: { marginTop: 28, gap: space.lg },
   resend: { flexDirection: "row", justifyContent: "center", marginTop: space.xl },
 });

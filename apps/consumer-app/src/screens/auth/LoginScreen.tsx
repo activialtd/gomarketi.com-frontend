@@ -15,13 +15,19 @@ import { SocialButton } from "../../components/ui/SocialButton";
 import { useAuth } from "../../lib/auth-context";
 import { color, type, space, HIT } from "../../theme/tokens";
 
-export function LoginScreen({ onGoToSignup }: { onGoToSignup: () => void }) {
-  const { signInWithEmail, signInWithGoogle, signInWithApple, isLoading } =
+export function LoginScreen({
+  onGoToSignup,
+  onForgotPassword,
+}: {
+  onGoToSignup: () => void;
+  onForgotPassword: () => void;
+}) {
+  const { signInWithEmail, signInWithGoogle, signInWithApple, isLoading, authError } =
     useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const valid = email.includes("@") && password.length >= 6;
+  const valid = email.includes("@") && password.length >= 8;
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
@@ -55,7 +61,11 @@ export function LoginScreen({ onGoToSignup }: { onGoToSignup: () => void }) {
               value={password}
               onChangeText={setPassword}
             />
-            <Pressable hitSlop={HIT} style={{ alignSelf: "flex-end" }}>
+            <Pressable
+              hitSlop={HIT}
+              style={{ alignSelf: "flex-end" }}
+              onPress={onForgotPassword}
+            >
               <Text
                 style={[
                   type.meta,
@@ -66,6 +76,12 @@ export function LoginScreen({ onGoToSignup }: { onGoToSignup: () => void }) {
               </Text>
             </Pressable>
           </View>
+
+          {authError && (
+            <Text style={[type.meta, { color: color.danger, marginTop: space.sm }]}>
+              {authError}
+            </Text>
+          )}
 
           <View style={s.divider}>
             <View style={s.rule} />
@@ -85,7 +101,7 @@ export function LoginScreen({ onGoToSignup }: { onGoToSignup: () => void }) {
             label="Sign in"
             loading={isLoading}
             disabled={!valid}
-            onPress={() => signInWithEmail(email, password)}
+            onPress={() => signInWithEmail(email, password).catch(() => {})}
           />
           <View style={s.foot}>
             <Text style={type.meta}>New to GoMarketi? </Text>

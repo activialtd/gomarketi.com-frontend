@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
@@ -8,6 +8,7 @@ import { PaystackSheet } from "../../components/PaystackSheet";
 import { useCart, formatNaira, toNaira } from "../../lib/cart-context";
 import { useOrders } from "../../lib/orders-context";
 import { useAuth } from "../../lib/auth-context";
+import { useLocation } from "../../hooks/useLocation";
 import { useNav } from "../../navigation/AppNavigator";
 import { color, type, space } from "../../theme/tokens";
 import { KeyboardAvoidingView, Platform } from "react-native";
@@ -16,11 +17,21 @@ export function CheckoutScreen() {
   const { items, totalUsd, clear } = useCart();
   const { placeOrder } = useOrders();
   const { user } = useAuth();
+  const { address: capturedAddress } = useLocation();
   const { reset, push } = useNav();
 
   const [address, setAddress] = useState("");
+  const [addressEdited, setAddressEdited] = useState(false);
   const [phone, setPhone] = useState("");
   const [paying, setPaying] = useState(false);
+
+  // Pre-fill from the buyer's captured location, but never overwrite
+  // something they've already typed or edited themselves.
+  useEffect(() => {
+    if (!addressEdited && capturedAddress) {
+      setAddress(capturedAddress);
+    }
+  }, [capturedAddress, addressEdited]);
 
   const valid =
     address.trim().length > 5 && phone.trim().length >= 7 && items.length > 0;
@@ -52,7 +63,10 @@ export function CheckoutScreen() {
               label="Delivery address"
               placeholder="12 Adeola Odeku St, Victoria Island"
               value={address}
-              onChangeText={setAddress}
+              onChangeText={(t) => {
+                setAddressEdited(true);
+                setAddress(t);
+              }}
             />
             <Input
               label="Phone"

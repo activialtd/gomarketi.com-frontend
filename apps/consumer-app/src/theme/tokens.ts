@@ -18,6 +18,14 @@ const brand = {
   ring: "#1a7a42",
 
   onPrimary: "#ffffff",
+
+  danger: "#dc2626", // form/auth error text
+
+  // ---- cartoon accent pops — bright, saturated, used sparingly ----
+  sunshine: "#FFC93C", // badges, sparkle accents
+  coral: "#FF6B5E", // playful highlights, mic ring
+  sky: "#3EC1F3", // secondary accent pop
+  ink900: "#0A2E1A", // hard "sticker" shadow colour
 } as const;
 
 export const color = {
@@ -36,6 +44,23 @@ export const color = {
   onInk: brand.onPrimary, // text/icon on dark green
 } as const;
 
+/**
+ * "Sticker" look: thick border + hard offset shadow (no blur) instead of a
+ * soft drop shadow — the cartoon signature applied to cards/buttons/chips
+ * that should feel poppy and tactile rather than flat/corporate.
+ */
+export function stickerShadow(borderColor: string = color.ink900, offset = 4) {
+  return {
+    borderWidth: 2.5,
+    borderColor,
+    shadowColor: borderColor,
+    shadowOffset: { width: offset, height: offset },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: offset,
+  } as const;
+}
+
 /** Category tints for product image slots — low saturation, calm wall. */
 export const tint = {
   produce: "#E6F0E9",
@@ -44,6 +69,11 @@ export const tint = {
   pharmacy: "#E7EFF5",
   fashion: "#EFEFF1",
   home: "#EFECF3",
+  electronics: "#E8EEF7",
+  jewelry: "#F6EEDD",
+  groceries: "#EAF3E3",
+  thrift: "#EFE9E2",
+  food: "#F5E9E3",
 } as const;
 
 export type TintKey = keyof typeof tint;
@@ -75,7 +105,9 @@ export const type = {
     color: color.muted,
   },
   display: {
-    fontFamily: "Jakarta_700",
+    // Fredoka (not Jakarta) — its rounded shapes are the "cartoon" headline
+    // treatment, used consistently across splash/onboarding/auth/home.
+    fontFamily: "Fredoka_600",
     fontSize: 28,
     lineHeight: 36,
     color: color.secondary,

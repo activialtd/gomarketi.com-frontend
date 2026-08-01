@@ -112,6 +112,7 @@ export function StoreSetupForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [markets, setMarkets] = useState<{ id: string; name: string }[]>([]);
 
   const {
     register,
@@ -135,6 +136,26 @@ export function StoreSetupForm() {
   const slugVal = watch("slug") ?? "";
   const currencyVal = watch("currency");
   const teamSizeVal = watch("teamSize");
+  const stateVal = watch("state");
+  const cityVal = watch("city");
+
+  // Populate the "major market" dropdown once the vendor's address gives us
+  // a state (and, ideally, a city) — e.g. an Awka/Anambra address shows
+  // Anambra's markets, not Lagos's.
+  useEffect(() => {
+    if (!stateVal) {
+      setMarkets([]);
+      return;
+    }
+    let cancelled = false;
+    storefrontApi
+      .getMarkets({ state: stateVal, city: cityVal || undefined })
+      .then((res) => !cancelled && setMarkets(res))
+      .catch(() => !cancelled && setMarkets([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [stateVal, cityVal]);
 
   const slugRegister = register("slug", {
     onChange: () => setSlugEdited(true),
@@ -223,12 +244,13 @@ export function StoreSetupForm() {
         },
         accessToken,
       );
-      // Save address if provided
+      // Save address (and market, if one was picked) if provided
       if (data.address && store?.id) {
         await storefrontApi.updateStore(store.id, {
           address: data.address,
           city: data.city,
           state: data.state,
+          market_id: data.market || undefined,
         }, accessToken).catch(() => {/* non-fatal */});
       }
       try {
@@ -630,6 +652,40 @@ export function StoreSetupForm() {
                   <p className="text-[11px]" style={{color:"#94a3b8"}}>Search and select your business address above</p>
                 )}
               </div>
+
+              {/* Major market — optional, populated once we know the state/city */}
+              {markets.length > 0 && (
+                <Field label="Major market (optional)">
+                  <Controller
+                    control={control}
+                    name="market"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                        <SelectTrigger
+                          className="h-[42px] px-3.5 text-[13px] rounded-[10px] border w-full"
+                          style={{
+                            background: "#F0FAF3",
+                            borderColor: BORDER,
+                            color: field.value ? "#1C1C1C" : "#3D6B4F",
+                          }}
+                        >
+                          <SelectValue placeholder="Not part of a named market" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {markets.map((m) => (
+                            <SelectItem key={m.id} value={m.id}>
+                              {m.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-[11px] mt-1.5" style={{ color: "#94a3b8" }}>
+                    If your store is inside a well-known market like Balogun or Alaba, buyers searching for that market will find you. Leave blank otherwise.
+                  </p>
+                </Field>
+              )}
 
               {/* Team size */}
               <div className="space-y-2">

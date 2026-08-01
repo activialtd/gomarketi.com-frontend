@@ -28,10 +28,19 @@ const GALLERY_H = 400;
  * - CTA is two-stage: "Add to cart" → after adding, becomes "Checkout · ₦total"
  *   with a quiet "Add another" beneath it.
  */
-export function ProductDetailScreen({ productId }: { productId?: string }) {
+export function ProductDetailScreen({
+  productId,
+  product: productProp,
+}: {
+  productId?: string;
+  product?: Product;
+}) {
   const { pop, push } = useNav();
   const { add, count, totalUsd } = useCart();
-  const product: Product | undefined = PRODUCTS.find((p) => p.id === productId);
+  // A real (API-backed) product is passed directly since it won't exist in
+  // the mock PRODUCTS array; only fall back to the mock lookup by id when
+  // no product object was handed over.
+  const product: Product | undefined = productProp ?? PRODUCTS.find((p) => p.id === productId);
 
   const pager = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);

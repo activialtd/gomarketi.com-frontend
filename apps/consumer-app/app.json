@@ -4,7 +4,6 @@
     "slug": "gomarketi",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
@@ -15,29 +14,24 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#E6F4FE"
       },
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
-    },
     "extra": {
+      "apiUrl": "https://api-staging.gomarketi.com",
       "eas": {
         "projectId": "078981bd-5813-4f08-849d-e71871dcd6f4"
       }
     },
-    "owner": "moseley_dev"
-  },
-  "plugins": [
-    [
-      "expo-location",
-      {
-        "locationWhenInUsePermission": "GoMarketi uses your location to show nearby vendors and deliver to your door."
-      }
+    "owner": "moseley_dev",
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "GoMarketi uses your location to show nearby vendors and deliver to your door."
+        }
+      ]
     ]
-  ]
+  }
 }

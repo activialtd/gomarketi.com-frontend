@@ -7,19 +7,27 @@ import {
   Animated,
   Easing,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { MotiView } from "moti";
 import { useAuth } from "../../lib/auth-context";
 import { useLocation } from "../../hooks/useLocation";
 import { SearchModal } from "../../components/ui/SearchModal";
 import { VoiceSearchOverlay } from "../../components/ui/VoiceSearchOverlay";
 import { WalkToMarketOverlay } from "../../components/ui/WalkToMarketOverlay";
+import { Bouncy } from "../../components/ui/Bouncy";
 import { useNav } from "../../navigation/AppNavigator";
-import { color, space, HIT } from "../../theme/tokens";
+import { color, space, HIT, stickerShadow } from "../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 
-const PROMPTS = ["Order groceries", "Refill pharmacy", "Find a vendor"];
+const PROMPTS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { label: "Order groceries", icon: "basket-outline" },
+  { label: "Refill pharmacy", icon: "medkit-outline" },
+  { label: "Find a vendor", icon: "storefront-outline" },
+];
 
 /**
  * Bold Niva-style bloom: concentric brand-hue discs centered behind the pill,
@@ -153,7 +161,7 @@ const b = StyleSheet.create({
 
 export function HomeScreen() {
   const { user } = useAuth();
-  const { status, city, request } = useLocation();
+  const { status, city, coords, request } = useLocation();
   const { push } = useNav();
 
   const [query, setQuery] = useState("");
@@ -192,13 +200,12 @@ export function HomeScreen() {
         ? "Set location"
         : "Locating…";
 
-  /** submit on Home → play the walk → then open the modal */
+  /** submit on Home → play the walk → then open the modal (which fires the search itself) */
   const commitSearch = (q: string) => {
     const cleaned = q.trim();
     if (!cleaned) return;
     setCommittedQuery(cleaned);
     setWalking(true);
-    // TODO(backend): fire the search request HERE so results are ready post-walk
   };
 
   const onWalkDone = () => {
@@ -244,7 +251,11 @@ export function HomeScreen() {
         </View>
 
         {/* fixed hero */}
-        <View style={s.hero}>
+        <View style={s.heroWrap}>
+        <KeyboardAvoidingView
+          style={s.hero}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           {/* upper block: greeting + chips */}
           <View style={s.top}>
             <Animated.Text style={[s.eyebrow, riseIn(14)]}>
@@ -255,15 +266,23 @@ export function HomeScreen() {
             </Animated.Text>
             <Animated.View style={[s.chips, riseIn(26)]}>
               {PROMPTS.map((p) => (
-                <Pressable
-                  key={p}
-                  onPress={() => commitSearch(p.split(" ").pop()!)}
+                <Bouncy
+                  key={p.label}
+                  style={s.chip}
+                  onPress={() => commitSearch(p.label.split(" ").pop()!)}
                 >
-                  <View style={s.chip}>
-                    <Text style={s.chipText}>{p}</Text>
-                  </View>
-                </Pressable>
+                  <Ionicons name={p.icon} size={14} color={color.ink} />
+                  <Text style={s.chipText}>{p.label}</Text>
+                </Bouncy>
               ))}
+            </Animated.View>
+
+            <Animated.View style={riseIn(28)}>
+              <Bouncy style={s.marketsTab} onPress={() => push("markets")}>
+                <Ionicons name="storefront" size={16} color={color.onInk} />
+                <Text style={s.marketsTabText}>Popular Markets</Text>
+                <Ionicons name="chevron-forward" size={14} color={color.onInk} />
+              </Bouncy>
             </Animated.View>
           </View>
 
@@ -281,17 +300,26 @@ export function HomeScreen() {
                 accessibilityLabel="Search products"
                 style={s.pillInput}
               />
-              <Pressable
-                onPress={() => setListening(true)}
-                accessibilityRole="button"
-                accessibilityLabel="Search by voice"
-              >
-                <View style={s.mic}>
+              <View style={s.micWrap}>
+                <MotiView
+                  from={{ scale: 1, opacity: 0.5 }}
+                  animate={{ scale: 1.55, opacity: 0 }}
+                  transition={{ type: "timing", duration: 1400, loop: true }}
+                  style={s.micPulse}
+                />
+                <Bouncy
+                  onPress={() => setListening(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Search by voice"
+                  style={s.mic}
+                  scaleTo={0.88}
+                >
                   <Ionicons name="mic" size={22} color={color.onInk} />
-                </View>
-              </Pressable>
+                </Bouncy>
+              </View>
             </Animated.View>
           </View>
+        </KeyboardAvoidingView>
         </View>
       </SafeAreaView>
 
@@ -308,13 +336,15 @@ export function HomeScreen() {
       <SearchModal
         visible={searchOpen}
         initialQuery={committedQuery}
+        lat={coords?.latitude}
+        lng={coords?.longitude}
         onClose={() => {
           setSearchOpen(false);
           setQuery("");
         }}
-        onOpenProduct={(p) => {
+        onOpenStore={(st) => {
           setSearchOpen(false);
-          push("product", { productId: p.id });
+          push("store", { store: st });
         }}
       />
 
@@ -350,14 +380,26 @@ const s = StyleSheet.create({
   loc: { flexDirection: "row", alignItems: "center", gap: 4 },
   locText: { fontFamily: "Jakarta_600", fontSize: 16, color: color.text },
 
-  hero: {
+  // Shadow lives on the outer wrapper — a hard offset shadow gets clipped
+  // if it's on the same view as overflow:hidden, so the inner `hero` (which
+  // needs overflow:hidden to contain AuroraField's blobs) can't carry it.
+  heroWrap: {
     flex: 1,
     margin: space.lg,
     marginTop: space.sm,
     borderRadius: 32,
+    shadowColor: color.ink900,
+    shadowOffset: { width: 6, height: 6 },
+    shadowOpacity: 1,
+    shadowRadius: 0,
+    elevation: 6,
+  },
+  hero: {
+    flex: 1,
+    borderRadius: 32,
     backgroundColor: color.card,
-    borderWidth: 1,
-    borderColor: color.line,
+    borderWidth: 2.5,
+    borderColor: color.ink900,
     overflow: "hidden",
   },
   top: { paddingTop: 48 },
@@ -370,12 +412,12 @@ const s = StyleSheet.create({
   },
   display: {
     textAlign: "center",
-    fontFamily: "Jakarta_700",
+    fontFamily: "Fredoka_600",
     fontSize: 32,
     lineHeight: 40,
     color: color.text,
     marginTop: space.md,
-    letterSpacing: -0.4,
+    letterSpacing: -0.2,
   },
   chips: {
     flexDirection: "row",
@@ -386,16 +428,30 @@ const s = StyleSheet.create({
     paddingHorizontal: space.lg,
   },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     height: 38,
     paddingHorizontal: 16,
     borderRadius: 19,
-    borderWidth: 1,
-    borderColor: color.lineStrong,
     backgroundColor: color.card,
-    alignItems: "center",
     justifyContent: "center",
+    ...stickerShadow(color.ink900, 3),
   },
   chipText: { fontFamily: "Jakarta_500", fontSize: 13, color: color.text },
+  marketsTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "center",
+    gap: 8,
+    marginTop: space.lg,
+    height: 40,
+    paddingHorizontal: 18,
+    borderRadius: 20,
+    backgroundColor: color.ink,
+    ...stickerShadow(color.ink900, 3),
+  },
+  marketsTabText: { fontFamily: "Jakarta_600", fontSize: 13, color: color.onInk },
 
   centerZone: {
     flex: 1,
@@ -413,13 +469,7 @@ const s = StyleSheet.create({
     paddingRight: 8,
     borderRadius: 32,
     backgroundColor: color.card,
-    borderWidth: 1,
-    borderColor: "rgba(10,46,26,0.08)",
-    shadowColor: "#0A2E1A",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    elevation: 8,
+    ...stickerShadow(color.ink900, 5),
   },
   pillInput: {
     flex: 1,
@@ -428,6 +478,19 @@ const s = StyleSheet.create({
     color: color.text,
     padding: 0,
   },
+  micWrap: {
+    width: 50,
+    height: 50,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  micPulse: {
+    position: "absolute",
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: color.sunshine,
+  },
   mic: {
     width: 50,
     height: 50,
@@ -435,10 +498,6 @@ const s = StyleSheet.create({
     backgroundColor: color.accent,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#22C55E",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 6,
+    ...stickerShadow(color.ink900, 3),
   },
 });

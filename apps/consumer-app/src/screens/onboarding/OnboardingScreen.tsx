@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { color, space, HIT } from "../../theme/tokens";
+import { color, space, HIT, stickerShadow } from "../../theme/tokens";
 
 const { width } = Dimensions.get("window");
 
@@ -95,11 +95,7 @@ const c = StyleSheet.create({
     position: "absolute",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#0A2E1A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 14,
-    elevation: 5,
+    ...stickerShadow(color.ink900, 3),
   },
 });
 
@@ -560,13 +556,13 @@ const s = StyleSheet.create({
   },
 
   title: {
-    fontFamily: "Jakarta_500",
+    fontFamily: "Fredoka_500",
     fontSize: 30,
     lineHeight: 39,
     color: color.text,
-    letterSpacing: -0.4,
+    letterSpacing: -0.2,
   },
-  titleStrong: { fontFamily: "Jakarta_800", color: color.ink },
+  titleStrong: { fontFamily: "Fredoka_700", color: color.ink },
   body: {
     fontFamily: "Jakarta_400",
     fontSize: 14.5,
@@ -594,7 +590,7 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(10,46,26,0.12)",
     overflow: "hidden",
   },
-  progressFill: { height: 4, borderRadius: 2, backgroundColor: color.ink },
+  progressFill: { height: 4, borderRadius: 2, backgroundColor: color.coral },
   orb: {
     width: 58,
     height: 58,
