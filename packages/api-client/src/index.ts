@@ -437,8 +437,14 @@ async function request<T>(
     headers,
   });
 
-  // Auto-refresh: if 401 and a refresh callback is registered, retry once
-  if (res.status === 401 && _onTokenExpired) {
+  // Auto-refresh: if 401 and a refresh callback is registered, retry once.
+  // The refresh endpoint itself is excluded — otherwise a 401 from a missing
+  // or expired refresh token would call refreshOnce() from inside the very
+  // refreshOnce() call that's already in flight, awaiting a promise that can
+  // only settle once this call returns. That's a permanent deadlock, which
+  // left the dashboard's hydration spinner stuck forever on session restore.
+  const isRefreshEndpoint = path === "/v1/auth/token/refresh";
+  if (res.status === 401 && _onTokenExpired && !isRefreshEndpoint) {
     const newToken = await refreshOnce();
     if (newToken) {
       const retryHeaders = { ...headers, Authorization: `Bearer ${newToken}` };
