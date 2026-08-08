@@ -38,7 +38,9 @@ export function OrdersScreen() {
             >
               <View style={s.card}>
                 <View style={s.rowTop}>
-                  <Text style={s.ref}>#{o.reference.slice(-8)}</Text>
+                  <Text style={s.ref}>
+                    {o.storeName ? `${o.storeName} · ` : ""}#{o.reference.slice(-8)}
+                  </Text>
                   <View
                     style={[
                       s.chip,

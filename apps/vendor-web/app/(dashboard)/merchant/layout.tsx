@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/common/Sidebar";
 import { Header } from "@/components/common/Header";
+import { ToastContainer } from "@/components/common/ToastContainer";
 import { useAuthStore } from "@/store/useAuthStore";
 import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
@@ -88,6 +89,7 @@ export default function MerchantLayout({
     <SWRProvider>
       <div className="flex h-screen overflow-hidden bg-[#f4f6f9]">
         <DashboardTour />
+        <ToastContainer />
 
         <Sidebar
           isOpen={sidebarOpen}

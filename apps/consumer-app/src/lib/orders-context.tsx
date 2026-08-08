@@ -5,18 +5,22 @@ export type OrderStatus =
   "confirmed" | "preparing" | "on_the_way" | "delivered";
 
 export type Order = {
-  id: string;
-  reference: string; // Paystack reference
-  items: CartLine[];
+  id: string; // real backend order id — one per vendor store
+  reference: string; // shared Paystack reference across every order in one checkout
+  items: CartLine[]; // this order's slice of the cart (one store's items only)
   totalUsd: number;
   address: string;
   status: OrderStatus;
   placedAt: number;
+  storeId?: string;
+  storeName?: string;
 };
 
 type OrdersState = {
   orders: Order[];
-  placeOrder: (o: Omit<Order, "id" | "status" | "placedAt">) => Order;
+  // Registers N real backend-created orders from one checkout (one per
+  // vendor store) in a single state update.
+  registerOrders: (batch: Array<Omit<Order, "status" | "placedAt">>) => Order[];
   advance: (id: string) => void; // demo: step status forward
 };
 
@@ -31,16 +35,15 @@ const FLOW: OrderStatus[] = [
 export function OrdersProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<Order[]>([]);
 
-  const placeOrder: OrdersState["placeOrder"] = (o) => {
-    // TODO(backend): POST /orders after server-side Paystack verification
-    const order: Order = {
+  const registerOrders: OrdersState["registerOrders"] = (batch) => {
+    const placedAt = Date.now();
+    const newOrders: Order[] = batch.map((o) => ({
       ...o,
-      id: `ord_${Date.now()}`,
       status: "confirmed",
-      placedAt: Date.now(),
-    };
-    setOrders((cur) => [order, ...cur]);
-    return order;
+      placedAt,
+    }));
+    setOrders((cur) => [...newOrders, ...cur]);
+    return newOrders;
   };
 
   const advance = (id: string) =>
@@ -54,7 +57,7 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     );
 
   return (
-    <OrdersContext.Provider value={{ orders, placeOrder, advance }}>
+    <OrdersContext.Provider value={{ orders, registerOrders, advance }}>
       {children}
     </OrdersContext.Provider>
   );

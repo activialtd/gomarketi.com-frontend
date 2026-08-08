@@ -35,11 +35,22 @@ import {
   type PlanResp,
 } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useNotificationStore } from "@/store/useNotificationStore";
 
 // ── Token helper ──────────────────────────────────────────────────────────────
 
 function tok() {
   return useAuthStore.getState().accessToken ?? "";
+}
+
+function koboToNaira(kobo: number) {
+  return (
+    "₦" +
+    (kobo / 100).toLocaleString("en-NG", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })
+  );
 }
 
 // ── Products ──────────────────────────────────────────────────────────────────
@@ -283,11 +294,17 @@ export function useOrderEvents() {
       if (msg.id) lastEventId.current = msg.id;
 
       switch (msg.type) {
-        case "order_created":
+        case "order_created": {
           invalidate.orders();
           invalidate.wallet();
           invalidate.analytics();
+          const data = msg.data as { total_kobo?: number } | undefined;
+          useNotificationStore.getState().push({
+            title: "New order received",
+            body: typeof data?.total_kobo === "number" ? koboToNaira(data.total_kobo) : undefined,
+          });
           break;
+        }
         case "order_updated":
           invalidate.orders();
           invalidate.analytics();

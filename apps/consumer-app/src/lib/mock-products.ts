@@ -15,6 +15,12 @@ export type Product = {
   id: string;
   name: string;
   vendor: string;
+  // Store identity — undefined for the local mock catalog below; real
+  // catalogue products (via catalogue-adapter.ts) always carry this, since
+  // checkout needs it to know which vendor each cart line belongs to.
+  storeId?: string;
+  storeSlug?: string;
+  storeName?: string;
   category: string;
   price: number;
   rating: number;

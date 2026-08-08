@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { ROUTES } from "@/lib/config/routes";
+import { useNotificationStore } from "@/store/useNotificationStore";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -22,7 +23,6 @@ interface HeaderProps {
   merchantName?: string;
   userEmail?: string;
   avatarInitials?: string;
-  hasNotifications?: boolean;
   onSignOut?: () => void;
 }
 
@@ -34,10 +34,11 @@ export function Header({
   merchantName = "Merchant",
   userEmail,
   avatarInitials,
-  hasNotifications = false,
   onSignOut,
 }: HeaderProps) {
   const [profileOpen, setProfileOpen] = useState(false);
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
+  const markAllRead = useNotificationStore((s) => s.markAllRead);
 
   const initials =
     avatarInitials ??
@@ -143,12 +144,13 @@ export function Header({
         {/* Notification bell */}
         <button
           type="button"
+          onClick={markAllRead}
           className="relative w-9 h-9 flex items-center justify-center rounded-[8px] border transition-colors hover:bg-gray-50"
           style={{ borderColor: "#e9eef3" }}
           aria-label="Notifications"
         >
           <Bell className="w-4 h-4" style={{ color: "#64748b" }} />
-          {hasNotifications && (
+          {unreadCount > 0 && (
             <span
               className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border-2 border-white"
               style={{ background: "#ef4444" }}

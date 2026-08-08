@@ -356,3 +356,50 @@ export async function getStoreProducts(
     hasMore: resp.page * resp.per_page < resp.total,
   };
 }
+
+// ── Checkout ────────────────────────────────────────────────────────────────
+
+export type CheckoutOrderItem = {
+  product_id: string;
+  name: string;
+  image_url?: string;
+  quantity: number;
+  price_kobo: number;
+};
+
+export type CheckoutStoreOrder = {
+  store_id: string;
+  store_slug?: string;
+  store_name?: string;
+  items: CheckoutOrderItem[];
+};
+
+export type OrderResp = {
+  id: string;
+  store_id: string;
+  customer_id: string;
+  customer_name: string;
+  customer_email: string;
+  status: string;
+  items: CheckoutOrderItem[];
+  total_kobo: number;
+  delivery_address: string;
+  payment_reference?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// createCheckout creates one order per vendor store from a single payment —
+// POST /v1/orders/public/checkout, no auth (same public model as login/register
+// above: no vendor session exists at checkout time, only the buyer's details
+// and a verified Paystack reference).
+export async function createCheckout(input: {
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  delivery_address?: string;
+  payment_reference: string;
+  stores: CheckoutStoreOrder[];
+}): Promise<{ orders: OrderResp[] }> {
+  return request<{ orders: OrderResp[] }>("/v1/orders/public/checkout", input);
+}

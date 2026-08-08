@@ -1,21 +1,23 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, ScrollView, StyleSheet, TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { PaystackSheet } from "../../components/PaystackSheet";
-import { useCart, formatNaira, toNaira } from "../../lib/cart-context";
+import { useCart, formatNaira, toNaira, NGN_RATE } from "../../lib/cart-context";
 import { useOrders } from "../../lib/orders-context";
 import { useAuth } from "../../lib/auth-context";
 import { useLocation } from "../../hooks/useLocation";
 import { useNav } from "../../navigation/AppNavigator";
 import { color, type, space } from "../../theme/tokens";
 import { KeyboardAvoidingView, Platform } from "react-native";
+import { groupCartByStore } from "../../lib/checkout-grouping";
+import { createCheckout, ApiError } from "../../lib/api-client";
 
 export function CheckoutScreen() {
   const { items, totalUsd, clear } = useCart();
-  const { placeOrder } = useOrders();
+  const { registerOrders } = useOrders();
   const { user } = useAuth();
   const { address: capturedAddress } = useLocation();
   const { reset, push } = useNav();
@@ -24,6 +26,8 @@ export function CheckoutScreen() {
   const [addressEdited, setAddressEdited] = useState(false);
   const [phone, setPhone] = useState("");
   const [paying, setPaying] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   // Pre-fill from the buyer's captured location, but never overwrite
   // something they've already typed or edited themselves.
@@ -35,15 +39,60 @@ export function CheckoutScreen() {
 
   const valid =
     address.trim().length > 5 && phone.trim().length >= 7 && items.length > 0;
-  const reference = `gmk_${Date.now()}`;
 
-  const onPaid = (ref: string) => {
+  // Stable for the lifetime of one payment attempt — PaystackSheet stays
+  // mounted throughout, and payment idempotency now depends on this
+  // reference not changing mid-payment (it would otherwise be recomputed on
+  // every render, e.g. from a keystroke elsewhere on screen while paying).
+  const reference = useMemo(() => `gmk_${Date.now()}`, []);
+
+  const onPaid = async (ref: string) => {
     setPaying(false);
-    // TODO(backend): verify `ref` server-side BEFORE creating the order.
-    const order = placeOrder({ reference: ref, items, totalUsd, address });
-    clear();
-    reset("home");
-    push("track", { orderId: order.id });
+    setCheckoutError(null);
+
+    const grouped = groupCartByStore(items);
+    if (!grouped.ok) {
+      setCheckoutError(grouped.error);
+      return;
+    }
+
+    setCheckingOut(true);
+    try {
+      const { orders } = await createCheckout({
+        customer_name: user?.fullName || "Customer",
+        customer_email: user?.email ?? "",
+        customer_phone: phone,
+        delivery_address: address,
+        payment_reference: ref,
+        stores: grouped.stores,
+      });
+
+      registerOrders(
+        orders.map((o) => ({
+          id: o.id,
+          reference: ref,
+          items: grouped.linesByStore[o.store_id] ?? [],
+          totalUsd: o.total_kobo / 100 / NGN_RATE,
+          address,
+          storeId: o.store_id,
+          storeName: grouped.stores.find((s) => s.store_id === o.store_id)?.store_name,
+        })),
+      );
+      clear();
+      reset("home");
+      push("orders");
+    } catch (err) {
+      // Payment already succeeded with Paystack at this point — surface the
+      // error but keep the cart intact so the buyer can retry checkout
+      // (createCheckout is idempotent on `ref`, so retrying is safe).
+      setCheckoutError(
+        err instanceof ApiError
+          ? err.message
+          : "Payment succeeded but we couldn't finish placing your order. Please try again.",
+      );
+    } finally {
+      setCheckingOut(false);
+    }
   };
 
   return (
