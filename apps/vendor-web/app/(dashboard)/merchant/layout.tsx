@@ -61,7 +61,17 @@ export default function MerchantLayout({
     router.push(ROUTES.AUTH.LOGIN);
   }
 
-  if (hydrating) {
+  // Redirecting is a side effect and must happen after render commits, not
+  // during it — calling router.push() directly in the render body updates
+  // the Router component's state while MerchantLayout is still rendering,
+  // which React flags as an invalid cross-component setState-in-render.
+  useEffect(() => {
+    if (!hydrating && !user) {
+      router.push(ROUTES.AUTH.LOGIN);
+    }
+  }, [hydrating, user, router]);
+
+  if (hydrating || !user) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f8fafc]">
         <div
@@ -72,10 +82,6 @@ export default function MerchantLayout({
         />
       </div>
     );
-  }
-
-  if (!user) {
-    router.push(ROUTES.AUTH.LOGIN);
   }
 
   return (

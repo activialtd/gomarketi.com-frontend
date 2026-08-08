@@ -202,31 +202,40 @@ export const invalidate = {
   vendorProfile: () => mutate("identity:vendor-profile"),
 };
 
-// ── SSE real-time events ──────────────────────────────────────────────────────
+// ── WebSocket real-time events ──────────────────────────────────────────────
 
-const SSE_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
-const SSE_MAX_RETRIES = 5;       // give up SSE after 5 consecutive failures
-const SSE_FALLBACK_INTERVAL = 60_000; // poll every 60s after SSE gives up
+// The backend only ever implemented GET /v1/orders/ws (gorilla/websocket) —
+// there is no SSE endpoint, so this must speak WebSocket, not EventSource.
+const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws");
+const WS_MAX_RETRIES = 5;       // give up WS after 5 consecutive failures
+const WS_FALLBACK_INTERVAL = 60_000; // poll every 60s after WS gives up
+
+interface WsMessage {
+  type: string;
+  id: string;
+  data: unknown;
+}
 
 /**
- * useOrderEvents — subscribes to the orders SSE stream for real-time
+ * useOrderEvents — subscribes to the orders WebSocket stream for real-time
  * notifications. Replaces polling: the server pushes a tiny event only when
  * an order or wallet balance actually changes.
  *
  * Fault-tolerance design:
- *  - Reconnects automatically after disconnect (EventSource native behaviour)
- *  - Sends Last-Event-ID on reconnect so the server can replay missed events
+ *  - Reconnects automatically after disconnect
+ *  - Sends last_id on reconnect so the server can replay missed events
  *  - Random jitter (0–3s) on reconnect to prevent thundering-herd after
  *    a service restart with 10k concurrent vendors
- *  - After SSE_MAX_RETRIES consecutive failures, falls back to 60s polling
- *    so the dashboard still updates even if SSE is broken
- *  - Polling is disabled while SSE is healthy (zero wasted requests)
+ *  - After WS_MAX_RETRIES consecutive failures, falls back to 60s polling
+ *    so the dashboard still updates even if the socket is broken
+ *  - Polling is disabled while the socket is healthy (zero wasted requests)
  */
 export function useOrderEvents() {
   const accessToken = useAuthStore.getState().accessToken;
   const retryCount = useRef(0);
   const fallbackTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const sourceRef = useRef<EventSource | null>(null);
+  const sourceRef = useRef<WebSocket | null>(null);
+  const lastEventId = useRef<string | null>(null);
 
   const stopFallback = useCallback(() => {
     if (fallbackTimer.current) {
@@ -237,12 +246,12 @@ export function useOrderEvents() {
 
   const startFallback = useCallback(() => {
     if (fallbackTimer.current) return; // already running
-    console.warn("[SSE] switched to 60s polling fallback after repeated failures");
+    console.warn("[WS] switched to 60s polling fallback after repeated failures");
     fallbackTimer.current = setInterval(() => {
       invalidate.orders();
       invalidate.wallet();
       invalidate.analytics();
-    }, SSE_FALLBACK_INTERVAL);
+    }, WS_FALLBACK_INTERVAL);
   }, []);
 
   const connect = useCallback(() => {
@@ -251,40 +260,53 @@ export function useOrderEvents() {
     // Close any existing connection first.
     sourceRef.current?.close();
 
-    // EventSource doesn't support custom headers — token goes in the query param.
-    const url = `${SSE_BASE}/v1/orders/events?token=${encodeURIComponent(accessToken)}`;
-    const source = new EventSource(url);
-    sourceRef.current = source;
+    // Browser WebSocket cannot send custom headers — token goes in the query param;
+    // the gateway promotes it to an Authorization header for upgrade requests.
+    const params = new URLSearchParams({ token: accessToken });
+    if (lastEventId.current) params.set("last_id", lastEventId.current);
+    const socket = new WebSocket(`${WS_BASE}/v1/orders/ws?${params.toString()}`);
+    sourceRef.current = socket;
 
-    source.addEventListener("connected", () => {
+    socket.onopen = () => {
       // Successful (re)connect — reset retry counter and cancel fallback polling.
       retryCount.current = 0;
       stopFallback();
-    });
+    };
 
-    source.addEventListener("order_created", () => {
-      invalidate.orders();
-      invalidate.wallet();
-      invalidate.analytics();
-    });
+    socket.onmessage = (event) => {
+      let msg: WsMessage;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
+        return;
+      }
+      if (msg.id) lastEventId.current = msg.id;
 
-    source.addEventListener("order_updated", () => {
-      invalidate.orders();
-      invalidate.analytics();
-    });
+      switch (msg.type) {
+        case "order_created":
+          invalidate.orders();
+          invalidate.wallet();
+          invalidate.analytics();
+          break;
+        case "order_updated":
+          invalidate.orders();
+          invalidate.analytics();
+          break;
+        case "wallet_updated":
+          invalidate.wallet();
+          break;
+      }
+    };
 
-    source.addEventListener("wallet_updated", () => {
-      invalidate.wallet();
-    });
-
-    source.onerror = () => {
-      source.close();
+    // The close event always follows error and carries the actual retry
+    // decision — onerror alone gives no useful information here.
+    socket.onclose = () => {
       sourceRef.current = null;
       retryCount.current += 1;
 
-      if (retryCount.current >= SSE_MAX_RETRIES) {
+      if (retryCount.current >= WS_MAX_RETRIES) {
         startFallback();
-        return; // stop trying SSE — fallback polling takes over
+        return; // stop trying WS — fallback polling takes over
       }
 
       // Jitter: random delay 0–3s so 10k clients don't all reconnect at once
