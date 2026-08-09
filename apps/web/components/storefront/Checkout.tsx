@@ -500,7 +500,7 @@ export default function CheckoutPage({
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "40px" }} className="checkout-grid">
+      <div style={{ display: "grid", gap: "40px" }} className="checkout-grid">
         {/* ── Form ── */}
         <form onSubmit={handleSubmit(onSubmit)}>
           <h1 style={{ fontSize: "22px", fontWeight: 900, color: c.text, letterSpacing: "-0.4px", marginBottom: "24px" }}>Checkout</h1>
@@ -513,7 +513,7 @@ export default function CheckoutPage({
             <Field label="Full name" error={errors.fullName?.message}>
               <input style={inputStyle(!!errors.fullName)} placeholder="Your full name" {...register("fullName")} />
             </Field>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div style={{ display: "grid", gap: "12px" }} className="checkout-field-pair">
               <Field label="Email address" error={errors.email?.message}>
                 <input style={inputStyle(!!errors.email)} type="email" placeholder="you@example.com" {...register("email")} />
               </Field>
@@ -532,7 +532,7 @@ export default function CheckoutPage({
             <Field label="Street address" error={errors.address?.message}>
               <input style={inputStyle(!!errors.address)} placeholder="House number, street name" {...register("address")} />
             </Field>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div style={{ display: "grid", gap: "12px" }} className="checkout-field-pair">
               <Field label="City" error={errors.city?.message}>
                 <input style={inputStyle(!!errors.city)} placeholder="e.g. Surulere" {...register("city")} />
               </Field>
@@ -563,7 +563,7 @@ export default function CheckoutPage({
 
         {/* ── Order summary ── */}
         <div>
-          <div style={{ borderRadius: "16px", border: "1px solid #f1f5f9", padding: "20px", position: "sticky", top: "80px" }}>
+          <div style={{ borderRadius: "16px", border: "1px solid #f1f5f9", padding: "20px" }} className="checkout-summary-panel">
             <p style={{ fontSize: "14px", fontWeight: 800, color: c.text, marginBottom: "16px" }}>Order summary</p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px", maxHeight: "260px", overflowY: "auto" }}>
