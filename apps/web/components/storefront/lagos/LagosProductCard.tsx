@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
@@ -19,10 +20,15 @@ export function LagosProductCard({
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const hasImage = product.images.length > 0;
+  // See EkoProductCard.tsx — every caller (Home/Shop/Collection grids)
+  // never passed a slug prop, which silently broke every product link
+  // site-wide. Read it directly from the route instead.
+  const { slug } = useParams<{ slug?: string }>();
+  const productHref = slug ? `/storefront/${slug}/products/${product.id}` : `/products/${product.id}`;
 
   return (
     <Link
-      href={`/products/${product.id}`}
+      href={productHref}
       className="group relative block opacity-0 [animation-fill-mode:forwards]"
       style={{ animation: `fadeUp 0.6s ease forwards ${index * 70}ms` }}
     >

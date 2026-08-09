@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   Download, ShoppingBag, Check, Share2,
   Shield, Zap, RotateCcw, ChevronRight,
@@ -24,6 +24,8 @@ export default function EkoProductDetails({
 }) {
   const { addToCart } = useCart();
   const router = useRouter();
+  const params = useParams<{ slug?: string }>();
+  const slug = params?.slug;
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
@@ -36,7 +38,7 @@ export default function EkoProductDetails({
 
   function handleBuyNow() {
     addToCart(product, qty);
-    router.push("/checkout");
+    router.push(slug ? `/storefront/${slug}/checkout` : "/checkout");
   }
 
   return (

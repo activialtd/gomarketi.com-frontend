@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { ShoppingBag, Plus, Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
@@ -12,14 +13,16 @@ function fmtPrice(kobo: number): string {
 export function ProductCard({
   product,
   index = 0,
-  slug = "",
 }: {
   product: StorefrontProduct;
   index?: number;
-  slug?: string;
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const hasImage = product.images.length > 0;
+  // Read the store slug directly from the route rather than relying on every
+  // caller (Home/Shop/Collection grids) to remember to pass it as a prop —
+  // none of them did, which silently broke every product link site-wide.
+  const { slug } = useParams<{ slug?: string }>();
 
   const productHref = slug
     ? `/storefront/${slug}/products/${product.id}`

@@ -6,20 +6,6 @@ async function get<T>(path: string, revalidate = 60): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-    cache: 'no-store',
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({})) as { error?: string };
-    throw new Error(err.error ?? `${res.status}`);
-  }
-  return res.json() as Promise<T>;
-}
-
 export const storefrontAPI = {
   getStore: (slug: string) =>
     get<StoreData>(`/v1/storefront/public/stores/${slug}`),
@@ -46,9 +32,6 @@ export const storefrontAPI = {
 
   getCollections: (storeId: string) =>
     get<CollectionList>(`/v1/catalogue/public/collections?store_id=${storeId}`),
-
-  createOrder: (order: CreateOrderPayload) =>
-    post<OrderResp>('/v1/orders/public', order),
 
   getOrder: (orderId: string, email: string) =>
     get<OrderResp>(`/v1/orders/public/${orderId}?email=${encodeURIComponent(email)}`, 0),
@@ -164,25 +147,6 @@ export interface CartItem {
   image_url: string;
   quantity: number;
   slug?: string;
-}
-
-export interface CreateOrderPayload {
-  store_id: string;
-  store_slug: string;
-  store_name: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone?: string;
-  delivery_address: string;
-  items: Array<{
-    product_id: string;
-    name: string;
-    image_url: string;
-    quantity: number;
-    price_kobo: number;
-  }>;
-  total_kobo: number;
-  paystack_reference: string;
 }
 
 export interface OrderResp {
