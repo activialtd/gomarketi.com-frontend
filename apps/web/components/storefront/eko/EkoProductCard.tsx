@@ -16,8 +16,10 @@ export function ProductCard({
 }: {
   product: StorefrontProduct;
   index?: number;
-  slug?: string; // kept for call-site compatibility
 }) {
+  // Read the store slug directly from the route rather than relying on every
+  // caller (Home/Shop/Collection grids) to remember to pass it as a prop —
+  // none of them did, which silently broke every product link site-wide.
   const params = useParams<{ slug?: string }>();
   const [imgLoaded, setImgLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
