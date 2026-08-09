@@ -12,17 +12,24 @@ import {
   Globe,
   Phone,
 } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function ProfilePage() {
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuthStore();
 
-  // Mock User State
-  const [profile, setProfile] = useState({
-    firstName: "Chidinma",
-    lastName: "Okafor",
-    email: "chidinma@yourstore.ng",
-    phone: "+234 801 234 5678",
+  // The backend stores one full_name column (first + last joined at signup,
+  // see services/auth Register()), not separate first/last columns — split
+  // it back apart for display. Phone isn't collected at signup and isn't on
+  // UserDTO, so it has no real source yet; show a clear placeholder instead
+  // of fabricating a value.
+  const fullName = user?.full_name?.trim() ?? "";
+  const [firstName, ...lastParts] = fullName ? fullName.split(" ") : [""];
+  const lastName = lastParts.join(" ");
+
+  // Preferences are local-only UI state, not yet backed by any API.
+  const [preferences, setPreferences] = useState({
     language: "en",
     timezone: "Africa/Lagos",
   });
@@ -53,7 +60,8 @@ export default function ProfilePage() {
   }, []);
 
   const getInitials = () => {
-    return `${profile.firstName.charAt(0)}${profile.lastName.charAt(0)}`.toUpperCase();
+    const initials = `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+    return initials || (user?.email?.charAt(0).toUpperCase() ?? "?");
   };
 
   // Styling for active inputs (Passwords, Preferences)
@@ -130,7 +138,7 @@ export default function ProfilePage() {
                 </label>
                 <input
                   readOnly
-                  value={profile.firstName}
+                  value={firstName || "—"}
                   className={readOnlyInputClass}
                   style={{ color: "#6b7280" }}
                 />
@@ -141,7 +149,7 @@ export default function ProfilePage() {
                 </label>
                 <input
                   readOnly
-                  value={profile.lastName}
+                  value={lastName || "—"}
                   className={readOnlyInputClass}
                   style={{ color: "#6b7280" }}
                 />
@@ -157,7 +165,7 @@ export default function ProfilePage() {
                   />
                   <input
                     readOnly
-                    value={profile.email}
+                    value={user?.email ?? "—"}
                     className={`${readOnlyInputClass} pl-12`}
                     style={{ color: "#6b7280" }}
                   />
@@ -174,7 +182,7 @@ export default function ProfilePage() {
                   />
                   <input
                     readOnly
-                    value={profile.phone}
+                    value="Not provided"
                     className={`${readOnlyInputClass} pl-12`}
                     style={{ color: "#6b7280" }}
                   />
@@ -216,9 +224,9 @@ export default function ProfilePage() {
                     Language
                   </label>
                   <select
-                    value={profile.language}
+                    value={preferences.language}
                     onChange={(e) =>
-                      setProfile({ ...profile, language: e.target.value })
+                      setPreferences({ ...preferences, language: e.target.value })
                     }
                     className={activeInputClass}
                     style={activeInputStyle}
@@ -233,9 +241,9 @@ export default function ProfilePage() {
                     Timezone
                   </label>
                   <select
-                    value={profile.timezone}
+                    value={preferences.timezone}
                     onChange={(e) =>
-                      setProfile({ ...profile, timezone: e.target.value })
+                      setPreferences({ ...preferences, timezone: e.target.value })
                     }
                     className={activeInputClass}
                     style={activeInputStyle}
@@ -388,7 +396,7 @@ export default function ProfilePage() {
       {deleteModalOpen && (
         <DeleteAccountModal
           onClose={() => setDeleteModalOpen(false)}
-          email={profile.email}
+          email={user?.email ?? ""}
         />
       )}
     </div>
