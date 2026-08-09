@@ -1,22 +1,11 @@
 import React from "react";
 import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useSharedValue,
-  interpolate,
-  Extrapolation,
-  runOnJS,
-  type SharedValue,
-} from "react-native-reanimated";
+import Animated, { type SharedValue } from "react-native-reanimated";
 import { Product } from "../../lib/mock-products";
 import { formatNaira } from "../../lib/cart-context";
 import { color, tint, type, space } from "../../theme/tokens";
-
-const ITEM_WIDTH = 210;
-const ITEM_GAP = space.md;
-const ITEM_SIZE = ITEM_WIDTH + ITEM_GAP;
+import { ITEM_WIDTH, ITEM_GAP, ITEM_SIZE, useCoverflowScroll, useCoverflowItemStyle } from "./coverflow-scroll";
 
 /**
  * A fanned "coverflow" carousel instead of a plain scroll — cards scale up,
@@ -36,21 +25,7 @@ export function ProductCoverflow({
   /** Fires once when the scroll position comes within ~2 cards of the end. */
   onEndReached?: () => void;
 }) {
-  const scrollX = useSharedValue(0);
-  const firedEndReached = useSharedValue(false);
-
-  const onScroll = useAnimatedScrollHandler((e) => {
-    scrollX.value = e.contentOffset.x;
-    if (!onEndReached) return;
-    const distanceFromEnd =
-      e.contentSize.width - e.layoutMeasurement.width - e.contentOffset.x;
-    if (distanceFromEnd < ITEM_SIZE * 2 && !firedEndReached.value) {
-      firedEndReached.value = true;
-      runOnJS(onEndReached)();
-    } else if (distanceFromEnd >= ITEM_SIZE * 2) {
-      firedEndReached.value = false;
-    }
-  });
+  const { scrollX, onScroll } = useCoverflowScroll(onEndReached);
 
   return (
     <Animated.ScrollView
@@ -90,13 +65,7 @@ function CoverflowCard({
   const cover = product.images[0];
   const showImage = !!cover && !imgFailed;
 
-  const style = useAnimatedStyle(() => {
-    const inputRange = [(index - 1) * ITEM_SIZE, index * ITEM_SIZE, (index + 1) * ITEM_SIZE];
-    const scale = interpolate(scrollX.value, inputRange, [0.86, 1, 0.86], Extrapolation.CLAMP);
-    const translateY = interpolate(scrollX.value, inputRange, [22, 0, 22], Extrapolation.CLAMP);
-    const opacity = interpolate(scrollX.value, inputRange, [0.55, 1, 0.55], Extrapolation.CLAMP);
-    return { transform: [{ scale }, { translateY }], opacity };
-  });
+  const style = useCoverflowItemStyle(index, scrollX);
 
   return (
     <Animated.View style={[s.card, style]}>

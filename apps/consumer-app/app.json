@@ -31,6 +31,13 @@
         {
           "locationWhenInUsePermission": "GoMarketi uses your location to show nearby vendors and deliver to your door."
         }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "GoMarketi uses your microphone to let you search by voice.",
+          "speechRecognitionPermission": "GoMarketi uses speech recognition to turn what you say into a search."
+        }
       ]
     ]
   }

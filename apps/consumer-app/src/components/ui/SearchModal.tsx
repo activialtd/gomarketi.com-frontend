@@ -14,20 +14,28 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
-import { searchStores, StoreResult } from "../../lib/api-client";
-import { categoryMeta } from "../../lib/store-category";
+import { StoreResult } from "../../lib/api-client";
+import { useProductSearch } from "../../hooks/useProductSearch";
+import { useCart } from "../../lib/cart-context";
+import { useNav } from "../../navigation/AppNavigator";
+import { ProductGrid } from "./ProductGrid";
+import { VendorCarousel } from "./VendorCarousel";
 import { useKeyboardHeight } from "../../hooks/useKeyboardHeight";
-import { color, tint, type, space, HIT } from "../../theme/tokens";
+import { color, type, space, HIT } from "../../theme/tokens";
 
 const { height } = Dimensions.get("window");
 const SHEET_H = height * 0.9;
-const REFINE_DEBOUNCE_MS = 350;
 
 /**
  * Results sheet (90%). Opens ONLY after the walk-to-market animation finishes;
- * the initial search fires as soon as the walk starts so results are ready
- * by the time the door opens. Refining the query inside the sheet re-queries
- * (debounced) — no walk replay, the trip already happened.
+ * the initial search fires as soon as the walk starts (via useProductSearch's
+ * own debounce) so results are ready by the time the door opens. Refining the
+ * query inside the sheet re-resolves scope and re-queries — no walk replay,
+ * the trip already happened.
+ *
+ * Product-first: a grid of matching products across vendors, with a
+ * swipeable "who else has this" carousel above it when the query didn't
+ * name a specific vendor or market (see useProductSearch/search-orchestrator).
  */
 export function SearchModal({
   visible,
@@ -45,11 +53,23 @@ export function SearchModal({
   onOpenStore: (s: StoreResult) => void;
 }) {
   const [query, setQuery] = useState(initialQuery);
-  const [results, setResults] = useState<StoreResult[]>([]);
-  const [loading, setLoading] = useState(false);
   const reveal = useRef(new Animated.Value(0)).current;
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const keyboardHeight = useKeyboardHeight();
+  const { add } = useCart();
+  const { push } = useNav();
+
+  const {
+    gridProducts,
+    loading,
+    loadingMore,
+    hasMore,
+    loadMore,
+    carouselItems,
+    showCarousel,
+    matchType,
+    matchedStore,
+    matchedMarketName,
+  } = useProductSearch(query, { lat, lng });
 
   // The sheet rises by the keyboard's own height as it appears, so the
   // refine bar always ends up sitting just above the qwerty keys instead of
@@ -58,18 +78,9 @@ export function SearchModal({
     transform: [{ translateY: -keyboardHeight.value }],
   }));
 
-  const runSearch = (q: string) => {
-    setLoading(true);
-    searchStores({ q: q || undefined, lat, lng })
-      .then((page) => setResults(page.stores))
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false));
-  };
-
   useEffect(() => {
     if (!visible) return;
     setQuery(initialQuery);
-    runSearch(initialQuery);
     reveal.setValue(0);
     Animated.timing(reveal, {
       toValue: 1,
@@ -78,12 +89,6 @@ export function SearchModal({
       useNativeDriver: true,
     }).start();
   }, [visible, initialQuery]);
-
-  const refine = (q: string) => {
-    setQuery(q);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(q), REFINE_DEBOUNCE_MS);
-  };
 
   const rise = {
     opacity: reveal,
@@ -96,6 +101,15 @@ export function SearchModal({
       },
     ],
   };
+
+  const heading =
+    matchType === "vendor" && matchedStore
+      ? `Products at ${matchedStore.name}`
+      : matchType === "market" && matchedMarketName
+        ? `Products in ${matchedMarketName}`
+        : query
+          ? `Products for "${query}"`
+          : "Products near you";
 
   return (
     <Modal
@@ -118,7 +132,7 @@ export function SearchModal({
           <Ionicons name="search" size={18} color={color.textMuted} />
           <TextInput
             value={query}
-            onChangeText={refine}
+            onChangeText={setQuery}
             returnKeyType="search"
             placeholder="Refine your search"
             placeholderTextColor={color.textFaint}
@@ -126,7 +140,7 @@ export function SearchModal({
           />
           {query.length > 0 && (
             <Pressable
-              onPress={() => refine("")}
+              onPress={() => setQuery("")}
               hitSlop={HIT}
               accessibilityLabel="Clear"
             >
@@ -140,15 +154,13 @@ export function SearchModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 60 }}
           >
-            <Text style={[type.section, s.section]}>
-              {query ? `Stores for "${query}"` : "Stores near you"}
-            </Text>
+            <Text style={[type.section, s.section]}>{heading}</Text>
 
             {loading ? (
               <View style={s.empty}>
                 <ActivityIndicator color={color.primary} />
               </View>
-            ) : results.length === 0 ? (
+            ) : gridProducts.length === 0 ? (
               <View style={s.empty}>
                 <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
                   Nothing matched
@@ -158,34 +170,23 @@ export function SearchModal({
                 </Text>
               </View>
             ) : (
-              results.map((st) => {
-                const meta = categoryMeta(st.category);
-                return (
-                  <Pressable
-                    key={st.id}
-                    style={s.vendorCard}
-                    onPress={() => onOpenStore(st)}
-                  >
-                    <View style={[s.vendorChip, { backgroundColor: tint[meta.tint] }]}>
-                      <Ionicons name={meta.icon} size={20} color={color.ink} />
+              <>
+                {showCarousel && (
+                  <View style={s.carouselWrap}>
+                    <Text style={type.meta}>Also sold by</Text>
+                    <View style={s.carouselBleed}>
+                      <VendorCarousel items={carouselItems} onOpenStore={onOpenStore} />
                     </View>
-                    <View style={{ flex: 1, marginLeft: space.md }}>
-                      <Text style={s.vendorName}>{st.name}</Text>
-                      <Text style={type.meta} numberOfLines={1}>
-                        {st.tagline ?? st.address ?? meta.label}
-                      </Text>
-                    </View>
-                    <View style={s.vendorRight}>
-                      <Text style={[type.meta, { fontFamily: "Jakarta_600", color: color.ink }]}>
-                        {meta.label}
-                      </Text>
-                      {typeof st.distance_km === "number" && (
-                        <Text style={type.meta}>{st.distance_km.toFixed(1)} km away</Text>
-                      )}
-                    </View>
-                  </Pressable>
-                );
-              })
+                  </View>
+                )}
+                <ProductGrid
+                  products={gridProducts}
+                  onAdd={(p) => add(p)}
+                  onOpen={(p) => push("product", { productId: p.id, product: p })}
+                  onEndReached={hasMore ? loadMore : undefined}
+                  loadingMore={loadingMore}
+                />
+              </>
             )}
           </ScrollView>
         </Animated.View>
@@ -246,32 +247,12 @@ const s = StyleSheet.create({
   },
 
   section: { marginTop: space.xl, marginBottom: space.md },
-
-  vendorCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: space.lg,
-    borderRadius: 20,
-    marginBottom: space.md,
-    backgroundColor: color.card,
-    borderWidth: 1,
-    borderColor: color.line,
-    shadowColor: "#0A2E1A",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.07,
-    shadowRadius: 14,
-    elevation: 3,
-  },
-  vendorChip: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: color.panel,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  vendorName: { fontFamily: "Jakarta_600", fontSize: 15, color: color.text },
-  vendorRight: { alignItems: "flex-end", gap: 3 },
+  carouselWrap: { marginBottom: space.lg },
+  // VendorCarousel supplies its own space.gutter inset in its
+  // contentContainerStyle (designed to sit full-bleed, per ProductCoverflow's
+  // convention) — cancel the sheet's ambient paddingHorizontal here so it
+  // isn't inset twice relative to the heading/grid around it.
+  carouselBleed: { marginHorizontal: -space.gutter },
 
   empty: { alignItems: "center", paddingTop: 40 },
 });

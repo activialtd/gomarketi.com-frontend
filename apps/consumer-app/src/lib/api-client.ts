@@ -272,9 +272,22 @@ export type StoreResult = {
   distance_km?: number;
 };
 
+// MatchType tells the caller which tier resolved the query: a named vendor,
+// a named market, a general area/city, nearest-by-distance, or no match at
+// all (bare keyword, no location). Cross-vendor product search uses this to
+// decide whether to show the vendor carousel and what the results header
+// should say — see resolveSearchScope in search-orchestrator.ts.
+export type MatchType = "vendor" | "market" | "city" | "distance" | "none";
+
 export type StoreSearchPage = {
   stores: StoreResult[];
   hasMore: boolean;
+  matchType: MatchType;
+  matchedStoreId?: string;
+  matchedMarketId?: string;
+  // remainingQuery is the query with the matched vendor/market/city phrase
+  // stripped out — the leftover product term(s), safe to pass to product search.
+  remainingQuery: string;
 };
 
 // searchStores finds stores by free-text query and/or category, optionally
@@ -291,7 +304,14 @@ export async function searchStores(params: {
   limit?: number;
   offset?: number;
 }): Promise<StoreSearchPage> {
-  const resp = await getPublic<{ stores: StoreResult[]; has_more: boolean }>(
+  const resp = await getPublic<{
+    stores: StoreResult[];
+    has_more: boolean;
+    match_type: MatchType;
+    matched_store_id?: string;
+    matched_market_id?: string;
+    remaining_query: string;
+  }>(
     "/v1/storefront/public/stores/search",
     {
       q: params.q,
@@ -304,7 +324,14 @@ export async function searchStores(params: {
       offset: params.offset,
     },
   );
-  return { stores: resp.stores, hasMore: resp.has_more };
+  return {
+    stores: resp.stores,
+    hasMore: resp.has_more,
+    matchType: resp.match_type,
+    matchedStoreId: resp.matched_store_id,
+    matchedMarketId: resp.matched_market_id,
+    remainingQuery: resp.remaining_query,
+  };
 }
 
 export type Market = {
@@ -332,6 +359,7 @@ export type CatalogueProduct = {
   stock: number;
   images: string[];
   tags: string[];
+  canonical_product_id?: string;
 };
 
 export type ProductPage = {
@@ -350,6 +378,27 @@ export async function getStoreProducts(
   const resp = await getPublic<{ products: CatalogueProduct[]; total: number; page: number; per_page: number }>(
     "/v1/catalogue/public/products",
     { store_id: storeId, page, per_page: perPage },
+  );
+  return {
+    products: resp.products,
+    hasMore: resp.page * resp.per_page < resp.total,
+  };
+}
+
+// searchProducts finds published products by name across a caller-resolved
+// set of stores — the cross-vendor half of search. storeIds is always
+// resolved first via searchStores/resolveSearchScope; an empty list here
+// returns an empty page rather than scanning the whole platform.
+export async function searchProducts(
+  storeIds: string[],
+  q: string,
+  page = 1,
+  perPage = 24,
+): Promise<ProductPage> {
+  if (storeIds.length === 0) return { products: [], hasMore: false };
+  const resp = await getPublic<{ products: CatalogueProduct[]; total: number; page: number; per_page: number }>(
+    "/v1/catalogue/public/products/search",
+    { store_ids: storeIds.join(","), q, page, per_page: perPage },
   );
   return {
     products: resp.products,

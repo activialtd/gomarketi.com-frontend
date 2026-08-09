@@ -30,3 +30,25 @@ export function catalogueProductToAppProduct(p: CatalogueProduct, store: StoreRe
     tint: meta.tint,
   };
 }
+
+/**
+ * Cross-vendor variant: each product in the list can belong to a different
+ * store, so the store comes from a lookup map (built from the SearchStores
+ * result that resolved the search scope) instead of one known store. A
+ * product whose store_id isn't in the map is dropped rather than crashing —
+ * shouldn't happen since storeIds passed to searchProducts always come from
+ * that same SearchStores result, but a product is unusable without vendor
+ * identity (name, slug, category icon) regardless.
+ */
+export function catalogueProductsToAppProducts(
+  products: CatalogueProduct[],
+  storeById: Map<string, StoreResult>,
+): Product[] {
+  const out: Product[] = [];
+  for (const p of products) {
+    const store = storeById.get(p.store_id);
+    if (!store) continue;
+    out.push(catalogueProductToAppProduct(p, store));
+  }
+  return out;
+}

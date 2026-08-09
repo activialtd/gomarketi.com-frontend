@@ -227,8 +227,6 @@ export const PRODUCTS: Product[] = [
   },
 ];
 
-const SUGGESTIONS = ["avocado", "coffee", "pizza", "strawberries", "sneakers"];
-
 export function searchProducts(query: string): Product[] {
   const q = query.trim().toLowerCase();
   if (!q) return PRODUCTS;
@@ -238,8 +236,4 @@ export function searchProducts(query: string): Product[] {
       p.vendor.toLowerCase().includes(q) ||
       p.category.toLowerCase().includes(q),
   );
-}
-
-export function randomVoiceQuery(): string {
-  return SUGGESTIONS[Math.floor(Math.random() * SUGGESTIONS.length)];
 }

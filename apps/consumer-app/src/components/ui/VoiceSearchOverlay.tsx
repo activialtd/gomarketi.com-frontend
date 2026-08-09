@@ -1,20 +1,27 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, Pressable, Modal, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from "expo-speech-recognition";
 import { Button } from "./Button";
 import { color, radius, type, space } from "../../theme/tokens";
-import { randomVoiceQuery } from "../../lib/mock-products";
+
+type Status = "listening" | "error";
+const RECOGNITION_OPTIONS = { lang: "en-US", interimResults: true, continuous: false } as const;
 
 /**
- * Voice capture sheet.
+ * Voice capture sheet — real on-device speech-to-text via
+ * expo-speech-recognition (no more stub/timeout). A dev build is required
+ * to run this at all: adding this native module means Expo Go can no
+ * longer load the app — use `eas build --profile development` once, then
+ * `expo start --dev-client` for local iteration from then on.
  *
- * A bottom sheet, not a full-screen spectacle. The only motion is the system
- * modal slide — no waveform, no pulses. Listening state is communicated by a
- * solid accent mic and a label, which is enough.
- *
- * TODO(backend): real speech-to-text. @react-native-voice/voice needs a dev
- * build (won't run in Expo Go). Swap the timeout below for the recognizer's
- * onSpeechResults callback.
+ * Listening starts as soon as the sheet mounts; the native "end" event
+ * (fired on silence or an explicit stop()) resolves with whatever the last
+ * transcript was. An empty transcript or a recognition error surfaces
+ * inline ("Didn't catch that — try again") instead of silently closing.
  */
 export function VoiceSearchOverlay({
   onResult,
@@ -23,9 +30,57 @@ export function VoiceSearchOverlay({
   onResult: (query: string) => void;
   onCancel: () => void;
 }) {
+  const [status, setStatus] = useState<Status>("listening");
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const transcriptRef = useRef("");
+  // Guards event handlers against firing after cancel/unmount — stop()
+  // stopping the native recognizer doesn't guarantee its async "end"/"error"
+  // events can't still land a tick later.
+  const activeRef = useRef(true);
+
+  useSpeechRecognitionEvent("result", (event) => {
+    if (!activeRef.current) return;
+    const t = event.results[0]?.transcript ?? "";
+    transcriptRef.current = t;
+    setLiveTranscript(t);
+  });
+
+  useSpeechRecognitionEvent("error", () => {
+    if (!activeRef.current) return;
+    setStatus("error");
+  });
+
+  useSpeechRecognitionEvent("end", () => {
+    if (!activeRef.current) return;
+    const t = transcriptRef.current.trim();
+    if (t) {
+      onResult(t);
+    } else {
+      setStatus("error");
+    }
+  });
+
+  const startListening = async () => {
+    transcriptRef.current = "";
+    setLiveTranscript("");
+    const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!activeRef.current) return;
+    if (!perm.granted) {
+      setStatus("error");
+      return;
+    }
+    setStatus("listening");
+    ExpoSpeechRecognitionModule.start(RECOGNITION_OPTIONS);
+  };
+
   useEffect(() => {
-    const t = setTimeout(() => onResult(randomVoiceQuery()), 1800);
-    return () => clearTimeout(t);
+    activeRef.current = true;
+    startListening();
+    return () => {
+      activeRef.current = false;
+      ExpoSpeechRecognitionModule.stop();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -36,20 +91,38 @@ export function VoiceSearchOverlay({
       <View style={s.sheet}>
         <View style={s.grabber} />
 
-        <View style={s.mic}>
-          <Ionicons name="mic" size={26} color={color.onPrimary} />
+        <View style={[s.mic, status === "error" && s.micError]}>
+          <Ionicons name={status === "error" ? "mic-off" : "mic"} size={26} color={color.onPrimary} />
         </View>
 
-        <Text style={[type.title, { marginTop: space.lg }]}>Listening…</Text>
-        <Text style={[type.body, { textAlign: "center", marginTop: 6 }]}>
-          Say what you're looking for
-        </Text>
+        {status === "listening" ? (
+          <>
+            <Text style={[type.title, { marginTop: space.lg }]}>Listening…</Text>
+            <Text style={[type.body, { textAlign: "center", marginTop: 6 }]}>
+              {liveTranscript || "Say what you're looking for"}
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={[type.title, { marginTop: space.lg }]}>Didn't catch that</Text>
+            <Text style={[type.body, { textAlign: "center", marginTop: 6 }]}>
+              Try again, or check your microphone permission.
+            </Text>
+          </>
+        )}
 
+        {status === "error" && (
+          <Button
+            label="Try again"
+            onPress={startListening}
+            style={{ alignSelf: "stretch", marginTop: space.xxl }}
+          />
+        )}
         <Button
           label="Cancel"
           variant="secondary"
           onPress={onCancel}
-          style={{ alignSelf: "stretch", marginTop: space.xxl }}
+          style={{ alignSelf: "stretch", marginTop: status === "error" ? space.sm : space.xxl }}
         />
       </View>
     </Modal>
@@ -82,4 +155,5 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  micError: { backgroundColor: color.textFaint },
 });
