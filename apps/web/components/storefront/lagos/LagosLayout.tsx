@@ -95,11 +95,12 @@ export default function LagosLayout({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
+  // Clean paths — proxy.ts rewrites these transparently on the store's subdomain.
   const links = navItems?.length
     ? navItems
     : [
-        { label: "Shop", url: slug ? `/storefront/${slug}/shop` : "/shop" },
-        ...(hasCollections ? [{ label: "Collections", url: slug ? `/storefront/${slug}/collections` : "/collections" }] : []),
+        { label: "Shop", url: "/shop" },
+        ...(hasCollections ? [{ label: "Collections", url: "/collections" }] : []),
       ];
 
   const socialLinks = [
@@ -122,7 +123,7 @@ export default function LagosLayout({
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href={slug ? `/storefront/${slug}` : "/"} className="flex items-center no-underline">
+          <Link href="/" className="flex items-center no-underline">
             {logoUrl ? (
               <img src={logoUrl} alt={storeName} className="h-9 w-auto max-w-[140px] object-contain brightness-0 invert" />
             ) : (
