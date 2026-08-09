@@ -34,3 +34,33 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Checkout.tsx — mobile-first: the desktop two-column layout only applies
+   at lg. Below that, the form and order summary stack, and field pairs
+   (email/phone, city/state) go full-width instead of squeezing to ~150px. */
+.checkout-grid {
+  grid-template-columns: 1fr;
+}
+
+.checkout-field-pair {
+  grid-template-columns: 1fr;
+}
+
+.checkout-summary-panel {
+  position: static;
+}
+
+@media (min-width: 1024px) {
+  .checkout-grid {
+    grid-template-columns: 1fr 380px;
+  }
+
+  .checkout-field-pair {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .checkout-summary-panel {
+    position: sticky;
+    top: 80px;
+  }
+}
