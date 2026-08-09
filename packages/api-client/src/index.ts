@@ -98,6 +98,7 @@ export interface CreateProductReq {
   images: string[];
   tags: string[];
   is_digital: boolean;
+  canonical_product_id?: string;
 }
 
 export interface UpdateProductReq {
@@ -109,6 +110,7 @@ export interface UpdateProductReq {
   sku?: string;
   images?: string[];
   tags?: string[];
+  canonical_product_id?: string;
 }
 
 export interface CategoryReq {
@@ -181,6 +183,7 @@ export interface ProductResp {
   tags: string[];
   is_digital: boolean;
   is_published: boolean;
+  canonical_product_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -190,6 +193,16 @@ export interface ProductListResp {
   total: number;
   page: number;
   per_page: number;
+}
+
+export interface CanonicalProductResp {
+  id: string;
+  name: string;
+  representative_image?: string;
+}
+
+export interface CanonicalProductSearchResp {
+  products: CanonicalProductResp[];
 }
 
 export interface CategoryResp {
@@ -661,6 +674,13 @@ export const catalogueApi = {
     request<ProductResp>(
       `/v1/catalogue/products/${id}/unpublish`,
       { method: "POST" },
+      token,
+    ),
+
+  searchCanonicalProducts: (q: string, token: string) =>
+    request<CanonicalProductSearchResp>(
+      `/v1/catalogue/canonical-products/search?q=${encodeURIComponent(q)}`,
+      {},
       token,
     ),
 

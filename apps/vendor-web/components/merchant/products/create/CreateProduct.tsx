@@ -31,14 +31,16 @@ import {
   VariantOptionBuilder,
   Section,
 } from "./helpers";
-import { catalogueApi, ApiError, type CollectionResp, type CategoryResp } from "@gomarket/api-client";
+import { catalogueApi, ApiError, type CollectionResp, type CategoryResp, type CanonicalProductResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
+import CanonicalProductTypeahead from "./CanonicalProductTypeahead";
 
 export default function CreateProductPage({ productId }: { productId?: string }) {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
   const isEditing = !!productId;
   const [images, setImages] = useState<string[]>([]);
+  const [canonicalProduct, setCanonicalProduct] = useState<CanonicalProductResp | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -153,6 +155,7 @@ export default function CreateProductPage({ productId }: { productId?: string })
         sku: data.sku || undefined,
         images,
         tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        canonical_product_id: canonicalProduct?.id ?? undefined,
       };
 
       const productIdForPublish = isEditing
@@ -284,6 +287,14 @@ export default function CreateProductPage({ productId }: { productId?: string })
                     autoComplete="off"
                     {...register("name")}
                   />
+                  {accessToken && (
+                    <CanonicalProductTypeahead
+                      query={nameVal}
+                      token={accessToken}
+                      selected={canonicalProduct}
+                      onSelect={setCanonicalProduct}
+                    />
+                  )}
                 </Field>
 
                 <Field
