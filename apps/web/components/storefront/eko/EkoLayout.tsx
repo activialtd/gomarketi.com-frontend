@@ -97,11 +97,12 @@ export default function EkoLayout({
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
+  // Clean paths — proxy.ts rewrites these transparently on the store's subdomain.
   const navLinks = navItems?.length
     ? navItems.map((i) => ({ label: i.label, href: i.url }))
     : [
-        { label: "Shop", href: slug ? `/storefront/${slug}/shop` : "/shop" },
-        ...(hasCollections ? [{ label: "Collections", href: slug ? `/storefront/${slug}/collections` : "/collections" }] : []),
+        { label: "Shop", href: "/shop" },
+        ...(hasCollections ? [{ label: "Collections", href: "/collections" }] : []),
       ];
 
   const socialLinks = [
@@ -123,7 +124,7 @@ export default function EkoLayout({
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href={slug ? `/storefront/${slug}` : "/"} className="flex items-center no-underline">
+          <Link href="/" className="flex items-center no-underline">
             {logoUrl ? (
               <img src={logoUrl} alt={storeName} className="h-9 w-auto max-w-[140px] object-contain" />
             ) : (

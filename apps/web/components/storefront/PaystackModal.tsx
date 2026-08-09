@@ -7,11 +7,16 @@ interface Props {
   amount: number; // kobo
   email: string;
   storeName: string;
+  // The vendor's own Paystack public key (store_payment_methods.config.public_key,
+  // set via vendor-web payment settings). Falls back to the platform-wide default
+  // below when a vendor hasn't configured their own — same pattern Checkout.tsx
+  // already uses for Flutterwave's public_key.
+  publicKey?: string;
   onSuccess: (ref: string) => void;
   onClose: () => void;
 }
 
-const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "";
+const DEFAULT_PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "";
 const PAYSTACK_SCRIPT_SRC = "https://js.paystack.co/v1/inline.js";
 
 declare global {
@@ -56,8 +61,9 @@ function loadPaystackScript(): Promise<void> {
 // own iframe (opened by openIframe()) handles all card entry — this
 // component never sees card details, matching the mobile app's
 // PaystackSheet.tsx pattern.
-export function PaystackModal({ amount, email, storeName, onSuccess, onClose }: Props) {
+export function PaystackModal({ amount, email, storeName, publicKey, onSuccess, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
+  const key = publicKey || DEFAULT_PAYSTACK_PUBLIC_KEY;
 
   useEffect(() => {
     // No "has run once" ref here on purpose: React Strict Mode's dev-only
@@ -67,7 +73,7 @@ export function PaystackModal({ amount, email, storeName, onSuccess, onClose }: 
     // — Paystack would never open. The `cancelled` flag below already does
     // the right thing: the first invocation's in-flight load is cancelled
     // by its own cleanup, and the second invocation runs to completion.
-    if (!PAYSTACK_PUBLIC_KEY) {
+    if (!key) {
       setError("Payments aren't configured for this store yet. Please contact the store owner.");
       return;
     }
@@ -78,7 +84,7 @@ export function PaystackModal({ amount, email, storeName, onSuccess, onClose }: 
         if (cancelled || !window.PaystackPop) return;
         const ref = `GMK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         window.PaystackPop.setup({
-          key: PAYSTACK_PUBLIC_KEY,
+          key,
           email,
           amount,
           currency: "NGN",

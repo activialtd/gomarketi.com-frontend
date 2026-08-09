@@ -107,7 +107,8 @@ export default function CheckoutPage({
   storeId, storeSlug = "", storeName = "GoMarketi Store",
 }: { storeId: string | null; storeSlug?: string; storeName?: string }) {
   const router = useRouter();
-  const shopUrl = storeSlug ? `/storefront/${storeSlug}/shop` : "/shop";
+  // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
+  const shopUrl = "/shop";
   const c = {
     primary: "var(--store-primary, #1A7A42)",
     bg: "var(--store-bg, #F0FAF3)",
@@ -630,6 +631,7 @@ export default function CheckoutPage({
           amount={total}
           email={pendingCustomer.email}
           storeName={storeName}
+          publicKey={gateways.find((g) => g.gateway === "paystack")?.config?.public_key as string | undefined}
           onSuccess={handlePaystackSuccess}
           onClose={() => { setShowPaystack(false); if (gateways.length > 1) setShowGatewaySelector(true); }}
         />
