@@ -69,11 +69,12 @@ export default async function OrderStatusPage({
   params: Promise<{ slug: string; id: string }>;
   searchParams: Promise<{ email?: string }>;
 }) {
-  const { slug, id } = await params;
+  const { id } = await params;
   const sp = await searchParams;
   const email = sp.email ?? '';
 
-  const shopUrl = `/storefront/${slug}/shop`;
+  // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
+  const shopUrl = '/shop';
 
   // If no email provided in query, show generic message
   if (!email) {

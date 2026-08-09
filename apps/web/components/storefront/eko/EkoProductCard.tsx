@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useParams } from "next/navigation";
 import { ShoppingBag, Plus, Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 
@@ -19,14 +18,10 @@ export function ProductCard({
 }) {
   const [imgLoaded, setImgLoaded] = useState(false);
   const hasImage = product.images.length > 0;
-  // Read the store slug directly from the route rather than relying on every
-  // caller (Home/Shop/Collection grids) to remember to pass it as a prop —
-  // none of them did, which silently broke every product link site-wide.
-  const { slug } = useParams<{ slug?: string }>();
-
-  const productHref = slug
-    ? `/storefront/${slug}/products/${product.id}`
-    : `/products/${product.id}`;
+  // Clean path — proxy.ts rewrites this transparently on the store's
+  // subdomain; a /storefront/[slug] prefix here would leak the internal
+  // route into the address bar on client-side navigation.
+  const productHref = `/products/${product.id}`;
 
   return (
     <Link

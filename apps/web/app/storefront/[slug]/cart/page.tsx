@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, Shield } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 
@@ -12,11 +12,12 @@ function fmt(kobo: number) {
 export default function CartPage() {
   const { lines, updateQuantity, removeLine, subtotal } = useCart();
   const router = useRouter();
-  const params = useParams<{ slug: string }>();
-  const slug = params.slug;
 
-  const shopUrl = `/storefront/${slug}/shop`;
-  const checkoutUrl = `/storefront/${slug}/checkout`;
+  // Clean paths — proxy.ts rewrites these transparently on the store's
+  // subdomain, so a literal /storefront/[slug] prefix here would leak the
+  // internal route into the address bar on client-side navigation.
+  const shopUrl = "/shop";
+  const checkoutUrl = "/checkout";
 
   const delivery = lines.some((l) => !l.isDigital) ? 150000 : 0; // ₦1,500 for physical
   const total = subtotal + delivery;

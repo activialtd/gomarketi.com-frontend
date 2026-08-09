@@ -139,7 +139,8 @@ function inputStyle(hasError?: boolean): React.CSSProperties {
 
 export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoMarketi Store" }: { storeId: string | null; storeSlug?: string; storeName?: string }) {
   const router = useRouter();
-  const shopUrl = storeSlug ? `/storefront/${storeSlug}/shop` : "/shop";
+  // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
+  const shopUrl = "/shop";
   const c = { primary: "var(--store-primary, #1A7A42)", bg: "var(--store-bg, #F0FAF3)", text: "#1C1C1C", secondary: "var(--store-secondary, #0A4D2A)" };
   const { lines, subtotal, setCustomer, clearCart } = useCart();
   const [isPlacing, setIsPlacing] = useState(false);
@@ -207,7 +208,8 @@ export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoM
       setOrderNumber(`#${order.id.slice(0, 8).toUpperCase()}`);
       clearCart();
       if (storeSlug) {
-        router.push(`/storefront/${storeSlug}/orders/${order.id}?email=${encodeURIComponent(pendingCustomer.email)}`);
+        // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
+        router.push(`/orders/${order.id}?email=${encodeURIComponent(pendingCustomer.email)}`);
       } else {
         setOrderPlaced(true);
       }
