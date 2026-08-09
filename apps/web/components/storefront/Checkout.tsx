@@ -377,7 +377,6 @@ export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoM
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 380px",
           gap: "40px",
         }}
         className="checkout-grid"
@@ -437,9 +436,9 @@ export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoM
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
                 gap: "12px",
               }}
+              className="checkout-field-pair"
             >
               <Field label="Email address" error={errors.email?.message}>
                 <input
@@ -507,9 +506,9 @@ export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoM
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
                 gap: "12px",
               }}
+              className="checkout-field-pair"
             >
               <Field label="City" error={errors.city?.message}>
                 <input
@@ -623,9 +622,8 @@ export default function CheckoutPage({ storeId, storeSlug = "", storeName = "GoM
               borderRadius: "16px",
               border: "1px solid #f1f5f9",
               padding: "20px",
-              position: "sticky",
-              top: "80px",
             }}
+            className="checkout-summary-panel"
           >
             <p
               style={{
