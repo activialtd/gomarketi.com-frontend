@@ -18,6 +18,9 @@ export function LagosProductCard({
   index?: number;
   tall?: boolean;
 }) {
+  // See EkoProductCard.tsx — every caller (Home/Shop/Collection grids)
+  // never passed a slug prop, which silently broke every product link
+  // site-wide. Read it directly from the route instead.
   const params = useParams<{ slug?: string }>();
   const [imgLoaded, setImgLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
