@@ -56,7 +56,7 @@ const r = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.lineStrong,
   },
-  tiles: { ...StyleSheet.absoluteFill, flexDirection: "row" },
+  tiles: { ...(StyleSheet.absoluteFill as any), flexDirection: "row" },
   tile: {
     flex: 1,
     borderRightWidth: 1.5,
@@ -325,7 +325,7 @@ export function WalkToMarketOverlay({
 
 const s = StyleSheet.create({
   overlay: {
-    ...StyleSheet.absoluteFill,
+    ...(StyleSheet.absoluteFill as any),
     backgroundColor: color.canvas, // fully opaque takeover
     zIndex: 40,
   },

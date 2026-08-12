@@ -104,9 +104,9 @@ export function FloatingHub() {
 }
 
 const s = StyleSheet.create({
-  layer: { ...StyleSheet.absoluteFill },
+  layer: { ...StyleSheet.absoluteFill as any },
   scrim: {
-    ...StyleSheet.absoluteFill,
+    ...StyleSheet.absoluteFill as any,
     backgroundColor: "rgba(12,20,15,0.25)",
   },
   column: {

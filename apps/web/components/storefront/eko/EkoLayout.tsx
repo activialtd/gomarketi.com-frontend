@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShoppingBag, Search, Menu, X, Share2, Phone } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 import { CartDrawer } from "@/components/storefront/CartDrawer";
+import { WhatsAppFloat } from "@/components/WhatsappFloat";
 
 interface EkoLayoutProps {
   children: React.ReactNode;
@@ -35,7 +36,10 @@ export default function EkoLayout({
 
   const navLinks = navItems?.length
     ? navItems.map((i) => ({ label: i.label, href: i.url }))
-    : [{ label: "Shop", href: "/shop" }, { label: "Collections", href: "/collections" }];
+    : [
+        { label: "Shop", href: "/shop" },
+        { label: "Collections", href: "/collections" },
+      ];
 
   return (
     <div className="flex min-h-screen flex-col bg-white antialiased">
@@ -85,8 +89,12 @@ export default function EkoLayout({
               onClick={() => setCartOpen(true)}
               className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-bold text-white transition-colors"
               style={{ background: "rgba(255,255,255,0.18)" }}
-              onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.28)")}
-              onMouseOut={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "rgba(255,255,255,0.28)")
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.background = "rgba(255,255,255,0.18)")
+              }
               aria-label="Open cart"
             >
               <ShoppingBag className="h-3.5 w-3.5" />
@@ -105,7 +113,10 @@ export default function EkoLayout({
           />
           <div className="absolute left-0 top-0 h-full w-[280px] bg-white p-5">
             <div className="mb-7 flex items-center justify-between">
-              <span className="text-[17px] font-extrabold" style={{ color: primary }}>
+              <span
+                className="text-[17px] font-extrabold"
+                style={{ color: primary }}
+              >
                 {storeName}
               </span>
               <button
@@ -135,15 +146,23 @@ export default function EkoLayout({
       <main className="flex-1">{children}</main>
 
       {/* ── Footer ───────────────────────────────────────── */}
-      <footer style={{ background: secondary, color: "rgba(255,255,255,0.85)" }}>
+      <footer
+        style={{ background: secondary, color: "rgba(255,255,255,0.85)" }}
+      >
         <div className="mx-auto max-w-6xl px-5 py-10">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-6">
             <div>
-              <p className="text-[18px] font-extrabold text-white" style={{ letterSpacing: "-0.3px" }}>
+              <p
+                className="text-[18px] font-extrabold text-white"
+                style={{ letterSpacing: "-0.3px" }}
+              >
                 {storeName}
               </p>
               {tagline && (
-                <p className="mt-1.5 max-w-[260px] text-[12px] leading-relaxed" style={{ color: "rgba(255,255,255,0.6)" }}>
+                <p
+                  className="mt-1.5 max-w-[260px] text-[12px] leading-relaxed"
+                  style={{ color: "rgba(255,255,255,0.6)" }}
+                >
                   {tagline}
                 </p>
               )}
@@ -173,7 +192,10 @@ export default function EkoLayout({
               </div>
             </div>
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-[0.14em] mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <p
+                className="text-[11px] font-bold uppercase tracking-[0.14em] mb-3"
+                style={{ color: "rgba(255,255,255,0.4)" }}
+              >
                 Quick links
               </p>
               <div className="flex flex-col gap-1.5">
@@ -191,15 +213,32 @@ export default function EkoLayout({
             </div>
           </div>
         </div>
-        <div className="border-t px-5 py-4 text-center" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-          <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <div
+          className="border-t px-5 py-4 text-center"
+          style={{ borderColor: "rgba(255,255,255,0.1)" }}
+        >
+          <p
+            className="text-[11px]"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
             © {new Date().getFullYear()} {storeName} · Powered by GoMarket
           </p>
         </div>
       </footer>
 
       {/* ── Cart drawer ──────────────────────────────────── */}
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} slug={slug} />
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        slug={slug}
+      />
+      {whatsapp && (
+        <WhatsAppFloat
+          number={whatsapp}
+          storeName={storeName}
+          primary={primary}
+        />
+      )}
     </div>
   );
 }
