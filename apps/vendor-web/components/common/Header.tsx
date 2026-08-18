@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Bell,
   Menu,
   ChevronDown,
   Globe,
@@ -14,6 +13,7 @@ import {
 } from "lucide-react";
 import { ROUTES } from "@/lib/config/routes";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import NotificationsPopover from "./Notification";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -52,14 +52,17 @@ export function Header({
   // Strip any accidental protocol prefix from storeDomain (e.g. Vercel env var set
   // to "https://gomarketi.com" instead of just "gomarketi.com" produces the broken
   // URL "https://cobi.https://gomarketi.com"). Always strip before using.
-  const cleanDomain = storeDomain.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+  const cleanDomain = storeDomain
+    .replace(/^https?:\/\//i, "")
+    .replace(/\/$/, "");
 
   // Build storefront URL based on environment:
   // - Local dev (domain contains "localhost" or a port): path-based routing
   //   → http://localhost:3001/storefront/{slug}  (apps/web dev server)
   // - Production: subdomain routing
   //   → https://{slug}.gomarketi.com
-  const isLocalDev = cleanDomain.includes("localhost") || /:\d+/.test(cleanDomain);
+  const isLocalDev =
+    cleanDomain.includes("localhost") || /:\d+/.test(cleanDomain);
   const storeUrl = storeSlug
     ? isLocalDev
       ? `http://${cleanDomain}/storefront/${storeSlug}`
@@ -108,7 +111,10 @@ export function Header({
             {storeName}
           </p>
           {storeSlug && (
-            <p className="text-[10px] font-medium mt-0.5 truncate max-w-[160px]" style={{ color: "#94a3b8" }}>
+            <p
+              className="text-[10px] font-medium mt-0.5 truncate max-w-[160px]"
+              style={{ color: "#94a3b8" }}
+            >
               {storeSlugDisplay}
             </p>
           )}
@@ -142,21 +148,7 @@ export function Header({
         )}
 
         {/* Notification bell */}
-        <button
-          type="button"
-          onClick={markAllRead}
-          className="relative w-9 h-9 flex items-center justify-center rounded-[8px] border transition-colors hover:bg-gray-50"
-          style={{ borderColor: "#e9eef3" }}
-          aria-label="Notifications"
-        >
-          <Bell className="w-4 h-4" style={{ color: "#64748b" }} />
-          {unreadCount > 0 && (
-            <span
-              className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full border-2 border-white"
-              style={{ background: "#ef4444" }}
-            />
-          )}
-        </button>
+        <NotificationsPopover />
 
         {/* Profile dropdown */}
         <div className="relative">

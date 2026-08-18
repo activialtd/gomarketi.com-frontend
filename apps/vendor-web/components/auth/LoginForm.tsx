@@ -14,7 +14,7 @@ import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
 import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
-import AppleIconFilled from "../common/AppleIcon";
+import AppleIconRefined from "../common/AppleIcon";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -87,7 +87,7 @@ export function LoginForm() {
         } catch {
           // No vendor profile — create it and send to onboarding
           await identityApi.startOnboarding(resp.access_token).catch(() => {});
-          destination = ROUTES.ONBOARDING.WELCOME;
+          destination = ROUTES.MERCHANT.OVERVIEW;
         }
         router.push(destination);
       }
@@ -152,7 +152,7 @@ export function LoginForm() {
         onClick={() => handleOAuth("apple")}
         loading={oauthLoading === "apple"}
         disabled={busy}
-        icon={<AppleIconFilled className="w-4 h-4 fill-current" />}
+        icon={<AppleIconRefined className="w-4 h-4 fill-current" />}
         label="Continue with Apple"
       />
 
