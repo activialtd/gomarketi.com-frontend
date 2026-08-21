@@ -244,17 +244,14 @@ export function SignupForm() {
         (err instanceof ApiError && err.status === 409) ||
         (err instanceof Error && err.message.toLowerCase().includes("already exists"));
       if (is409) {
-        // Try to send OTP — if it succeeds the account is unverified
-        try {
-          const resp = await authApi.requestOTP(data.email);
-          setSessionToken(resp.session_token);
-          setSignupEmail(data.email);
-          setStep("VERIFY_EMAIL");
-          setResendCooldown(60);
-        } catch {
-          // OTP request failed → account is already verified
-          setExistingVerifiedEmail(data.email);
-        }
+        // Backend already found a real account row for this email — RequestOTP
+        // has no verified-status gate and would succeed either way, so it can't
+        // be used to distinguish "unverified" from "verified" here. Always
+        // treat a 409 as an existing account and send the user to sign in,
+        // rather than silently funneling them into OTP-verify on somebody
+        // else's (or their own past) account with the password they just
+        // typed discarded.
+        setExistingVerifiedEmail(data.email);
       } else {
         setApiError(
           err instanceof ApiError

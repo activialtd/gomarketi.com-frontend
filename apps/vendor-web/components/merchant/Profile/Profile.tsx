@@ -13,18 +13,25 @@ import {
   Phone,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useMyStore } from "@/lib/swr/hooks";
 
 export default function ProfilePage() {
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const { user } = useAuthStore();
+  const { data: store } = useMyStore();
 
   // The backend stores one full_name column (first + last joined at signup,
   // see services/auth Register()), not separate first/last columns — split
-  // it back apart for display. Phone isn't collected at signup and isn't on
-  // UserDTO, so it has no real source yet; show a clear placeholder instead
-  // of fabricating a value.
+  // it back apart for display.
   const fullName = user?.full_name?.trim() ?? "";
+  // There's no separate "personal phone" field on the vendor's identity
+  // record — the only phone number ever collected from a vendor is the
+  // store's own support_phone (set during store setup, see StoreInfo.tsx).
+  // Showing that here is what makes the number the vendor entered during
+  // onboarding actually show up on their profile, instead of a permanent
+  // "Not provided" placeholder.
+  const phone = store?.support_phone ?? "";
   const [firstName, ...lastParts] = fullName ? fullName.split(" ") : [""];
   const lastName = lastParts.join(" ");
 
@@ -182,7 +189,7 @@ export default function ProfilePage() {
                   />
                   <input
                     readOnly
-                    value="Not provided"
+                    value={phone || "Not provided"}
                     className={`${readOnlyInputClass} pl-12`}
                     style={{ color: "#6b7280" }}
                   />

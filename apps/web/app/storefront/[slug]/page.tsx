@@ -60,6 +60,7 @@ export interface StorefrontProduct {
   name: string;
   description?: string;
   price_kobo: number;
+  stock: number;
   images: string[];
   tags: string[];
   is_digital: boolean;
