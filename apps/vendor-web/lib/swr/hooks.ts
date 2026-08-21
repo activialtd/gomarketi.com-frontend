@@ -274,14 +274,19 @@ export const invalidate = {
   staff: () => mutate("staff"),
 };
 
-// ── SSE real-time events ──────────────────────────────────────────────────────
+// ── WebSocket real-time events ──────────────────────────────────────────────
 
-const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(
-  /^http/,
-  "ws",
-);
-const WS_MAX_RETRIES = 5;
-const WS_FALLBACK_INTERVAL = 60_000;
+// The backend only ever implemented GET /v1/orders/ws (gorilla/websocket) —
+// there is no SSE endpoint, so this must speak WebSocket, not EventSource.
+const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws");
+const WS_MAX_RETRIES = 5;       // give up WS after 5 consecutive failures
+const WS_FALLBACK_INTERVAL = 60_000; // poll every 60s after WS gives up
+
+interface WsMessage {
+  type: string;
+  id: string;
+  data: unknown;
+}
 
 /**
  * useOrderEvents — subscribes to the orders WebSocket stream for real-time
@@ -290,6 +295,8 @@ const WS_FALLBACK_INTERVAL = 60_000;
  *
  * Fault-tolerance design:
  *  - Reconnects automatically with exponential backoff + jitter on close
+ *  - Random jitter (0–3s... capped) on reconnect to prevent thundering-herd
+ *    after a service restart with 10k concurrent vendors
  *  - Sends ?last_id= on reconnect so the server can replay missed events
  *  - After WS_MAX_RETRIES consecutive failures, falls back to 60s polling
  *    so the dashboard still updates even if WebSocket is broken
@@ -311,7 +318,7 @@ export function useOrderEvents() {
   }, []);
 
   const startFallback = useCallback(() => {
-    if (fallbackTimer.current) return;
+    if (fallbackTimer.current) return; // already running
     console.warn("[WS] switched to 60s polling fallback after repeated failures");
     fallbackTimer.current = setInterval(() => {
       invalidate.orders();
@@ -329,47 +336,53 @@ export function useOrderEvents() {
     wsRef.current = null;
     prev?.close();
 
+    // Browser WebSocket cannot send custom headers — token goes in the query param;
+    // the gateway promotes it to an Authorization header for upgrade requests.
     const params = new URLSearchParams({ token: accessToken });
     if (lastIdRef.current) params.set("last_id", lastIdRef.current);
-    const ws = new WebSocket(`${WS_BASE}/v1/orders/ws?${params}`);
+    const ws = new WebSocket(`${WS_BASE}/v1/orders/ws?${params.toString()}`);
     wsRef.current = ws;
 
     ws.onopen = () => {
+      // Successful (re)connect — reset retry counter and cancel fallback polling.
       retryCount.current = 0;
       stopFallback();
     };
 
     ws.onmessage = (event) => {
+      let msg: WsMessage;
       try {
-        const msg: { type: string; id?: string; data?: unknown } = JSON.parse(event.data as string);
-        if (msg.id) lastIdRef.current = msg.id;
-        switch (msg.type) {
-          case "order_created": {
-            invalidate.orders();
-            invalidate.wallet();
-            invalidate.analytics();
-            const data = msg.data as { total_kobo?: number } | undefined;
-            useNotificationStore.getState().push({
-              title: "New order received",
-              body: typeof data?.total_kobo === "number" ? koboToNaira(data.total_kobo) : undefined,
-            });
-            break;
-          }
-          case "order_updated":
-            invalidate.orders();
-            invalidate.analytics();
-            break;
-          case "wallet_updated":
-            invalidate.wallet();
-            break;
-        }
+        msg = JSON.parse(event.data as string);
       } catch {
-        // ignore malformed frames
+        return; // ignore malformed frames
+      }
+      if (msg.id) lastIdRef.current = msg.id;
+
+      switch (msg.type) {
+        case "order_created": {
+          invalidate.orders();
+          invalidate.wallet();
+          invalidate.analytics();
+          const data = msg.data as { total_kobo?: number } | undefined;
+          useNotificationStore.getState().push({
+            title: "New order received",
+            body: typeof data?.total_kobo === "number" ? koboToNaira(data.total_kobo) : undefined,
+          });
+          break;
+        }
+        case "order_updated":
+          invalidate.orders();
+          invalidate.analytics();
+          break;
+        case "wallet_updated":
+          invalidate.wallet();
+          break;
       }
     };
 
     ws.onerror = () => {
-      // onclose always fires after onerror — handle reconnect there.
+      // The close event always follows error and carries the actual retry
+      // decision — onerror alone gives no useful information here.
     };
 
     ws.onclose = () => {
@@ -382,7 +395,7 @@ export function useOrderEvents() {
 
       if (retryCount.current >= WS_MAX_RETRIES) {
         startFallback();
-        return;
+        return; // stop trying WS — fallback polling takes over
       }
 
       // Exponential backoff capped at 30s, plus up to 1s of jitter.

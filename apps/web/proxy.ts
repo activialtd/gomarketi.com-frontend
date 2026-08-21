@@ -5,6 +5,16 @@ const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "gomarketi.com";
 // Subdomains that belong to the platform itself, not stores
 const RESERVED = new Set(["www", "vendor", "app", "api", "admin", "mail", "cdn"]);
 
+// Platform-wide pages that live at the root (app/legal/*, app/help) rather
+// than under app/storefront/[slug]/ — every vendor's storefront footer links
+// to these, so they must stay reachable un-rewritten even on a store's own
+// subdomain, or every "Shipping"/"Privacy"/"Help" link 404s (there's no
+// app/storefront/[slug]/legal/... route for the rewrite to land on).
+const GLOBAL_PATH_PREFIXES = ["/legal", "/help"];
+function isGlobalPath(pathname: string) {
+  return GLOBAL_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 export function proxy(req: NextRequest) {
   const host = req.headers.get("host") ?? "";
   // Strip port (for local dev: "cobi.localhost:3001" → "cobi.localhost")
@@ -22,6 +32,9 @@ export function proxy(req: NextRequest) {
   }
 
   if (subdomain && !RESERVED.has(subdomain)) {
+    if (isGlobalPath(url.pathname)) {
+      return NextResponse.next();
+    }
     const alreadyRouted =
       url.pathname === `/storefront/${subdomain}` ||
       url.pathname.startsWith(`/storefront/${subdomain}/`);
@@ -37,6 +50,9 @@ export function proxy(req: NextRequest) {
   const isLocalhost = hostname === "localhost";
 
   if (!isRootDomain && !isLocalhost) {
+    if (isGlobalPath(url.pathname)) {
+      return NextResponse.next();
+    }
     // Pass the custom domain to the page via a header so it can look up the store
     url.pathname = `/storefront/_domain${url.pathname === "/" ? "" : url.pathname}`;
     const res = NextResponse.rewrite(url);

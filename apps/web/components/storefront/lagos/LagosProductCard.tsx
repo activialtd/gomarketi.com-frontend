@@ -20,15 +20,15 @@ export function LagosProductCard({
   const [imgLoaded, setImgLoaded] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
   const hasImage = product.images.length > 0;
+  // Clean path — see EkoProductCard.tsx. proxy.ts rewrites this
+  // transparently on the store's subdomain.
+  const productHref = `/products/${product.id}`;
 
   useEffect(() => {
     if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
       setImgLoaded(true);
     }
   }, []);
-
-  // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
-  const productHref = `/products/${product.id}`;
 
   return (
     <Link

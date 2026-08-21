@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Apple, Eye, EyeOff, Users } from "lucide-react";
+import { Loader2, Eye, EyeOff, Users } from "lucide-react";
 import { Input } from "@gomarket/ui";
 import { authApi, identityApi, staffApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -14,7 +14,7 @@ import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
 import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
-import AppleIconFilled from "../common/AppleIcon";
+import AppleIconRefined from "../common/AppleIcon";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -99,7 +99,7 @@ export function LoginForm() {
         } catch {
           // No vendor profile — create it and send to onboarding
           await identityApi.startOnboarding(resp.access_token).catch(() => {});
-          destination = ROUTES.ONBOARDING.WELCOME;
+          destination = ROUTES.MERCHANT.OVERVIEW;
         }
         router.push(destination);
       }
@@ -150,6 +150,7 @@ export function LoginForm() {
       </p>
 
       {/* ── OAuth buttons (vendor mode only) ────────────────── */}
+      {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
       <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
       {!isStaffMode && (
         <>
@@ -165,7 +166,7 @@ export function LoginForm() {
             onClick={() => handleOAuth("apple")}
             loading={oauthLoading === "apple"}
             disabled={busy}
-            icon={<Apple className="w-4 h-4 fill-current" />}
+            icon={<AppleIconRefined className="w-4 h-4 fill-current" />}
             label="Continue with Apple"
           />
 

@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* ─── design tokens ─── */
+@theme {
+  --color-background: #ffffff;
+  --color-foreground: #1c1c1c;
+  --color-muted: #6e766f;
+  --color-surface: #f0faf3;
+  --color-border: #e4e8e5;
+
+  --color-primary: #0a2e1a;
+  --color-primary-soft: #239452;
+  --color-primary-accent: #22c55e;
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ─── legacy storefront tokens (kept for existing components) ─── */
 :root {
   --store-primary: #1a7a42;
   --store-secondary: #0a4d2a;
@@ -7,6 +23,26 @@
   --store-text: #1c1c1c;
 }
 
+/* ─── prose helpers ─── */
+@layer components {
+  .prose-policy p {
+    @apply text-muted leading-relaxed;
+  }
+  .prose-policy strong {
+    @apply text-foreground font-semibold;
+  }
+  .prose-policy ul {
+    @apply list-disc space-y-2 pl-5 marker:text-primary-soft;
+  }
+  .prose-policy li {
+    @apply text-muted;
+  }
+  .prose-policy a {
+    @apply text-primary underline underline-offset-2 hover:text-primary-soft;
+  }
+}
+
+/* ─── animations ─── */
 @keyframes fadeUp {
   from {
     opacity: 0;
@@ -17,7 +53,6 @@
     transform: translateY(0);
   }
 }
-
 @keyframes slideIn {
   from {
     transform: translateX(-100%);

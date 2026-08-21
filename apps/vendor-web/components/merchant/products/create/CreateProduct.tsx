@@ -34,6 +34,7 @@ import {
 import { catalogueApi, ApiError, type CollectionResp, type CategoryResp, type CanonicalProductResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import CanonicalProductTypeahead from "./CanonicalProductTypeahead";
+import { invalidate } from "@/lib/swr/hooks";
 
 export default function CreateProductPage({ productId }: { productId?: string }) {
   const router = useRouter();
@@ -167,6 +168,11 @@ export default function CreateProductPage({ productId }: { productId?: string })
       } else if (isEditing) {
         await catalogueApi.unpublishProduct(productIdForPublish, accessToken);
       }
+      // Without this, the products list keeps serving its cached SWR
+      // response (5 min dedupingInterval) after navigating back — the new
+      // or edited product wouldn't show up until the cache expired or the
+      // page was hard-refreshed.
+      invalidate.products();
       router.push(ROUTES.MERCHANT.PRODUCTS);
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "Failed to save product. Please try again.");
