@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Check,
   Loader2,
@@ -15,9 +16,19 @@ import {
   Video,
   Music,
 } from "lucide-react";
-import { InstagramIcon, TwitterIcon, FacebookIcon } from "@/lib/icons";
+import {
+  InstagramIcon,
+  TwitterIcon,
+  FacebookIcon,
+  TikTokIcon,
+} from "@/lib/icons";
 import { ROUTES } from "@/lib/config/routes";
-import { useMyStore, useVendorProfile, useSubscription, invalidate } from "@/lib/swr/hooks";
+import {
+  useMyStore,
+  useVendorProfile,
+  useSubscription,
+  invalidate,
+} from "@/lib/swr/hooks";
 import {
   storefrontApi,
   type StoreUpdatePayload,
@@ -33,7 +44,14 @@ const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const FONTS = ["Inter", "Poppins", "Playfair Display", "Montserrat", "Lato", "Open Sans"];
+const FONTS = [
+  "Inter",
+  "Poppins",
+  "Playfair Display",
+  "Montserrat",
+  "Lato",
+  "Open Sans",
+];
 
 const DEFAULT_THEME: ThemeConfig = {
   primary_color: "#1A7A42",
@@ -56,18 +74,24 @@ type Tab = typeof TABS[number];
 
 // ── Plan display config ───────────────────────────────────────────────────────
 
-const planDisplay: Record<string, { label: string; bg: string; color: string }> = {
-  free:    { label: "Free",    bg: "#f1f5f9", color: "#64748b" },
+const planDisplay: Record<
+  string,
+  { label: string; bg: string; color: string }
+> = {
+  free: { label: "Free", bg: "#f1f5f9", color: "#64748b" },
   starter: { label: "Starter", bg: "#F0FAF3", color: "#1A7A42" },
-  growth:  { label: "Growth",  bg: "#eff6ff", color: "#3b82f6" },
-  scale:   { label: "Scale",   bg: "#faf5ff", color: "#7c3aed" },
+  growth: { label: "Growth", bg: "#eff6ff", color: "#3b82f6" },
+  scale: { label: "Scale", bg: "#faf5ff", color: "#7c3aed" },
 };
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="block text-[10px] font-bold uppercase tracking-[0.1em] mb-1.5" style={{ color: "#3D6B4F" }}>
+    <label
+      className="block text-[10px] font-bold uppercase tracking-[0.1em] mb-1.5"
+      style={{ color: "#3D6B4F" }}
+    >
       {children}
     </label>
   );
@@ -101,7 +125,9 @@ function StyledInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   );
 }
 
-function StyledTextarea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
+function StyledTextarea(
+  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+) {
   return (
     <textarea
       rows={3}
@@ -149,12 +175,23 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
   );
 }
 
-function ColorSwatch({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ColorSwatch({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
   return (
     <div className="space-y-1.5">
       <FieldLabel>{label}</FieldLabel>
       <div className="flex items-center gap-2.5">
-        <div className="w-9 h-9 rounded-[8px] border" style={{ background: value, borderColor: "#e2e8f0" }} />
+        <div
+          className="w-9 h-9 rounded-[8px] border"
+          style={{ background: value, borderColor: "#e2e8f0" }}
+        />
         <div className="flex-1 relative">
           <StyledInput
             type="text"
@@ -183,7 +220,13 @@ function ColorSwatch({ label, value, onChange }: { label: string; value: string;
 
 // ── Banner / toast ─────────────────────────────────────────────────────────────
 
-function SaveBanner({ visible, error }: { visible: boolean; error: string | null }) {
+function SaveBanner({
+  visible,
+  error,
+}: {
+  visible: boolean;
+  error: string | null;
+}) {
   if (!visible && !error) return null;
   return (
     <div
@@ -227,13 +270,18 @@ function InformationTab({
   return (
     <div className="space-y-5 max-w-2xl">
       <div>
-        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Store Information</p>
+        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
+          Store Information
+        </p>
         <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
           Displayed on your storefront and in customer communications.
         </p>
       </div>
 
-      <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+      <div
+        className="rounded-[14px] border p-5 space-y-4"
+        style={{ background: "#fff", borderColor: "#e2e8f0" }}
+      >
         {/* Store name */}
         <div>
           <FieldLabel>Store name</FieldLabel>
@@ -254,7 +302,15 @@ function InformationTab({
             placeholder="A short catchy phrase for your store"
             maxLength={charLimitTagline}
           />
-          <p className="text-[10px] mt-1" style={{ color: info.tagline.length > charLimitTagline * 0.9 ? "#f59e0b" : "#94a3b8" }}>
+          <p
+            className="text-[10px] mt-1"
+            style={{
+              color:
+                info.tagline.length > charLimitTagline * 0.9
+                  ? "#f59e0b"
+                  : "#94a3b8",
+            }}
+          >
             {info.tagline.length}/{charLimitTagline} characters
           </p>
         </div>
@@ -281,7 +337,12 @@ function InformationTab({
           />
           <p
             className="text-[10px] mt-1"
-            style={{ color: info.site_description.length > charLimitSiteDesc ? "#ef4444" : "#94a3b8" }}
+            style={{
+              color:
+                info.site_description.length > charLimitSiteDesc
+                  ? "#ef4444"
+                  : "#94a3b8",
+            }}
           >
             {info.site_description.length}/{charLimitSiteDesc} characters
           </p>
@@ -319,15 +380,28 @@ function CustomizationTab({
       {/* Left: controls */}
       <div className="space-y-5">
         <div>
-          <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Store Customization</p>
+          <p
+            className="text-[15px] font-extrabold"
+            style={{ color: "#1C1C1C" }}
+          >
+            Store Customization
+          </p>
           <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
             Customize your storefront appearance. Changes apply after saving.
           </p>
         </div>
 
         {/* Branding images */}
-        <div className="rounded-[14px] border p-5 space-y-6" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
-          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Branding Images</p>
+        <div
+          className="rounded-[14px] border p-5 space-y-6"
+          style={{ background: "#fff", borderColor: "#e2e8f0" }}
+        >
+          <p
+            className="text-[13px] font-extrabold"
+            style={{ color: "#1C1C1C" }}
+          >
+            Branding Images
+          </p>
 
           <ImageUpload
             label="Store Logo"
@@ -353,49 +427,109 @@ function CustomizationTab({
         </div>
 
         {/* Theme colors */}
-        <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
-          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Brand Colors</p>
+        <div
+          className="rounded-[14px] border p-5 space-y-4"
+          style={{ background: "#fff", borderColor: "#e2e8f0" }}
+        >
+          <p
+            className="text-[13px] font-extrabold"
+            style={{ color: "#1C1C1C" }}
+          >
+            Brand Colors
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <ColorSwatch label="Primary color" value={custom.theme.primary_color} onChange={(v) => setTheme({ primary_color: v })} />
-            <ColorSwatch label="Secondary color" value={custom.theme.secondary_color} onChange={(v) => setTheme({ secondary_color: v })} />
-            <ColorSwatch label="Accent / light bg" value={custom.theme.accent_color} onChange={(v) => setTheme({ accent_color: v })} />
-            <ColorSwatch label="Page background" value={custom.theme.background_color} onChange={(v) => setTheme({ background_color: v })} />
-            <ColorSwatch label="Text color" value={custom.theme.text_color} onChange={(v) => setTheme({ text_color: v })} />
+            <ColorSwatch
+              label="Primary color"
+              value={custom.theme.primary_color}
+              onChange={(v) => setTheme({ primary_color: v })}
+            />
+            <ColorSwatch
+              label="Secondary color"
+              value={custom.theme.secondary_color}
+              onChange={(v) => setTheme({ secondary_color: v })}
+            />
+            <ColorSwatch
+              label="Accent / light bg"
+              value={custom.theme.accent_color}
+              onChange={(v) => setTheme({ accent_color: v })}
+            />
+            <ColorSwatch
+              label="Page background"
+              value={custom.theme.background_color}
+              onChange={(v) => setTheme({ background_color: v })}
+            />
+            <ColorSwatch
+              label="Text color"
+              value={custom.theme.text_color}
+              onChange={(v) => setTheme({ text_color: v })}
+            />
           </div>
         </div>
 
         {/* Typography */}
-        <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
-          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Typography</p>
+        <div
+          className="rounded-[14px] border p-5 space-y-4"
+          style={{ background: "#fff", borderColor: "#e2e8f0" }}
+        >
+          <p
+            className="text-[13px] font-extrabold"
+            style={{ color: "#1C1C1C" }}
+          >
+            Typography
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <FieldLabel>Heading font</FieldLabel>
               <select
                 className="w-full h-[42px] px-3.5 rounded-[10px] border text-[13px] outline-none"
-                style={{ borderColor: "#e2e8f0", background: "#F0FAF3", color: "#1C1C1C" }}
+                style={{
+                  borderColor: "#e2e8f0",
+                  background: "#F0FAF3",
+                  color: "#1C1C1C",
+                }}
                 value={custom.theme.font_heading}
                 onChange={(e) => setTheme({ font_heading: e.target.value })}
               >
-                {FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+                {FONTS.map((f) => (
+                  <option key={f} value={f} style={{ fontFamily: f }}>
+                    {f}
+                  </option>
+                ))}
               </select>
             </div>
             <div>
               <FieldLabel>Body font</FieldLabel>
               <select
                 className="w-full h-[42px] px-3.5 rounded-[10px] border text-[13px] outline-none"
-                style={{ borderColor: "#e2e8f0", background: "#F0FAF3", color: "#1C1C1C" }}
+                style={{
+                  borderColor: "#e2e8f0",
+                  background: "#F0FAF3",
+                  color: "#1C1C1C",
+                }}
                 value={custom.theme.font_body}
                 onChange={(e) => setTheme({ font_body: e.target.value })}
               >
-                {FONTS.map((f) => <option key={f} value={f} style={{ fontFamily: f }}>{f}</option>)}
+                {FONTS.map((f) => (
+                  <option key={f} value={f} style={{ fontFamily: f }}>
+                    {f}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
         </div>
 
         {/* Layout */}
-        <div className="rounded-[14px] border p-5 space-y-5" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
-          <p className="text-[13px] font-extrabold" style={{ color: "#1C1C1C" }}>Layout & Style</p>
+        <div
+          className="rounded-[14px] border p-5 space-y-5"
+          style={{ background: "#fff", borderColor: "#e2e8f0" }}
+        >
+          <p
+            className="text-[13px] font-extrabold"
+            style={{ color: "#1C1C1C" }}
+          >
+            Layout & Style
+          </p>
 
           {/* Products per row */}
           <div>
@@ -408,9 +542,18 @@ function CustomizationTab({
                   onClick={() => setTheme({ products_per_row: n })}
                   className="flex-1 py-2 rounded-[8px] border text-[13px] font-bold transition-all"
                   style={{
-                    borderColor: custom.theme.products_per_row === n ? "#1A7A42" : "#e2e8f0",
-                    background: custom.theme.products_per_row === n ? "#F0FAF3" : "#f8fafc",
-                    color: custom.theme.products_per_row === n ? "#1A7A42" : "#6b7280",
+                    borderColor:
+                      custom.theme.products_per_row === n
+                        ? "#1A7A42"
+                        : "#e2e8f0",
+                    background:
+                      custom.theme.products_per_row === n
+                        ? "#F0FAF3"
+                        : "#f8fafc",
+                    color:
+                      custom.theme.products_per_row === n
+                        ? "#1A7A42"
+                        : "#6b7280",
                   }}
                 >
                   {n}
@@ -430,9 +573,12 @@ function CustomizationTab({
                   onClick={() => setTheme({ hero_style: style })}
                   className="py-2 rounded-[8px] border text-[11px] font-bold capitalize transition-all"
                   style={{
-                    borderColor: custom.theme.hero_style === style ? "#1A7A42" : "#e2e8f0",
-                    background: custom.theme.hero_style === style ? "#F0FAF3" : "#f8fafc",
-                    color: custom.theme.hero_style === style ? "#1A7A42" : "#6b7280",
+                    borderColor:
+                      custom.theme.hero_style === style ? "#1A7A42" : "#e2e8f0",
+                    background:
+                      custom.theme.hero_style === style ? "#F0FAF3" : "#f8fafc",
+                    color:
+                      custom.theme.hero_style === style ? "#1A7A42" : "#6b7280",
                   }}
                 >
                   {style}
@@ -445,21 +591,27 @@ function CustomizationTab({
           <div>
             <FieldLabel>Button style</FieldLabel>
             <div className="grid grid-cols-3 gap-2">
-              {([
-                { id: "rounded", label: "Rounded" },
-                { id: "sharp", label: "Sharp" },
-                { id: "pill", label: "Pill" },
-              ] as const).map(({ id, label }) => (
+              {(
+                [
+                  { id: "rounded", label: "Rounded" },
+                  { id: "sharp", label: "Sharp" },
+                  { id: "pill", label: "Pill" },
+                ] as const
+              ).map(({ id, label }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => setTheme({ button_style: id })}
                   className="py-2 border text-[11px] font-bold transition-all"
                   style={{
-                    borderRadius: id === "rounded" ? 8 : id === "sharp" ? 2 : 999,
-                    borderColor: custom.theme.button_style === id ? "#1A7A42" : "#e2e8f0",
-                    background: custom.theme.button_style === id ? "#F0FAF3" : "#f8fafc",
-                    color: custom.theme.button_style === id ? "#1A7A42" : "#6b7280",
+                    borderRadius:
+                      id === "rounded" ? 8 : id === "sharp" ? 2 : 999,
+                    borderColor:
+                      custom.theme.button_style === id ? "#1A7A42" : "#e2e8f0",
+                    background:
+                      custom.theme.button_style === id ? "#F0FAF3" : "#f8fafc",
+                    color:
+                      custom.theme.button_style === id ? "#1A7A42" : "#6b7280",
                   }}
                 >
                   {label}
@@ -471,16 +623,41 @@ function CustomizationTab({
           {/* Toggles */}
           <div className="space-y-3 pt-1">
             {[
-              { key: "show_hero" as const, label: "Show hero section", sub: "Full-width banner at the top of your store" },
-              { key: "show_featured" as const, label: "Show featured products", sub: "Highlight selected products on the homepage" },
-              { key: "show_categories" as const, label: "Show categories grid", sub: "Display a grid of your product categories" },
+              {
+                key: "show_hero" as const,
+                label: "Show hero section",
+                sub: "Full-width banner at the top of your store",
+              },
+              {
+                key: "show_featured" as const,
+                label: "Show featured products",
+                sub: "Highlight selected products on the homepage",
+              },
+              {
+                key: "show_categories" as const,
+                label: "Show categories grid",
+                sub: "Display a grid of your product categories",
+              },
             ].map(({ key, label, sub }) => (
-              <div key={key} className="flex items-center justify-between gap-4">
+              <div
+                key={key}
+                className="flex items-center justify-between gap-4"
+              >
                 <div>
-                  <p className="text-[13px] font-semibold" style={{ color: "#374151" }}>{label}</p>
-                  <p className="text-[11px]" style={{ color: "#94a3b8" }}>{sub}</p>
+                  <p
+                    className="text-[13px] font-semibold"
+                    style={{ color: "#374151" }}
+                  >
+                    {label}
+                  </p>
+                  <p className="text-[11px]" style={{ color: "#94a3b8" }}>
+                    {sub}
+                  </p>
                 </div>
-                <Toggle on={custom.theme[key] as boolean} onChange={() => setTheme({ [key]: !custom.theme[key] })} />
+                <Toggle
+                  on={custom.theme[key] as boolean}
+                  onChange={() => setTheme({ [key]: !custom.theme[key] })}
+                />
               </div>
             ))}
           </div>
@@ -489,7 +666,12 @@ function CustomizationTab({
 
       {/* Right: live preview */}
       <div className="xl:sticky xl:top-6 self-start space-y-3">
-        <p className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: "#94a3b8" }}>Live preview</p>
+        <p
+          className="text-[11px] font-bold uppercase tracking-[0.1em]"
+          style={{ color: "#94a3b8" }}
+        >
+          Live preview
+        </p>
         <ThemePreview
           storeName={storeName}
           logoUrl={custom.logo_url || undefined}
@@ -513,12 +695,48 @@ const SOCIAL_FIELDS: {
   icon: React.ElementType;
   iconColor: string;
 }[] = [
-  { key: "instagram", label: "Instagram", placeholder: "@yourstorename", icon: InstagramIcon, iconColor: "#e1306c" },
-  { key: "twitter",   label: "Twitter / X", placeholder: "@yourstorename", icon: TwitterIcon, iconColor: "#1da1f2" },
-  { key: "facebook",  label: "Facebook", placeholder: "facebook.com/yourpage", icon: FacebookIcon, iconColor: "#1877f2" },
-  { key: "tiktok",    label: "TikTok", placeholder: "@yourstorename", icon: Music, iconColor: "#010101" },
-  { key: "whatsapp",  label: "WhatsApp", placeholder: "+2348012345678", icon: Phone, iconColor: "#25d366" },
-  { key: "youtube",   label: "YouTube", placeholder: "youtube.com/c/yourchannel", icon: Video, iconColor: "#ff0000" },
+  {
+    key: "instagram",
+    label: "Instagram",
+    placeholder: "@yourstorename",
+    icon: InstagramIcon,
+    iconColor: "#e1306c",
+  },
+  {
+    key: "twitter",
+    label: "Twitter / X",
+    placeholder: "@yourstorename",
+    icon: TwitterIcon,
+    iconColor: "#1da1f2",
+  },
+  {
+    key: "facebook",
+    label: "Facebook",
+    placeholder: "facebook.com/yourpage",
+    icon: FacebookIcon,
+    iconColor: "#1877f2",
+  },
+  {
+    key: "tiktok",
+    label: "TikTok",
+    placeholder: "@yourstorename",
+    icon: TikTokIcon,
+    iconColor: "#010101",
+  },
+  {
+    key: "whatsapp",
+    label: "WhatsApp",
+    placeholder: "+2348012345678",
+    icon: Phone,
+    iconColor: "#25d366",
+  },
+  {
+    key: "youtube",
+    label: "YouTube",
+    placeholder: "youtube.com/c/yourchannel",
+    icon: Video,
+    iconColor: "#ff0000",
+  },
 ];
 
 function SocialMediaTab({
@@ -531,39 +749,54 @@ function SocialMediaTab({
   return (
     <div className="space-y-5 max-w-2xl">
       <div>
-        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Social Media Links</p>
+        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
+          Social Media Links
+        </p>
         <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
-          These links appear in your storefront footer so customers can find you everywhere.
+          These links appear in your storefront footer so customers can find you
+          everywhere.
         </p>
       </div>
 
-      <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
-        {SOCIAL_FIELDS.map(({ key, label, placeholder, icon: Icon, iconColor }) => (
-          <div key={key}>
-            <FieldLabel>{label}</FieldLabel>
-            <div className="relative flex items-center">
-              <div
-                className="absolute left-3 w-5 h-5 flex items-center justify-center shrink-0"
-                style={{ color: iconColor }}
-              >
-                <Icon className="w-4 h-4" />
+      <div
+        className="rounded-[14px] border p-5 space-y-4"
+        style={{ background: "#fff", borderColor: "#e2e8f0" }}
+      >
+        {SOCIAL_FIELDS.map(
+          ({ key, label, placeholder, icon: Icon, iconColor }) => (
+            <div key={key}>
+              <FieldLabel>{label}</FieldLabel>
+              <div className="relative flex items-center">
+                <div
+                  className="absolute left-3 w-5 h-5 flex items-center justify-center shrink-0"
+                  style={{ color: iconColor }}
+                >
+                  <Icon className="w-4 h-4" />
+                </div>
+                <StyledInput
+                  value={social[key] ?? ""}
+                  onChange={(e) =>
+                    setSocial({ [key]: e.target.value || undefined })
+                  }
+                  placeholder={placeholder}
+                  style={{ paddingLeft: "2.25rem" }}
+                />
               </div>
-              <StyledInput
-                value={social[key] ?? ""}
-                onChange={(e) => setSocial({ [key]: e.target.value || undefined })}
-                placeholder={placeholder}
-                style={{ paddingLeft: "2.25rem" }}
-              />
             </div>
-          </div>
-        ))}
+          ),
+        )}
       </div>
 
       <div
         className="rounded-[12px] p-4 text-[12px]"
-        style={{ background: "#F0FAF3", border: "1px solid rgba(26,122,66,0.15)", color: "#3D6B4F" }}
+        style={{
+          background: "#F0FAF3",
+          border: "1px solid rgba(26,122,66,0.15)",
+          color: "#3D6B4F",
+        }}
       >
-        <strong>Tip:</strong> You can enter handles (e.g. @mystore) or full URLs. GoMarketi will display them correctly.
+        <strong>Tip:</strong> You can enter handles (e.g. @mystore) or full
+        URLs. GoMarketi will display them correctly.
       </div>
     </div>
   );
@@ -592,20 +825,31 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
   return (
     <div className="space-y-5 max-w-2xl">
       <div>
-        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>Your Subscription</p>
+        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
+          Your Subscription
+        </p>
         <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
           Manage your GoMarketi plan and billing.
         </p>
       </div>
 
-      <div className="rounded-[14px] border p-5 space-y-4" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+      <div
+        className="rounded-[14px] border p-5 space-y-4"
+        style={{ background: "#fff", borderColor: "#e2e8f0" }}
+      >
         {/* Current plan */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0" style={{ background: planCfg.bg }}>
+          <div
+            className="w-10 h-10 rounded-[10px] flex items-center justify-center shrink-0"
+            style={{ background: planCfg.bg }}
+          >
             <TrendingUp className="w-5 h-5" style={{ color: planCfg.color }} />
           </div>
           <div>
-            <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
+            <p
+              className="text-[15px] font-extrabold"
+              style={{ color: "#1C1C1C" }}
+            >
               {plan?.display_name ?? "Free"} plan
             </p>
             <p className="text-[12px]" style={{ color: "#94a3b8" }}>
@@ -615,7 +859,10 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
             </p>
           </div>
           <div className="ml-auto">
-            <span className="text-[11px] font-bold px-2.5 py-1 rounded-full" style={{ background: planCfg.bg, color: planCfg.color }}>
+            <span
+              className="text-[11px] font-bold px-2.5 py-1 rounded-full"
+              style={{ background: planCfg.bg, color: planCfg.color }}
+            >
               {planCfg.label}
             </span>
           </div>
@@ -623,13 +870,31 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
 
         {/* Features */}
         {plan && plan.features.length > 0 && (
-          <div className="pt-2 border-t space-y-2" style={{ borderColor: "#f1f5f9" }}>
-            <p className="text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: "#94a3b8" }}>Included in your plan</p>
+          <div
+            className="pt-2 border-t space-y-2"
+            style={{ borderColor: "#f1f5f9" }}
+          >
+            <p
+              className="text-[11px] font-bold uppercase tracking-[0.1em]"
+              style={{ color: "#94a3b8" }}
+            >
+              Included in your plan
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {plan.features.map((f) => (
-                <div key={f} className="flex items-center gap-2 text-[12px]" style={{ color: "#374151" }}>
-                  <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0" style={{ background: "#F0FAF3" }}>
-                    <Check className="w-2.5 h-2.5" style={{ color: "#1A7A42" }} />
+                <div
+                  key={f}
+                  className="flex items-center gap-2 text-[12px]"
+                  style={{ color: "#374151" }}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                    style={{ background: "#F0FAF3" }}
+                  >
+                    <Check
+                      className="w-2.5 h-2.5"
+                      style={{ color: "#1A7A42" }}
+                    />
                   </div>
                   {f}
                 </div>
@@ -640,15 +905,42 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
 
         {/* Limits */}
         {plan && (
-          <div className="pt-2 border-t grid grid-cols-3 gap-3" style={{ borderColor: "#f1f5f9" }}>
+          <div
+            className="pt-2 border-t grid grid-cols-3 gap-3"
+            style={{ borderColor: "#f1f5f9" }}
+          >
             {[
-              { label: "Products", value: plan.product_limit === -1 ? "Unlimited" : plan.product_limit },
-              { label: "Team members", value: plan.team_limit === -1 ? "Unlimited" : plan.team_limit },
-              { label: "Stores", value: plan.store_limit === -1 ? "Unlimited" : plan.store_limit },
+              {
+                label: "Products",
+                value:
+                  plan.product_limit === -1 ? "Unlimited" : plan.product_limit,
+              },
+              {
+                label: "Team members",
+                value: plan.team_limit === -1 ? "Unlimited" : plan.team_limit,
+              },
+              {
+                label: "Stores",
+                value: plan.store_limit === -1 ? "Unlimited" : plan.store_limit,
+              },
             ].map(({ label, value }) => (
-              <div key={label} className="text-center py-3 rounded-[10px]" style={{ background: "#f8fafc" }}>
-                <p className="text-[16px] font-extrabold" style={{ color: "#1C1C1C" }}>{value}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wide mt-0.5" style={{ color: "#94a3b8" }}>{label}</p>
+              <div
+                key={label}
+                className="text-center py-3 rounded-[10px]"
+                style={{ background: "#f8fafc" }}
+              >
+                <p
+                  className="text-[16px] font-extrabold"
+                  style={{ color: "#1C1C1C" }}
+                >
+                  {value}
+                </p>
+                <p
+                  className="text-[10px] font-semibold uppercase tracking-wide mt-0.5"
+                  style={{ color: "#94a3b8" }}
+                >
+                  {label}
+                </p>
               </div>
             ))}
           </div>
@@ -661,9 +953,12 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
           className="rounded-[14px] p-5 space-y-3"
           style={{ background: "#0A2E1A" }}
         >
-          <p className="text-[15px] font-extrabold text-white">Unlock more with a paid plan</p>
+          <p className="text-[15px] font-extrabold text-white">
+            Unlock more with a paid plan
+          </p>
           <p className="text-[12px]" style={{ color: "rgba(240,250,243,0.7)" }}>
-            Upgrade to Starter or Growth to get higher product limits, priority support, and a GoMarketi Verified badge.
+            Upgrade to Starter or Growth to get higher product limits, priority
+            support, and a GoMarketi Verified badge.
           </p>
           <Link
             href={ROUTES.ONBOARDING.PLANS}
@@ -676,10 +971,17 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
       )}
 
       {plan && plan.price_kobo > 0 && (
-        <div className="rounded-[14px] border p-4 flex items-center justify-between" style={{ background: "#fff", borderColor: "#e2e8f0" }}>
+        <div
+          className="rounded-[14px] border p-4 flex items-center justify-between"
+          style={{ background: "#fff", borderColor: "#e2e8f0" }}
+        >
           <div>
-            <p className="text-[13px] font-bold" style={{ color: "#1C1C1C" }}>Need a different plan?</p>
-            <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>Upgrade, downgrade, or cancel anytime.</p>
+            <p className="text-[13px] font-bold" style={{ color: "#1C1C1C" }}>
+              Need a different plan?
+            </p>
+            <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
+              Upgrade, downgrade, or cancel anytime.
+            </p>
           </div>
           <Link
             href={ROUTES.ONBOARDING.PLANS}
@@ -697,17 +999,45 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
 // ── KYC banner ────────────────────────────────────────────────────────────────
 
 const KYC_CFG = {
-  verified:   { label: "Identity verified", banner: "#0A2E1A", text: "#F0FAF3", muted: "rgba(240,250,243,0.55)", icon: ShieldCheck },
-  pending:    { label: "Verification in review", banner: "#713f12", text: "#fef08a", muted: "rgba(254,240,138,0.7)", icon: ShieldAlert },
-  unverified: { label: "Identity not verified", banner: "#713f12", text: "#fef08a", muted: "rgba(254,240,138,0.7)", icon: ShieldAlert },
-  rejected:   { label: "Verification unsuccessful", banner: "#7f1d1d", text: "#fecaca", muted: "rgba(254,202,202,0.7)", icon: ShieldAlert },
+  verified: {
+    label: "Identity verified",
+    banner: "#0A2E1A",
+    text: "#F0FAF3",
+    muted: "rgba(240,250,243,0.55)",
+    icon: ShieldCheck,
+  },
+  pending: {
+    label: "Verification in review",
+    banner: "#713f12",
+    text: "#fef08a",
+    muted: "rgba(254,240,138,0.7)",
+    icon: ShieldAlert,
+  },
+  unverified: {
+    label: "Identity not verified",
+    banner: "#713f12",
+    text: "#fef08a",
+    muted: "rgba(254,240,138,0.7)",
+    icon: ShieldAlert,
+  },
+  rejected: {
+    label: "Verification unsuccessful",
+    banner: "#7f1d1d",
+    text: "#fecaca",
+    muted: "rgba(254,202,202,0.7)",
+    icon: ShieldAlert,
+  },
 };
 
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Settings() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const [activeTab, setActiveTab] = useState<Tab>("Information");
+  const searchParams = useSearchParams();
+  // The sidebar's "Staff & Roles" (and any other) nav item can deep-link
+  // straight to a tab via ?tab=, instead of always landing on Information.
+  const initialTab = TABS.find((t) => t === searchParams.get("tab")) ?? "Information";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [isSaving, setIsSaving] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -752,7 +1082,9 @@ export default function Settings() {
         if ("primary_color" in raw) {
           parsedTheme = raw as Partial<ThemeConfig>;
         }
-      } catch { /* use defaults */ }
+      } catch {
+        /* use defaults */
+      }
     }
 
     setCustom({
@@ -768,7 +1100,9 @@ export default function Settings() {
   const loading = loadingStore || loadingVendor;
 
   const kycRaw = vendorProfile?.kyc_status ?? "none";
-  const kycStatus = (kycRaw === "none" ? "unverified" : kycRaw) as keyof typeof KYC_CFG;
+  const kycStatus = (
+    kycRaw === "none" ? "unverified" : kycRaw
+  ) as keyof typeof KYC_CFG;
   const kyc = KYC_CFG[kycStatus] ?? KYC_CFG.unverified;
   const plan: PlanResp | null = subscription?.plan ?? null;
   const storeUrl = store?.slug ? `${store.slug}.${STORE_DOMAIN}` : null;
@@ -801,7 +1135,10 @@ export default function Settings() {
       setShowBanner(true);
       setTimeout(() => setShowBanner(false), 3000);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to save changes. Please try again.";
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Failed to save changes. Please try again.";
       setSaveError(msg);
       setTimeout(() => setSaveError(null), 4000);
     } finally {
@@ -811,7 +1148,10 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <div className="w-full flex items-center justify-center py-32 gap-2" style={{ color: "#94a3b8" }}>
+      <div
+        className="w-full flex items-center justify-center py-32 gap-2"
+        style={{ color: "#94a3b8" }}
+      >
         <Loader2 className="w-5 h-5 animate-spin" />
         <span className="text-[13px]">Loading your profile…</span>
       </div>
@@ -822,12 +1162,23 @@ export default function Settings() {
     <div className="w-full">
       {/* ── KYC status band ─────────────────────────────────────── */}
       {kycStatus !== "verified" && (
-        <div className="mb-5 rounded-[14px] overflow-hidden" style={{ background: kyc.banner }}>
+        <div
+          className="mb-5 rounded-[14px] overflow-hidden"
+          style={{ background: kyc.banner }}
+        >
           <div className="px-5 py-4 flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-3">
-              <kyc.icon className="w-5 h-5 shrink-0" style={{ color: kyc.text }} />
+              <kyc.icon
+                className="w-5 h-5 shrink-0"
+                style={{ color: kyc.text }}
+              />
               <div>
-                <p className="text-[13px] font-bold" style={{ color: kyc.text }}>{kyc.label}</p>
+                <p
+                  className="text-[13px] font-bold"
+                  style={{ color: kyc.text }}
+                >
+                  {kyc.label}
+                </p>
                 <p className="text-[11px] mt-0.5" style={{ color: kyc.muted }}>
                   {kycStatus === "pending"
                     ? "Your documents are under review. This usually takes 1–2 business days."
@@ -844,7 +1195,9 @@ export default function Settings() {
                 style={{ background: kyc.text, color: kyc.banner }}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
-                {kycStatus === "rejected" ? "Re-submit documents" : "Verify now"}
+                {kycStatus === "rejected"
+                  ? "Re-submit documents"
+                  : "Verify now"}
               </Link>
             )}
           </div>
@@ -859,7 +1212,10 @@ export default function Settings() {
         <div className="px-6 py-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-[18px] font-extrabold" style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}>
+              <h1
+                className="text-[18px] font-extrabold"
+                style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}
+              >
                 Settings
               </h1>
               {storeUrl && (
@@ -870,7 +1226,9 @@ export default function Settings() {
                   className="flex items-center gap-1 text-[11px] font-semibold"
                   style={{ color: "#1A7A42" }}
                 >
-                  <Globe className="w-3 h-3" />{storeUrl}<ExternalLink className="w-3 h-3 opacity-60 ml-0.5" />
+                  <Globe className="w-3 h-3" />
+                  {storeUrl}
+                  <ExternalLink className="w-3 h-3 opacity-60 ml-0.5" />
                 </a>
               )}
             </div>
@@ -879,12 +1237,18 @@ export default function Settings() {
           {activeTab !== "Subscription" && (
             <div className="flex items-center gap-2">
               {saveError && (
-                <span className="text-[11px] font-semibold max-w-[220px] truncate" style={{ color: "#ef4444" }}>
+                <span
+                  className="text-[11px] font-semibold max-w-[220px] truncate"
+                  style={{ color: "#ef4444" }}
+                >
                   {saveError}
                 </span>
               )}
               {showBanner && (
-                <span className="flex items-center gap-1 text-[11px] font-bold" style={{ color: "#1A7A42" }}>
+                <span
+                  className="flex items-center gap-1 text-[11px] font-bold"
+                  style={{ color: "#1A7A42" }}
+                >
                   <Check className="w-3.5 h-3.5" /> Saved!
                 </span>
               )}
@@ -893,9 +1257,16 @@ export default function Settings() {
                 onClick={handleSave}
                 disabled={isSaving}
                 className="flex items-center gap-1.5 h-9 px-4 rounded-[8px] text-white text-[12px] font-bold transition-all disabled:opacity-60"
-                style={{ background: "#0A2E1A", boxShadow: "0 2px 8px rgba(26,122,66,0.25)" }}
-                onMouseOver={(e) => !isSaving && (e.currentTarget.style.background = "#239452")}
-                onMouseOut={(e) => (e.currentTarget.style.background = "#0A2E1A")}
+                style={{
+                  background: "#0A2E1A",
+                  boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
+                }}
+                onMouseOver={(e) =>
+                  !isSaving && (e.currentTarget.style.background = "#239452")
+                }
+                onMouseOut={(e) =>
+                  (e.currentTarget.style.background = "#0A2E1A")
+                }
               >
                 {isSaving ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />

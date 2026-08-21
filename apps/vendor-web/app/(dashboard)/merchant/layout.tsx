@@ -60,6 +60,10 @@ export default function MerchantLayout({
     authApi.logout().catch(() => {}); // best-effort server-side revocation
   }
 
+  // Redirecting is a side effect and must happen after render commits, not
+  // during it — calling router.push() directly in the render body updates
+  // the Router component's state while MerchantLayout is still rendering,
+  // which React flags as an invalid cross-component setState-in-render.
   useEffect(() => {
     if (hydrating) return;
     if (!user) {

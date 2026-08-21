@@ -29,7 +29,9 @@ export function ProductCard({
     }
   }, []);
 
-  // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
+  // Clean path — proxy.ts rewrites this transparently on the store's
+  // subdomain; a /storefront/[slug] prefix here would leak the internal
+  // route into the address bar on client-side navigation.
   const productHref = `/products/${product.id}`;
 
   return (

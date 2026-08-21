@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Metadata } from "next";
 import Setting from "@/components/merchant/settings/Settings";
 
@@ -8,7 +8,11 @@ export const metadata: Metadata = {
 };
 
 const page = () => {
-  return <Setting />;
+  return (
+    <Suspense fallback={null}>
+      <Setting />
+    </Suspense>
+  );
 };
 
 export default page;

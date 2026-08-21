@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShoppingBag, Menu, X } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 import { CartDrawer } from "@/components/storefront/CartDrawer";
+import { WhatsAppFloat } from "@/components/WhatsappFloat";
 
 function IconInstagram() {
   return (
@@ -115,11 +116,14 @@ export default function LagosLayout({
 
   return (
     <div className="min-h-screen bg-[#0E0E0E] text-[#F7F4EE]">
-
       {/* ── Nav ──────────────────────────────────────────── */}
       <nav className="sticky top-0 z-40 border-b border-white/8 bg-[#0E0E0E]/95 backdrop-blur-sm">
         <div className="mx-auto flex h-[60px] max-w-7xl items-center justify-between px-6">
-          <button onClick={() => setMobileNavOpen(true)} className="p-1 text-white/70 lg:hidden" aria-label="Menu">
+          <button
+            onClick={() => setMobileNavOpen(true)}
+            className="p-1 text-white/70 lg:hidden"
+            aria-label="Menu"
+          >
             <Menu className="h-5 w-5" />
           </button>
 
@@ -136,16 +140,21 @@ export default function LagosLayout({
 
           <div className="hidden items-center gap-8 lg:flex">
             {links.map((l) => (
-              <Link key={l.label} href={l.url}
-                className="text-[12px] font-medium uppercase tracking-[0.1em] text-white/60 no-underline transition-colors hover:text-white">
+              <Link
+                key={l.label}
+                href={l.url}
+                className="text-[12px] font-medium uppercase tracking-[0.1em] text-white/60 no-underline transition-colors hover:text-white"
+              >
                 {l.label}
               </Link>
             ))}
           </div>
 
-          <button onClick={() => setCartOpen(true)}
+          <button
+            onClick={() => setCartOpen(true)}
             className="flex items-center gap-1.5 border border-white/20 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#F7F4EE] transition-colors hover:border-white/40"
-            aria-label="Cart">
+            aria-label="Cart"
+          >
             <ShoppingBag className="h-3.5 w-3.5" />
             {itemCount > 0 ? itemCount : "Bag"}
           </button>
@@ -228,7 +237,7 @@ export default function LagosLayout({
             <div>
               <p className="mb-5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/22">Legal</p>
               <div className="flex flex-col gap-3">
-                {[{ label: "Shipping", href: "/shipping" }, { label: "Returns", href: "/returns" }, { label: "Privacy", href: "/privacy" }].map((l) => (
+                {[{ label: "Shipping", href: "/legal/shipping" }, { label: "Returns", href: "/legal/returns" }, { label: "Privacy", href: "/legal/privacy" }].map((l) => (
                   <Link key={l.label} href={l.href} className="text-[13px] text-white/40 no-underline transition-colors hover:text-white/75">{l.label}</Link>
                 ))}
               </div>
@@ -262,21 +271,14 @@ export default function LagosLayout({
         </div>
       </footer>
 
-      {/* ── Floating WhatsApp — Lagos: minimal square pill ── */}
-      {whatsapp && (
-        <a
-          href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Chat with us on WhatsApp"
-          className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center transition-all duration-200 hover:scale-105"
-          style={{ background: "#25D366", boxShadow: "0 4px 24px rgba(37,211,102,0.3)" }}
-        >
-          <IconWhatsApp className="h-6 w-6 text-white" />
-        </a>
-      )}
-
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} slug={slug} />
+      {whatsapp && (
+        <WhatsAppFloat
+          number={whatsapp}
+          storeName={storeName}
+          primary={primary}
+        />
+      )}
     </div>
   );
 }

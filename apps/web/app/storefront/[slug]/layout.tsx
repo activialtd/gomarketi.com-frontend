@@ -7,8 +7,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 async function getStore(slug: string) {
   try {
-    const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`,
-      { cache: "no-store" });
+    const res = await fetch(`${API_URL}/v1/storefront/public/stores/${slug}`, {
+      cache: "no-store",
+    });
     if (!res.ok) return null;
     return await res.json() as { id: string; name: string; tagline?: string; theme_config?: string };
   } catch { return null; }
@@ -69,7 +70,9 @@ export default async function StoreLayout({
 
   let themeConfig: ThemeConfig | null = null;
   if (store.theme_config) {
-    try { themeConfig = JSON.parse(store.theme_config) as ThemeConfig; } catch {}
+    try {
+      themeConfig = JSON.parse(store.theme_config) as ThemeConfig;
+    } catch {}
   }
 
   const hasCollections = (await getCollectionsCount(store.id)) > 0;
@@ -81,10 +84,10 @@ export default async function StoreLayout({
   const logoUrl  = sec?.header?.logoUrl ?? undefined;
 
   const cssVars = {
-    "--store-primary":   colors?.primary   ?? "#1A7A42",
+    "--store-primary": colors?.primary ?? "#1A7A42",
     "--store-secondary": colors?.secondary ?? "#0A4D2A",
-    "--store-bg":        colors?.bg        ?? "#F0FAF3",
-    "--store-text":      colors?.text      ?? "#1C1C1C",
+    "--store-bg": colors?.bg ?? "#F0FAF3",
+    "--store-text": colors?.text ?? "#1C1C1C",
   } as React.CSSProperties;
 
   const social = sec?.footer?.social ?? {};

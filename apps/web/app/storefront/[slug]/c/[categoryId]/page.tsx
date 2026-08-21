@@ -86,7 +86,8 @@ export default async function CategoryPage({
     getProductsByCategory(storeId!, categoryId),
   ]);
 
-  const shopUrl = "/shop";
+  // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
+  const shopUrl = '/shop';
 
   return (
     <div style={{ minHeight: '60vh', background: '#fff' }}>

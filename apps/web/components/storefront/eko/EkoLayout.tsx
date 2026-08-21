@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ShoppingBag, Search, Menu, X } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 import { CartDrawer } from "@/components/storefront/CartDrawer";
+import { WhatsAppFloat } from "@/components/WhatsappFloat";
 
 function IconInstagram() {
   return (
@@ -150,8 +151,12 @@ export default function EkoLayout({
               onClick={() => setCartOpen(true)}
               className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-bold text-white transition-colors"
               style={{ background: "rgba(255,255,255,0.18)" }}
-              onMouseOver={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.28)")}
-              onMouseOut={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.18)")}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "rgba(255,255,255,0.28)")
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.background = "rgba(255,255,255,0.18)")
+              }
               aria-label="Open cart"
             >
               <ShoppingBag className="h-3.5 w-3.5" />
@@ -237,7 +242,7 @@ export default function EkoLayout({
             <div>
               <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: "rgba(255,255,255,0.35)" }}>Policies</p>
               <div className="flex flex-col gap-2.5">
-                {[{ label: "Shipping", href: "/shipping" }, { label: "Returns & refunds", href: "/returns" }, { label: "Privacy", href: "/privacy" }].map((l) => (
+                {[{ label: "Shipping", href: "/legal/shipping" }, { label: "Returns & refunds", href: "/legal/returns" }, { label: "Privacy", href: "/legal/privacy" }].map((l) => (
                   <Link key={l.label} href={l.href} className="text-[13px] no-underline transition-colors hover:text-white" style={{ color: "rgba(255,255,255,0.62)" }}>
                     {l.label}
                   </Link>
@@ -276,23 +281,19 @@ export default function EkoLayout({
         </div>
       </footer>
 
-      {/* ── Floating WhatsApp button ──────────────────────── */}
-      {whatsapp && (
-        <a
-          href={`https://wa.me/${whatsapp.replace(/\D/g, "")}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Chat with us on WhatsApp"
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full px-4 py-3 shadow-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-2xl"
-          style={{ background: "#25D366", color: "#fff", boxShadow: "0 4px 20px rgba(37,211,102,0.4)" }}
-        >
-          <IconWhatsApp className="h-5 w-5 shrink-0" />
-          <span className="hidden text-[12px] font-bold sm:block">Chat with us</span>
-        </a>
-      )}
-
       {/* ── Cart drawer ──────────────────────────────────── */}
-      <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} slug={slug} />
+      <CartDrawer
+        open={cartOpen}
+        onClose={() => setCartOpen(false)}
+        slug={slug}
+      />
+      {whatsapp && (
+        <WhatsAppFloat
+          number={whatsapp}
+          storeName={storeName}
+          primary={primary}
+        />
+      )}
     </div>
   );
 }

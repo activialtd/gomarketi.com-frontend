@@ -70,6 +70,11 @@ export const storeSetupSchema = z.object({
   state: z.string().min(2, "Select your state"),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
+
+  // Optional — which major market (e.g. Balogun Market) the store is in,
+  // populated from a dropdown once address/state is known. Left unset for
+  // vendors whose store isn't part of a named market.
+  market: z.string().optional(),
 });
 
 const variantOptionSchema = z.object({

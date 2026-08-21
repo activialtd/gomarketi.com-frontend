@@ -42,7 +42,15 @@ export interface UpdateStoreReq {
   address?: string;
   city?: string;
   state?: string;
+  market_id?: string;
   theme_config?: string; // raw JSON string stored as JSONB
+}
+
+export interface MarketResp {
+  id: string;
+  name: string;
+  city: string;
+  state: string;
 }
 
 // ── Store customization types ──────────────────────────────────────────────────
@@ -157,6 +165,8 @@ export interface StoreResp {
   address?: string;
   city?: string;
   state?: string;
+  market_id?: string;
+  market_name?: string;
   description?: string;
   site_description?: string;
   social_links?: SocialLinks;
@@ -600,6 +610,15 @@ export const storefrontApi = {
       {},
       token,
     ),
+
+  // Public, no auth required — used to populate the "major market" dropdown
+  // during store setup, filtered by the state/city the vendor just entered.
+  getMarkets: (params: { state?: string; city?: string }) => {
+    const qs = new URLSearchParams();
+    if (params.state) qs.set("state", params.state);
+    if (params.city) qs.set("city", params.city);
+    return request<MarketResp[]>(`/v1/storefront/public/markets?${qs.toString()}`);
+  },
 
   // Upload store asset (logo or hero image) via multipart form
   uploadStoreAsset: async (token: string, file: File, type: "logo" | "hero"): Promise<StoreAssetResp> => {
