@@ -22,6 +22,8 @@ export function ProductCard({
   // subdomain; a /storefront/[slug] prefix here would leak the internal
   // route into the address bar on client-side navigation.
   const productHref = `/products/${product.id}`;
+  const isOutOfStock = !product.is_digital && product.stock <= 0;
+  const isLowStock = !product.is_digital && product.stock > 0 && product.stock <= 5;
 
   return (
     <Link
@@ -64,12 +66,28 @@ export function ProductCard({
             </div>
           )}
 
+          {/* Stock badge */}
+          {isOutOfStock && (
+            <div className="absolute right-3 top-3">
+              <span className="rounded-full bg-gray-900/80 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+                Out of stock
+              </span>
+            </div>
+          )}
+          {isLowStock && (
+            <div className="absolute right-3 top-3">
+              <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+                Only {product.stock} left
+              </span>
+            </div>
+          )}
+
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
           <div className="absolute inset-x-3 bottom-3 translate-y-3 opacity-0 transition-all duration-300 ease-out group-hover:translate-y-0 group-hover:opacity-100">
             <div className="flex items-center justify-center gap-2 rounded-xl bg-white/95 py-2.5 text-[12px] font-bold text-[var(--store-text)] shadow-lg backdrop-blur-sm transition-colors group-hover:bg-[var(--store-primary)] group-hover:text-white">
               <ShoppingBag className="h-3.5 w-3.5" />
-              {product.is_digital ? "Get it now" : "View product"}
+              {isOutOfStock ? "Out of stock" : product.is_digital ? "Get it now" : "View product"}
             </div>
           </div>
         </div>

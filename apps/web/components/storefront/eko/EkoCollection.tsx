@@ -45,6 +45,7 @@ export default function CollectionPage({
       name: p.name,
       description: p.description,
       price_kobo: Math.round(p.price * 100),
+      stock: p.stock,
       images: p.images,
       tags: p.tags,
       is_digital: false,

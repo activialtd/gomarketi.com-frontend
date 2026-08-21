@@ -28,13 +28,21 @@ export default function EkoProductDetails({
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
 
+  // Digital products don't carry a real stock count (CreateProduct.tsx
+  // defaults untracked-inventory items to 9999), so only physical products
+  // are ever actually out of / low on stock.
+  const isOutOfStock = !product.is_digital && product.stock <= 0;
+  const isLowStock = !product.is_digital && product.stock > 0 && product.stock <= 5;
+
   function handleAdd() {
+    if (isOutOfStock) return;
     addToCart(product, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   }
 
   function handleBuyNow() {
+    if (isOutOfStock) return;
     addToCart(product, qty);
     // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
     router.push("/checkout");
@@ -128,12 +136,22 @@ export default function EkoProductDetails({
               {product.name}
             </h1>
 
-            <div style={{ marginBottom: "24px", display: "flex", alignItems: "baseline", gap: "12px" }}>
+            <div style={{ marginBottom: "24px", display: "flex", alignItems: "baseline", gap: "12px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "34px", fontWeight: 900, color: "var(--store-primary, #1A7A42)", letterSpacing: "-0.5px" }}>
                 {fmt(product.price_kobo)}
               </span>
               {product.is_digital && (
                 <span style={{ fontSize: "13px", color: "#6b7280" }}>One-time purchase</span>
+              )}
+              {isOutOfStock && (
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "3px 10px", borderRadius: "999px" }}>
+                  Out of stock
+                </span>
+              )}
+              {isLowStock && (
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#b45309", background: "#fffbeb", padding: "3px 10px", borderRadius: "999px" }}>
+                  Only {product.stock} left
+                </span>
               )}
             </div>
 
@@ -143,7 +161,7 @@ export default function EkoProductDetails({
               </p>
             )}
 
-            {!product.is_digital && (
+            {!product.is_digital && !isOutOfStock && (
               <div style={{ marginBottom: "24px" }}>
                 <p style={{ fontSize: "11px", fontWeight: 700, color: "#6b7280", marginBottom: "8px", letterSpacing: "0.08em" }}>
                   QUANTITY
@@ -159,34 +177,41 @@ export default function EkoProductDetails({
                   <span style={{ width: "48px", textAlign: "center", fontWeight: 700, fontSize: "15px" }}>
                     {qty}
                   </span>
-                  <button onClick={() => setQty(qty + 1)} style={{
-                    width: "42px", height: "42px", border: "none", background: "#f8fafc",
-                    cursor: "pointer", fontSize: "18px", color: "#374151",
-                  }}>+</button>
+                  <button
+                    onClick={() => setQty(Math.min(product.stock, qty + 1))}
+                    disabled={qty >= product.stock}
+                    style={{
+                      width: "42px", height: "42px", border: "none", background: "#f8fafc",
+                      cursor: qty >= product.stock ? "not-allowed" : "pointer",
+                      fontSize: "18px", color: qty >= product.stock ? "#cbd5e1" : "#374151",
+                    }}>+</button>
                 </div>
               </div>
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "28px" }}>
-              <button onClick={handleBuyNow} style={{
+              <button onClick={handleBuyNow} disabled={isOutOfStock} style={{
                 height: "54px", borderRadius: "14px", border: "none",
-                background: "var(--store-primary, #1A7A42)", color: "#fff",
-                fontSize: "15px", fontWeight: 800, cursor: "pointer",
+                background: isOutOfStock ? "#e2e8f0" : "var(--store-primary, #1A7A42)",
+                color: isOutOfStock ? "#94a3b8" : "#fff",
+                fontSize: "15px", fontWeight: 800, cursor: isOutOfStock ? "not-allowed" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
-                boxShadow: "0 8px 24px rgba(26,122,66,0.35)",
+                boxShadow: isOutOfStock ? "none" : "0 8px 24px rgba(26,122,66,0.35)",
               }}>
-                {product.is_digital
-                  ? <><Zap style={{ width: "17px", height: "17px" }} /> Get Instant Access</>
-                  : <><ShoppingBag style={{ width: "17px", height: "17px" }} /> Buy Now</>
+                {isOutOfStock
+                  ? "Out of stock"
+                  : product.is_digital
+                    ? <><Zap style={{ width: "17px", height: "17px" }} /> Get Instant Access</>
+                    : <><ShoppingBag style={{ width: "17px", height: "17px" }} /> Buy Now</>
                 }
               </button>
 
-              <button onClick={handleAdd} style={{
+              <button onClick={handleAdd} disabled={isOutOfStock} style={{
                 height: "54px", borderRadius: "14px",
                 border: `2px solid ${added ? "var(--store-primary, #1A7A42)" : "#e2e8f0"}`,
                 background: added ? "var(--store-bg, #F0FAF3)" : "#fff",
-                color: added ? "var(--store-primary, #1A7A42)" : "#374151",
-                fontSize: "15px", fontWeight: 700, cursor: "pointer",
+                color: isOutOfStock ? "#cbd5e1" : added ? "var(--store-primary, #1A7A42)" : "#374151",
+                fontSize: "15px", fontWeight: 700, cursor: isOutOfStock ? "not-allowed" : "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
                 transition: "all 0.2s",
               }}>
