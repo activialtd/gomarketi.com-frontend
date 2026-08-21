@@ -23,6 +23,8 @@ export function LagosProductCard({
   // Clean path — see EkoProductCard.tsx. proxy.ts rewrites this
   // transparently on the store's subdomain.
   const productHref = `/products/${product.id}`;
+  const isOutOfStock = !product.is_digital && product.stock <= 0;
+  const isLowStock = !product.is_digital && product.stock > 0 && product.stock <= 5;
 
   useEffect(() => {
     if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
@@ -72,6 +74,21 @@ export function LagosProductCard({
           <div className="absolute left-3 top-3">
             <span className="flex items-center gap-1 bg-white/10 backdrop-blur-sm px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
               <Download className="h-2.5 w-2.5" /> Digital
+            </span>
+          </div>
+        )}
+
+        {isOutOfStock && (
+          <div className="absolute left-3 bottom-3">
+            <span className="bg-black/70 backdrop-blur-sm px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+              Out of stock
+            </span>
+          </div>
+        )}
+        {isLowStock && (
+          <div className="absolute left-3 bottom-3">
+            <span className="bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+              Only {product.stock} left
             </span>
           </div>
         )}
