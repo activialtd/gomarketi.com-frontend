@@ -917,6 +917,9 @@ export interface SubscriptionResp {
   payment_reference?: string;
   current_period_start: string;
   current_period_end?: string;
+  paystack_dva_account_number?: string;
+  paystack_dva_bank_name?: string;
+  paystack_dva_account_name?: string;
 }
 
 export const identityApi = {
@@ -1042,4 +1045,152 @@ export const staffApi = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+};
+
+// ── Admin Center ─────────────────────────────────────────────────────────────
+// Talks to the admin-api service (Node/Fastify) through the same gateway
+// origin, under /v1/admin/. Admin tokens are minted/verified independently
+// of the buyer/vendor auth flow above — see services/admin-api.
+
+export type AdminRole = "agent" | "supervisor" | "super_admin";
+
+export interface AdminResp {
+  id: string;
+  email: string;
+  full_name: string;
+  role: AdminRole;
+}
+
+export interface AdminLoginResp {
+  token: string;
+  admin: AdminResp;
+}
+
+export interface AdminCustomerSummary {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  is_active: boolean;
+  created_at: string;
+  total_orders: number;
+  total_spent: string;
+}
+
+export interface AdminOrderItemSummary {
+  name: string;
+  quantity: number;
+  price_kobo: string;
+  image_url: string;
+}
+
+export interface AdminCustomerOrder {
+  id: string;
+  store_id: string;
+  status: string;
+  total_kobo: string;
+  created_at: string;
+  items: AdminOrderItemSummary[];
+}
+
+export interface AdminCustomerDetail {
+  profile: AdminCustomerSummary & { avatar_url: string | null };
+  orders: AdminCustomerOrder[];
+}
+
+export interface AdminVendorSummary {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  created_at: string;
+  business_name: string | null;
+  kyc_status: string;
+  onboarding_step: string;
+  is_active: boolean;
+}
+
+export interface AdminVendorStore {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  currency: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminVendorSale {
+  id: string;
+  store_id: string;
+  store_name: string;
+  customer_name: string;
+  status: string;
+  total_kobo: string;
+  created_at: string;
+}
+
+export interface AdminVendorDetail {
+  profile: AdminVendorSummary & {
+    vendor_profile_id: string;
+    business_type: string | null;
+    paystack_dva_account_number: string | null;
+    paystack_dva_bank_name: string | null;
+    subscription_status: string | null;
+    current_period_end: string | null;
+    plan_slug: string | null;
+    plan_name: string | null;
+  };
+  stores: AdminVendorStore[];
+  sales: AdminVendorSale[];
+}
+
+export interface AdminListParams {
+  q?: string;
+  page?: number;
+  per_page?: number;
+}
+
+function toQueryString(params: AdminListParams): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.page) search.set("page", String(params.page));
+  if (params.per_page) search.set("per_page", String(params.per_page));
+  const s = search.toString();
+  return s ? `?${s}` : "";
+}
+
+export const adminApi = {
+  login: (email: string, password: string) =>
+    request<AdminLoginResp>("/v1/admin/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+
+  me: (token: string) =>
+    request<{ admin: AdminResp & { is_admin: true; jti: string; iat: number; exp: number } }>(
+      "/v1/admin/auth/me",
+      {},
+      token,
+    ),
+
+  listCustomers: (params: AdminListParams, token: string) =>
+    request<{ customers: AdminCustomerSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/customers${toQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getCustomer: (id: string, token: string) =>
+    request<AdminCustomerDetail>(`/v1/admin/customers/${id}`, {}, token),
+
+  listVendors: (params: AdminListParams, token: string) =>
+    request<{ vendors: AdminVendorSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/vendors${toQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getVendor: (id: string, token: string) =>
+    request<AdminVendorDetail>(`/v1/admin/vendors/${id}`, {}, token),
 };

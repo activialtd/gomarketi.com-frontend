@@ -122,6 +122,15 @@ export default function PlanSelection() {
           </p>
         </div>
 
+        {!loading && plans.length > 0 && (
+          <div className="mb-8 flex items-center justify-center gap-2 rounded-[12px] border border-[#c8e6d2] bg-[#F0FAF3] px-4 py-3 text-center">
+            <span className="text-[13px] font-semibold text-[#0A2E1A]">
+              🎉 First 3 months, every feature unlocked — no matter which plan
+              you pick below.
+            </span>
+          </div>
+        )}
+
         {/* Plan cards */}
         {loading ? (
           <div className="flex items-center justify-center py-24 gap-2 text-slate-400">
@@ -130,10 +139,19 @@ export default function PlanSelection() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {plans.map((plan) => {
+            {(() => {
+              const clickableIds = new Set(
+                plans
+                  .slice()
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .slice(0, 2)
+                  .map((p) => p.id),
+              );
+              return plans.map((plan) => {
               const meta = PLAN_META[plan.slug] ?? PLAN_META.starter;
               const Icon = meta.icon;
               const isPopular = !!meta.badge;
+              const isClickable = clickableIds.has(plan.id);
 
               return (
                 <div
@@ -144,6 +162,7 @@ export default function PlanSelection() {
                     boxShadow: isPopular
                       ? "0 4px 16px rgba(26,122,66,0.08)"
                       : "none",
+                    opacity: isClickable ? 1 : 0.5,
                   }}
                 >
                   {meta.badge && (
@@ -224,25 +243,39 @@ export default function PlanSelection() {
                   </div>
 
                   {/* CTA */}
-                  <button
-                    onClick={() => handleSelect(plan)}
-                    className="w-full h-11 rounded-[10px] text-[13px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                    style={
-                      isPopular
-                        ? { background: "#0A2E1A", color: "#fff" }
-                        : {
-                            background: "#F0FAF3",
-                            color: "#0A2E1A",
-                            border: "1px solid #c8e6d2",
-                          }
-                    }
-                  >
-                    {meta.cta}
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
+                  {isClickable ? (
+                    <button
+                      onClick={() => handleSelect(plan)}
+                      className="w-full h-11 rounded-[10px] text-[13px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                      style={
+                        isPopular
+                          ? { background: "#0A2E1A", color: "#fff" }
+                          : {
+                              background: "#F0FAF3",
+                              color: "#0A2E1A",
+                              border: "1px solid #c8e6d2",
+                            }
+                      }
+                    >
+                      {meta.cta}
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <div
+                      className="w-full h-11 rounded-[10px] text-[13px] font-bold flex items-center justify-center gap-2 cursor-not-allowed"
+                      style={{
+                        background: "#f1f5f9",
+                        color: "#94a3b8",
+                        border: "1px solid #e2e8f0",
+                      }}
+                    >
+                      Coming soon
+                    </div>
+                  )}
                 </div>
               );
-            })}
+              });
+            })()}
           </div>
         )}
 

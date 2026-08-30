@@ -34,12 +34,21 @@ import {
 import { catalogueApi, ApiError, type CollectionResp, type CategoryResp, type CanonicalProductResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import CanonicalProductTypeahead from "./CanonicalProductTypeahead";
-import { invalidate } from "@/lib/swr/hooks";
+import { invalidate, useSubscription, useProducts } from "@/lib/swr/hooks";
 
 export default function CreateProductPage({ productId }: { productId?: string }) {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
   const isEditing = !!productId;
+  const { data: subscription } = useSubscription();
+  const { data: productsData } = useProducts();
+  const plan = subscription?.plan;
+  const maxImages = plan?.slug === "free" ? 3 : 8;
+  const atProductLimit =
+    !isEditing &&
+    !!plan &&
+    plan.product_limit !== -1 &&
+    (productsData?.total ?? 0) >= plan.product_limit;
   const [images, setImages] = useState<string[]>([]);
   const [canonicalProduct, setCanonicalProduct] = useState<CanonicalProductResp | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -143,6 +152,12 @@ export default function CreateProductPage({ productId }: { productId?: string })
     status: "draft" | "active",
   ) {
     if (!accessToken) return;
+    if (atProductLimit) {
+      setSubmitError(
+        `You've reached your plan's ${plan?.product_limit}-product limit — upgrade to add more.`,
+      );
+      return;
+    }
     const setter = status === "draft" ? setIsSaving : setIsPublishing;
     setter(true);
     setSubmitError(null);
@@ -236,7 +251,7 @@ export default function CreateProductPage({ productId }: { productId?: string })
           <button
             type="button"
             onClick={handleSubmit((d) => onSubmit(d, "draft"))}
-            disabled={isSaving || isPublishing}
+            disabled={isSaving || isPublishing || atProductLimit}
             className="flex items-center gap-1.5 h-9 px-4 rounded-[8px] border text-[12px] font-semibold transition-all disabled:opacity-50"
             style={{
               borderColor: "#e2e8f0",
@@ -252,7 +267,7 @@ export default function CreateProductPage({ productId }: { productId?: string })
           <button
             type="button"
             onClick={handleSubmit((d) => onSubmit(d, "active"))}
-            disabled={isSaving || isPublishing}
+            disabled={isSaving || isPublishing || atProductLimit}
             className="flex items-center gap-1.5 h-9 px-4 rounded-[8px] text-white text-[12px] font-bold transition-all active:scale-[0.98] disabled:opacity-60"
             style={{
               background: "#0A2E1A",
@@ -384,13 +399,18 @@ export default function CreateProductPage({ productId }: { productId?: string })
             {/* Media */}
             <Section
               title="Product images"
-              description="Upload up to 8 images. First image is the main thumbnail."
+              description={
+                plan?.slug === "free"
+                  ? "Free plan: up to 3 images. First image is the main thumbnail."
+                  : "Upload up to 8 images. First image is the main thumbnail."
+              }
             >
               <ImageUpload
                 images={images}
                 onAdd={(url) => setImages((p) => [...p, url])}
                 onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))}
                 accessToken={accessToken ?? ""}
+                maxImages={maxImages}
               />
             </Section>
 

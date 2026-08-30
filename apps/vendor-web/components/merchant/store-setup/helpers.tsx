@@ -5,14 +5,8 @@ export const BRAND_LIGHT = "rgba(26,122,66,0.07)";
 export const BORDER = "#e2e8f0";
 
 export const CURRENCIES = [
-  {
-    code: "NGN",
-    symbol: "₦",
-    name: "Nigerian Naira",
-    flag: "🇳🇬",
-    active: true,
-  },
-  { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸", active: true },
+  { code: "NGN", symbol: "₦", name: "Nigerian Naira", flag: "🇳🇬" },
+  { code: "USD", symbol: "$", name: "US Dollar", flag: "🇺🇸" },
 ] as const;
 
 export const TEAM_SIZES = [
@@ -44,30 +38,34 @@ export const STORE_CATEGORIES = [
 export function CurrencyCard({
   currency,
   selected,
+  disabled = false,
   onSelect,
 }: {
   currency: (typeof CURRENCIES)[number];
   selected: boolean;
+  disabled?: boolean;
   onSelect: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
-      disabled={!currency.active}
+      disabled={disabled}
       title={
-        !currency.active ? `${currency.name} — coming soon` : currency.name
+        disabled
+          ? `${currency.name} — upgrade your plan to unlock`
+          : currency.name
       }
       className="relative flex flex-col items-center gap-1 py-4 rounded-[10px] border font-medium transition-all"
       style={{
         borderColor: selected ? "#1A7A42" : "#e2e8f0",
         background: selected
           ? "rgba(26,122,66,0.06)"
-          : !currency.active
+          : disabled
             ? "transparent"
             : "#F0FAF3",
-        opacity: currency.active ? 1 : 0.42,
-        cursor: currency.active ? "pointer" : "not-allowed",
+        opacity: disabled ? 0.42 : 1,
+        cursor: disabled ? "not-allowed" : "pointer",
       }}
     >
       <span className="text-2xl">{currency.flag}</span>
@@ -80,12 +78,12 @@ export function CurrencyCard({
       <span className="text-[10px] font-semibold" style={{ color: "#6b7280" }}>
         {currency.code}
       </span>
-      {!currency.active && (
+      {disabled && (
         <span
           className="absolute -top-2 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
           style={{ background: "#f1f5f9", color: "#94a3b8" }}
         >
-          Soon
+          Upgrade
         </span>
       )}
       {selected && (
