@@ -24,6 +24,7 @@ import {
 } from "@gomarket/ui";
 import { storefrontApi, authApi, ApiError } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useSubscription } from "@/lib/swr/hooks";
 import { ROUTES } from "@/lib/config/routes";
 import {
   storeSetupSchema,
@@ -138,6 +139,9 @@ export function StoreSetupForm() {
   const teamSizeVal = watch("teamSize");
   const stateVal = watch("state");
   const cityVal = watch("city");
+
+  const { data: subscription } = useSubscription();
+  const isFree = (subscription?.plan?.slug ?? "free") === "free";
 
   // Populate the "major market" dropdown once the vendor's address gives us
   // a state (and, ideally, a city) — e.g. an Awka/Anambra address shows
@@ -691,27 +695,44 @@ export function StoreSetupForm() {
               <div className="space-y-2">
                 <FieldLabel>Team size</FieldLabel>
                 <div className="flex flex-wrap gap-2">
-                  {TEAM_SIZES.map((t) => (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => setValue("teamSize", t.value, { shouldValidate: true })}
-                      className="flex flex-col items-center px-5 py-2.5 rounded-[10px] border transition-colors"
-                      style={{
-                        borderColor: teamSizeVal === t.value ? BRAND : BORDER,
-                        background: teamSizeVal === t.value ? BRAND_LIGHT : "#F0FAF3",
-                        color: teamSizeVal === t.value ? BRAND : "#1C1C1C",
-                      }}
-                    >
-                      <span className="font-bold text-[13px]">{t.label}</span>
-                      <span
-                        className="text-[10px] font-normal mt-0.5"
-                        style={{ color: teamSizeVal === t.value ? BRAND : "#6b7280" }}
+                  {TEAM_SIZES.map((t) => {
+                    const disabled = isFree && !["solo", "2-10"].includes(t.value);
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        disabled={disabled}
+                        title={disabled ? "Upgrade your plan to unlock" : undefined}
+                        onClick={() => {
+                          if (!disabled) setValue("teamSize", t.value, { shouldValidate: true });
+                        }}
+                        className="relative flex flex-col items-center px-5 py-2.5 rounded-[10px] border transition-colors"
+                        style={{
+                          borderColor: teamSizeVal === t.value ? BRAND : BORDER,
+                          background: teamSizeVal === t.value ? BRAND_LIGHT : "#F0FAF3",
+                          color: teamSizeVal === t.value ? BRAND : "#1C1C1C",
+                          opacity: disabled ? 0.42 : 1,
+                          cursor: disabled ? "not-allowed" : "pointer",
+                        }}
                       >
-                        {t.sub}
-                      </span>
-                    </button>
-                  ))}
+                        {disabled && (
+                          <span
+                            className="absolute -top-2 -right-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={{ background: "#f1f5f9", color: "#94a3b8" }}
+                          >
+                            Upgrade
+                          </span>
+                        )}
+                        <span className="font-bold text-[13px]">{t.label}</span>
+                        <span
+                          className="text-[10px] font-normal mt-0.5"
+                          style={{ color: teamSizeVal === t.value ? BRAND : "#6b7280" }}
+                        >
+                          {t.sub}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -722,16 +743,20 @@ export function StoreSetupForm() {
                   The primary currency your store accepts payments in.
                 </p>
                 <div className="grid grid-cols-2 gap-3 max-w-[200px]">
-                  {CURRENCIES.map((c) => (
-                    <CurrencyCard
-                      key={c.code}
-                      currency={c}
-                      selected={currencyVal === c.code}
-                      onSelect={() => {
-                        if (c.active) setValue("currency", c.code as "NGN" | "USD");
-                      }}
-                    />
-                  ))}
+                  {CURRENCIES.map((c) => {
+                    const disabled = isFree && c.code !== "NGN";
+                    return (
+                      <CurrencyCard
+                        key={c.code}
+                        currency={c}
+                        selected={currencyVal === c.code}
+                        disabled={disabled}
+                        onSelect={() => {
+                          if (!disabled) setValue("currency", c.code as "NGN" | "USD");
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             </div>

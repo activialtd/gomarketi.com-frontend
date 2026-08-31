@@ -271,19 +271,21 @@ export function ImageUpload({
   onAdd,
   onRemove,
   accessToken,
+  maxImages = MAX_IMAGES,
 }: {
   images: string[];
   onAdd: (url: string) => void;
   onRemove: (i: number) => void;
   accessToken: string;
+  maxImages?: number;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState<UploadState[]>([]);
   const [dragging, setDragging] = useState(false);
 
   const totalSlots = images.length + uploading.length;
-  const remaining = MAX_IMAGES - totalSlots;
-  const isAtLimit = totalSlots >= MAX_IMAGES;
+  const remaining = maxImages - totalSlots;
+  const isAtLimit = totalSlots >= maxImages;
 
   // Revoke object URLs on unmount to avoid memory leaks.
   useEffect(() => {
@@ -352,7 +354,7 @@ export function ImageUpload({
           <div className="text-center">
             <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>Drag & drop or click to upload</p>
             <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
-              PNG, JPG, WEBP · Max {MAX_FILE_MB} MB each · Up to {MAX_IMAGES} images · {remaining} slot{remaining !== 1 ? "s" : ""} left
+              PNG, JPG, WEBP · Max {MAX_FILE_MB} MB each · Up to {maxImages} images · {remaining} slot{remaining !== 1 ? "s" : ""} left
             </p>
           </div>
         </div>

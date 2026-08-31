@@ -5,7 +5,7 @@ import { Eye, EyeOff, ArrowUpRight, Lock, Zap, Wallet, Loader2 } from "lucide-re
 import { fmtNaira } from "@gomarket/shared-utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { WithdrawModal, TransactionRow } from "./helpers";
-import { useWallet, invalidate } from "@/lib/swr/hooks";
+import { useWallet, useSubscription, invalidate } from "@/lib/swr/hooks";
 
 export default function WalletPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -13,6 +13,7 @@ export default function WalletPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   const { data: wallet, isLoading: loading, mutate } = useWallet();
+  const { data: subscription } = useSubscription();
 
   return (
     <div className="w-full">
@@ -77,6 +78,11 @@ export default function WalletPage() {
                 : balanceVisible
                   ? fmtNaira(wallet?.balance_kobo ?? 0)
                   : "₦ • • • • •"}
+            </p>
+            <p className="text-[11px] mt-2 text-white opacity-60">
+              {subscription?.paystack_dva_account_number
+                ? `Your GoMarketi account: ${subscription.paystack_dva_bank_name} — ${subscription.paystack_dva_account_number}`
+                : "Setting up your payment account…"}
             </p>
           </div>
 

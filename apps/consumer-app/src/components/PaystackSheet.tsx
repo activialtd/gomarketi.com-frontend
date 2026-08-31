@@ -10,7 +10,7 @@ import { color, space, HIT } from "../theme/tokens";
  * the reference server-side (GET /transaction/verify/:reference with the
  * SECRET key) before fulfilling — client "success" alone is not proof.
  */
-const PAYSTACK_PUBLIC_KEY = "pk_test_f533565fb42c5b9370e0419f53f92de0639314f1"; // TODO: your pk_test_/pk_live_ key
+const PAYSTACK_PUBLIC_KEY = process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY ?? "";
 
 export function PaystackSheet({
   email,

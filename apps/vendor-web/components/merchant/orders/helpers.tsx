@@ -1,10 +1,16 @@
-import { type OrderResp, type OrderStatus as ApiOrderStatus, ordersApi } from "@gomarket/api-client";
+import {
+  type OrderResp,
+  type OrderStatus as ApiOrderStatus,
+  type VendorSettableOrderStatus,
+  ordersApi,
+} from "@gomarket/api-client";
 import { fmtNaira } from "@gomarket/shared-utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   Clock,
   RefreshCw,
   Truck,
+  Building2,
   CheckCircle2,
   XCircle,
   ChevronDown,
@@ -29,7 +35,8 @@ export const STATUS_CFG: Record<
     color: "#1e40af",
     icon: RefreshCw,
   },
-  shipped: { label: "Shipped", bg: "#e0f2fe", color: "#0369a1", icon: Truck },
+  at_hub: { label: "At GoMarketi hub", bg: "#ede9fe", color: "#5b21b6", icon: Building2 },
+  shipped: { label: "Dispatched", bg: "#e0f2fe", color: "#0369a1", icon: Truck },
   delivered: {
     label: "Delivered",
     bg: "#dcfce7",
@@ -43,6 +50,13 @@ export const STATUS_CFG: Record<
     icon: XCircle,
   },
 };
+
+// A vendor can only ever set these two — at_hub/shipped/delivered are
+// admin-hub-intake/dispatch/buyer-confirmation controlled (see
+// VendorSettableOrderStatus in @gomarket/api-client). Once confirmed, the
+// vendor's job is to physically bring the item to the GoMarketi hub; every
+// status after that is read-only from here.
+const VENDOR_SETTABLE: VendorSettableOrderStatus[] = ["confirmed", "cancelled"];
 
 function StatusBadge({ status }: { status: ApiOrderStatus }) {
   const cfg = STATUS_CFG[status];
@@ -128,7 +142,14 @@ export function UpdateOrderModal({
   onClose: () => void;
   onUpdated: (updated: OrderResp) => void;
 }) {
-  const [status, setStatus] = useState<ApiOrderStatus>(order.status);
+  // Once an order leaves "confirmed" (checked in at the hub, dispatched,
+  // delivered, or already cancelled), the vendor has no more legitimate
+  // actions on it — status from here on is admin-hub/buyer-confirmation
+  // controlled. Only pending/confirmed orders get the editable picker.
+  const editable = order.status === "pending" || order.status === "confirmed";
+  const [status, setStatus] = useState<VendorSettableOrderStatus>(
+    order.status === "cancelled" ? "cancelled" : "confirmed",
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -183,48 +204,60 @@ export function UpdateOrderModal({
         </div>
 
         <div className="p-5 space-y-4">
-          <div className="space-y-1.5">
-            <label
-              className="text-[10px] font-extrabold uppercase block"
-              style={{ letterSpacing: "0.1em", color: "#3D6B4F" }}
-            >
-              Order status
-            </label>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                Object.entries(STATUS_CFG) as [
-                  ApiOrderStatus,
-                  (typeof STATUS_CFG)[ApiOrderStatus],
-                ][]
-              )
-                .filter(([val]) => val !== "pending")
-                .map(([val, cfg]) => (
-                  <button
-                    key={val}
-                    type="button"
-                    onClick={() => setStatus(val)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-[8px] border text-[12px] font-semibold text-left transition-all"
-                    style={{
-                      borderColor: status === val ? "#1A7A42" : "#e2e8f0",
-                      background:
-                        status === val ? "rgba(26,122,66,0.05)" : "#fafafa",
-                      color: status === val ? "#1A7A42" : "#374151",
-                    }}
-                  >
-                    <cfg.icon className="w-3.5 h-3.5 shrink-0" />
-                    {cfg.label}
-                    {status === val && (
-                      <div
-                        className="ml-auto w-3.5 h-3.5 rounded-full flex items-center justify-center"
-                        style={{ background: "#1A7A42" }}
-                      >
-                        <Check className="w-2 h-2 text-white" />
-                      </div>
-                    )}
-                  </button>
-                ))}
+          {!editable ? (
+            <div className="space-y-3">
+              <p className="text-[12.5px] leading-relaxed" style={{ color: "#374151" }}>
+                This order is past your control — its status is now tracked by GoMarketi's hub team
+                {order.status !== "cancelled" && order.status !== "delivered" ? " and the customer" : ""}.
+              </p>
+              <div className="flex items-center gap-2 px-3 py-2 rounded-[8px]" style={{ background: "#fafafa" }}>
+                <StatusBadge status={order.status} />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-1.5">
+              <label
+                className="text-[10px] font-extrabold uppercase block"
+                style={{ letterSpacing: "0.1em", color: "#3D6B4F" }}
+              >
+                Order status
+              </label>
+              <p className="text-[11.5px] leading-relaxed" style={{ color: "#6b7280" }}>
+                Confirming means you'll bring this item to the GoMarketi hub for dispatch — hub
+                intake, shipping, and delivery are tracked from there, not here.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {VENDOR_SETTABLE.map((val) => {
+                  const cfg = STATUS_CFG[val];
+                  return (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setStatus(val)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-[8px] border text-[12px] font-semibold text-left transition-all"
+                      style={{
+                        borderColor: status === val ? "#1A7A42" : "#e2e8f0",
+                        background:
+                          status === val ? "rgba(26,122,66,0.05)" : "#fafafa",
+                        color: status === val ? "#1A7A42" : "#374151",
+                      }}
+                    >
+                      <cfg.icon className="w-3.5 h-3.5 shrink-0" />
+                      {cfg.label}
+                      {status === val && (
+                        <div
+                          className="ml-auto w-3.5 h-3.5 rounded-full flex items-center justify-center"
+                          style={{ background: "#1A7A42" }}
+                        >
+                          <Check className="w-2 h-2 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {error && (
             <p className="text-[11px]" style={{ color: "#dc2626" }}>
@@ -243,26 +276,28 @@ export function UpdateOrderModal({
                 color: "#374151",
               }}
             >
-              Cancel
+              {editable ? "Cancel" : "Close"}
             </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 h-10 rounded-[10px] text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
-              style={{
-                background: "#0A2E1A",
-                boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
-              }}
-            >
-              {saving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <Check className="w-4 h-4" /> Save changes
-                </>
-              )}
-            </button>
+            {editable && (
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 h-10 rounded-[10px] text-white text-[13px] font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-60"
+                style={{
+                  background: "#0A2E1A",
+                  boxShadow: "0 2px 8px rgba(26,122,66,0.25)",
+                }}
+              >
+                {saving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" /> Save changes
+                  </>
+                )}
+              </button>
+            )}
           </div>
         </div>
       </div>

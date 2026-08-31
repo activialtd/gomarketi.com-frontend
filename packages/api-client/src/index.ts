@@ -231,7 +231,15 @@ export interface OrderItem {
   price_kobo: number;
 }
 
-export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+// at_hub/shipped/delivered are hub-and-spoke states a vendor can only ever
+// read, never set — see VendorSettableOrderStatus below for what a vendor's
+// own PATCH /v1/orders/:id/status call may actually request.
+export type OrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+
+// The backend restricts a vendor's own status PATCH to these two values —
+// at_hub/shipped/delivered are exclusively admin-hub-intake/dispatch/buyer-
+// confirmation controlled under the consolidation-hub fulfillment model.
+export type VendorSettableOrderStatus = "confirmed" | "cancelled";
 
 export interface OrderResp {
   id: string;
@@ -495,6 +503,36 @@ async function request<T>(
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+// ── Client-side crash capture ─────────────────────────────────────────────────
+
+export interface ReportClientErrorInput {
+  service: string;
+  message: string;
+  level?: "error" | "warning";
+  stack?: string;
+  context?: unknown;
+  request_path?: string;
+  user_id?: string;
+}
+
+// Self-built crash capture for vendor-web/consumer-app — POSTs to admin-api's
+// unauthenticated /v1/admin/errors/report (reached through the gateway, same
+// API_BASE every other call in this file uses; the gateway pass-through for
+// /v1/admin/ is unconditional, see services/gateway/cmd/server/main.go).
+// Deliberately fire-and-forget: a crash handler that can itself throw or
+// block defeats the point, so failures here are swallowed, not surfaced.
+export function reportClientError(input: ReportClientErrorInput): void {
+  try {
+    fetch(`${API_BASE}/v1/admin/errors/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }).catch(() => {});
+  } catch {
+    // fetch itself throwing synchronously (e.g. unavailable in this runtime) — ignore.
+  }
 }
 
 // ── Auth API ───────────────────────────────────────────────────────────────────
@@ -765,7 +803,7 @@ export const ordersApi = {
   getOrder: (id: string, token: string) =>
     request<OrderResp>(`/v1/orders/${id}`, {}, token),
 
-  updateOrderStatus: (id: string, status: OrderStatus, token: string) =>
+  updateOrderStatus: (id: string, status: VendorSettableOrderStatus, token: string) =>
     request<OrderResp>(
       `/v1/orders/${id}/status`,
       { method: "PATCH", body: JSON.stringify({ status }) },
@@ -917,6 +955,9 @@ export interface SubscriptionResp {
   payment_reference?: string;
   current_period_start: string;
   current_period_end?: string;
+  paystack_dva_account_number?: string;
+  paystack_dva_bank_name?: string;
+  paystack_dva_account_name?: string;
 }
 
 export const identityApi = {
@@ -1043,3 +1084,281 @@ export const staffApi = {
       body: JSON.stringify({ email, password }),
     }),
 };
+
+// ── Admin Center ─────────────────────────────────────────────────────────────
+// Talks to the admin-api service (Node/Fastify) through the same gateway
+// origin, under /v1/admin/. Admin tokens are minted/verified independently
+// of the buyer/vendor auth flow above — see services/admin-api.
+
+export type AdminRole = "agent" | "supervisor" | "super_admin";
+
+export interface AdminResp {
+  id: string;
+  email: string;
+  full_name: string;
+  role: AdminRole;
+}
+
+export interface AdminLoginResp {
+  token: string;
+  admin: AdminResp;
+}
+
+export interface AdminCustomerSummary {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  is_active: boolean;
+  created_at: string;
+  total_orders: number;
+  total_spent: string;
+}
+
+export interface AdminOrderItemSummary {
+  name: string;
+  quantity: number;
+  price_kobo: string;
+  image_url: string;
+}
+
+export interface AdminCustomerOrder {
+  id: string;
+  store_id: string;
+  status: string;
+  total_kobo: string;
+  created_at: string;
+  items: AdminOrderItemSummary[];
+}
+
+export interface AdminCustomerDetail {
+  profile: AdminCustomerSummary & { avatar_url: string | null };
+  orders: AdminCustomerOrder[];
+}
+
+export interface AdminVendorSummary {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  created_at: string;
+  business_name: string | null;
+  kyc_status: string;
+  onboarding_step: string;
+  is_active: boolean;
+}
+
+export interface AdminVendorStore {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  currency: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminVendorSale {
+  id: string;
+  store_id: string;
+  store_name: string;
+  customer_name: string;
+  status: string;
+  total_kobo: string;
+  created_at: string;
+}
+
+export interface AdminVendorDetail {
+  profile: AdminVendorSummary & {
+    vendor_profile_id: string;
+    business_type: string | null;
+    paystack_dva_account_number: string | null;
+    paystack_dva_bank_name: string | null;
+    subscription_status: string | null;
+    current_period_end: string | null;
+    plan_slug: string | null;
+    plan_name: string | null;
+  };
+  stores: AdminVendorStore[];
+  sales: AdminVendorSale[];
+}
+
+export interface AdminListParams {
+  q?: string;
+  page?: number;
+  per_page?: number;
+}
+
+function toQueryString(params: AdminListParams): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.page) search.set("page", String(params.page));
+  if (params.per_page) search.set("per_page", String(params.per_page));
+  const s = search.toString();
+  return s ? `?${s}` : "";
+}
+
+export const adminApi = {
+  login: (email: string, password: string) =>
+    request<AdminLoginResp>("/v1/admin/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    }),
+
+  me: (token: string) =>
+    request<{ admin: AdminResp & { is_admin: true; jti: string; iat: number; exp: number } }>(
+      "/v1/admin/auth/me",
+      {},
+      token,
+    ),
+
+  listCustomers: (params: AdminListParams, token: string) =>
+    request<{ customers: AdminCustomerSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/customers${toQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getCustomer: (id: string, token: string) =>
+    request<AdminCustomerDetail>(`/v1/admin/customers/${id}`, {}, token),
+
+  listVendors: (params: AdminListParams, token: string) =>
+    request<{ vendors: AdminVendorSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/vendors${toQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getVendor: (id: string, token: string) =>
+    request<AdminVendorDetail>(`/v1/admin/vendors/${id}`, {}, token),
+
+  listBatches: (params: AdminListParams, token: string) =>
+    request<{ batches: AdminBatchSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/batches${toQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getBatch: (paymentReference: string, token: string) =>
+    request<AdminBatchDetail>(`/v1/admin/batches/${encodeURIComponent(paymentReference)}`, {}, token),
+
+  // Fastify's JSON body parser rejects Content-Type: application/json with a
+  // truly empty body (FST_ERR_CTP_EMPTY_JSON_BODY) — request() always sets
+  // that header, so these no-payload actions send an explicit "{}".
+  hubIntake: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/hub-intake`, { method: "POST", body: "{}" }, token),
+
+  dispatchBatch: (paymentReference: string, token: string) =>
+    request<AdminDispatchResult>(
+      `/v1/admin/batches/${encodeURIComponent(paymentReference)}/dispatch`,
+      { method: "POST", body: "{}" },
+      token,
+    ),
+
+  releaseEscrow: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/release-escrow`, { method: "POST", body: "{}" }, token),
+
+  listErrors: (params: AdminErrorListParams, token: string) =>
+    request<{ errors: AdminErrorEvent[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/errors${toErrorQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getError: (id: string, token: string) => request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
+
+  resolveError: (id: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/errors/${id}/resolve`, { method: "POST", body: "{}" }, token),
+};
+
+// ── Batches / hub fulfillment ─────────────────────────────────────────────────
+
+export type AdminOrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+export type AdminEscrowStatus = "held" | "released" | "reversed" | null;
+
+export interface AdminBatchSummary {
+  payment_reference: string;
+  customer_name: string;
+  customer_email: string;
+  order_count: number;
+  at_hub_count: number;
+  shipped_count: number;
+  delivered_count: number;
+  cancelled_count: number;
+  total_kobo: string;
+  created_at: string;
+}
+
+export interface AdminBatchOrderItem {
+  order_id: string;
+  name: string;
+  quantity: number;
+  price_kobo: string;
+  image_url: string;
+}
+
+export interface AdminBatchOrder {
+  id: string;
+  store_id: string;
+  store_name: string;
+  customer_name: string;
+  customer_email: string;
+  status: AdminOrderStatus;
+  total_kobo: string;
+  hub_received_at: string | null;
+  dispatched_at: string | null;
+  delivered_at: string | null;
+  delivery_confirmed_at: string | null;
+  cancelled_reason: string | null;
+  refund_reference: string | null;
+  created_at: string;
+  wallet_status: "pending" | "completed" | "failed" | null;
+  items: AdminBatchOrderItem[];
+}
+
+export interface AdminBatchDetail {
+  payment_reference: string;
+  customer_name: string;
+  customer_email: string;
+  orders: AdminBatchOrder[];
+}
+
+export interface AdminDispatchResult {
+  shipped: string[];
+  refunded: string[];
+  refund_errors: { order_id: string; error: string }[];
+}
+
+// ── Error tracking ────────────────────────────────────────────────────────────
+
+export interface AdminErrorListParams extends AdminListParams {
+  service?: string;
+  resolved?: boolean;
+}
+
+function toErrorQueryString(params: AdminErrorListParams): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.page) search.set("page", String(params.page));
+  if (params.per_page) search.set("per_page", String(params.per_page));
+  if (params.service) search.set("service", params.service);
+  if (params.resolved !== undefined) search.set("resolved", String(params.resolved));
+  const s = search.toString();
+  return s ? `?${s}` : "";
+}
+
+export interface AdminErrorEvent {
+  id: string;
+  service: string;
+  level: "error" | "warning";
+  message: string;
+  stack: string | null;
+  context: unknown;
+  request_path: string | null;
+  status_code: number | null;
+  user_id: string | null;
+  resolved: boolean;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
+}

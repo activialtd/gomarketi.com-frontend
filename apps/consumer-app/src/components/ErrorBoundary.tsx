@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { reportClientError } from "../lib/api-client";
 import { color, type, space } from "../theme/tokens";
 
 /**
@@ -21,6 +22,12 @@ export class ErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("[ErrorBoundary]", error, info.componentStack);
+    reportClientError({
+      service: "consumer-app",
+      message: error.message,
+      stack: error.stack,
+      context: { componentStack: info.componentStack, kind: "render-error-boundary" },
+    });
   }
 
   render() {

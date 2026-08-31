@@ -1056,7 +1056,7 @@ export default function StoreCustomize() {
                   <div className="grid grid-cols-3 gap-2">
                     {([
                       { id: "eko",   label: "Eko",   Thumb: EkoThumb,   soon: false },
-                      { id: "lagos", label: "Lagos", Thumb: LagosThumb, soon: false },
+                      { id: "lagos", label: "Lagos", Thumb: LagosThumb, soon: !planGte(planSlug, "starter") },
                       { id: "abuja", label: "Abuja", Thumb: AbujaThumb, soon: true  },
                     ] as const).map(({ id, label, Thumb, soon }) => (
                       <button key={id} type="button"

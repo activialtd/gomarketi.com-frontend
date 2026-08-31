@@ -1,67 +1,71 @@
-import React from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import React, { useEffect } from "react";
+import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
-import { useOrders, OrderStatus } from "../../lib/orders-context";
-import { formatNaira } from "../../lib/cart-context";
+import { useOrders } from "../../lib/orders-context";
+import { summarizeBatch, formatKobo } from "../../lib/order-status";
 import { useNav } from "../../navigation/AppNavigator";
 import { color, type, space } from "../../theme/tokens";
 
-const STATUS_LABEL: Record<OrderStatus, string> = {
-  confirmed: "Confirmed",
-  preparing: "Preparing",
-  on_the_way: "On the way",
-  delivered: "Delivered",
-};
-
 export function OrdersScreen() {
-  const { orders } = useOrders();
+  const { batches, loading, error, refresh } = useOrders();
   const { push } = useNav();
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       <ScreenHeader title="Your orders" />
-      {orders.length === 0 ? (
+      {batches.length === 0 ? (
         <View style={s.empty}>
-          <Ionicons name="receipt-outline" size={48} color={color.textFaint} />
-          <Text style={[type.title, { marginTop: space.lg }]}>
-            No orders yet
-          </Text>
+          {loading ? (
+            <ActivityIndicator color={color.primary} />
+          ) : (
+            <>
+              <Ionicons name="receipt-outline" size={48} color={color.textFaint} />
+              <Text style={[type.title, { marginTop: space.lg }]}>No orders yet</Text>
+              {error && <Text style={[type.body, { marginTop: 4, color: color.textFaint }]}>{error}</Text>}
+            </>
+          )}
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: space.gutter }}>
-          {orders.map((o) => (
-            <Pressable
-              key={o.id}
-              onPress={() => push("track", { orderId: o.id })}
-            >
-              <View style={s.card}>
-                <View style={s.rowTop}>
-                  <Text style={s.ref}>
-                    {o.storeName ? `${o.storeName} · ` : ""}#{o.reference.slice(-8)}
+        <ScrollView
+          contentContainerStyle={{ padding: space.gutter }}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={color.primary} />}
+        >
+          {batches.map((b) => {
+            const summary = summarizeBatch(b.orders);
+            const totalKobo = b.orders.reduce((sum, o) => sum + o.total_kobo, 0);
+            return (
+              <Pressable key={b.reference} onPress={() => push("track", { reference: b.reference })}>
+                <View style={s.card}>
+                  <View style={s.rowTop}>
+                    <Text style={s.ref}>
+                      {b.orders.length > 1 ? `${b.orders.length} vendors · ` : ""}#{b.reference.slice(-8)}
+                    </Text>
+                    <View style={[s.chip, summary.label === "Delivered" && { backgroundColor: "#E1F0E6" }]}>
+                      <Text style={s.chipText}>{summary.label}</Text>
+                    </View>
+                  </View>
+                  <Text style={type.body} numberOfLines={1}>
+                    {b.orders
+                      .flatMap((o) => o.items.map((i) => `${i.quantity}× ${i.name}`))
+                      .join(", ") || "—"}
                   </Text>
-                  <View
-                    style={[
-                      s.chip,
-                      o.status === "delivered" && {
-                        backgroundColor: "#E1F0E6",
-                      },
-                    ]}
-                  >
-                    <Text style={s.chipText}>{STATUS_LABEL[o.status]}</Text>
+                  {summary.anyAwaitingConfirmation && (
+                    <Text style={s.confirmHint}>Tap to confirm you've received it</Text>
+                  )}
+                  <View style={s.rowBottom}>
+                    <Text style={s.total}>{formatKobo(totalKobo)}</Text>
+                    <Text style={s.track}>Track order →</Text>
                   </View>
                 </View>
-                <Text style={type.body} numberOfLines={1}>
-                  {o.items.map((i) => `${i.qty}× ${i.product.name}`).join(", ")}
-                </Text>
-                <View style={s.rowBottom}>
-                  <Text style={s.total}>{formatNaira(o.totalUsd)}</Text>
-                  <Text style={s.track}>Track order →</Text>
-                </View>
-              </View>
-            </Pressable>
-          ))}
+              </Pressable>
+            );
+          })}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -93,6 +97,7 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   chipText: { fontFamily: "Jakarta_600", fontSize: 11, color: color.ink },
+  confirmHint: { fontFamily: "Jakarta_600", fontSize: 12, color: color.primary, marginTop: 6 },
   rowBottom: {
     flexDirection: "row",
     justifyContent: "space-between",
