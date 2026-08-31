@@ -2,15 +2,17 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Wallet } from "lucide-react";
 import { useVendor } from "@/lib/swr/hooks";
 import { fmtNaira, fmtDate } from "@/lib/format";
+import { Avatar } from "@/components/Avatar";
+import { StatCard } from "@/components/StatCard";
 
 export default function VendorDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data, isLoading, error } = useVendor(id);
 
-  if (isLoading) return <p className="text-[13px] text-slate-400">Loading…</p>;
+  if (isLoading) return <p className="text-[13px] text-muted-soft">Loading…</p>;
   if (error || !data) return <p className="text-[13px] text-red-600">Vendor not found.</p>;
 
   const { profile, stores, sales } = data;
@@ -18,28 +20,37 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
 
   return (
     <div>
-      <Link href="/vendors" className="mb-4 inline-flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 hover:text-slate-700">
+      <Link
+        href="/vendors"
+        className="mb-5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-muted hover:text-foreground"
+      >
         <ArrowLeft className="h-3.5 w-3.5" /> Back to vendors
       </Link>
 
-      <div className="mb-5 flex items-start justify-between">
-        <div>
-          <h1 className="text-[20px] font-extrabold text-[#0A2E1A]">{profile.full_name ?? "Unnamed vendor"}</h1>
-          <p className="text-[13px] text-slate-500">
-            {profile.business_name ?? "No business name set"} · {profile.email}
-          </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div className="flex items-center gap-3.5">
+          <Avatar name={profile.full_name} size={48} />
+          <div>
+            <h1 className="text-[19px] font-extrabold tracking-tight text-foreground">
+              {profile.full_name ?? "Unnamed vendor"}
+            </h1>
+            <p className="text-[13px] text-muted">
+              {profile.business_name ?? "No business name set"} · {profile.email}
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <span
-            className="rounded-full px-2.5 py-1 text-[11px] font-bold capitalize"
-            style={{
-              background: profile.kyc_status === "verified" ? "#F0FAF3" : "#fffbeb",
-              color: profile.kyc_status === "verified" ? "#1A7A42" : "#b45309",
-            }}
+            className="badge capitalize"
+            style={
+              profile.kyc_status === "verified"
+                ? { background: "rgba(34,197,94,0.12)", color: "#15803d" }
+                : { background: "rgba(245,158,11,0.14)", color: "#b45309" }
+            }
           >
             KYC: {profile.kyc_status}
           </span>
-          <span className="rounded-full bg-[#F0FAF3] px-2.5 py-1 text-[11px] font-bold text-[#1A7A42]">
+          <span className="badge" style={{ background: "var(--input)", color: "var(--primary-soft)" }}>
             {profile.plan_name ?? "No plan"}
           </span>
         </div>
@@ -53,35 +64,45 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
       </div>
 
       {profile.paystack_dva_account_number && (
-        <div className="mb-6 rounded-[10px] border border-[#e2e8f0] bg-white p-4">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">Payment account</p>
-          <p className="text-[13px] text-slate-700">
-            {profile.paystack_dva_bank_name} — {profile.paystack_dva_account_number}
-          </p>
+        <div className="card mb-6 flex items-center gap-3 p-4">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[9px]"
+            style={{ background: "var(--input)" }}
+          >
+            <Wallet className="h-[16px] w-[16px]" style={{ color: "var(--primary-soft)" }} />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted-soft">
+              Payment account
+            </p>
+            <p className="text-[13px] font-semibold text-foreground">
+              {profile.paystack_dva_bank_name} — {profile.paystack_dva_account_number}
+            </p>
+          </div>
         </div>
       )}
 
-      <h2 className="mb-3 text-[14px] font-bold text-[#0A2E1A]">Stores</h2>
-      <div className="mb-6 overflow-hidden rounded-[12px] border border-[#e2e8f0] bg-white">
+      <h2 className="mb-3 text-[14px] font-bold text-foreground">Stores</h2>
+      <div className="table-shell mb-7">
         {stores.length === 0 ? (
-          <p className="px-4 py-6 text-center text-[13px] text-slate-400">No stores yet.</p>
+          <p className="py-8 text-center text-[13px] text-muted-soft">No stores yet.</p>
         ) : (
-          <table className="w-full text-left text-[13px]">
+          <table>
             <thead>
-              <tr className="border-b border-[#e2e8f0] bg-[#F7F9F8] text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-2.5">Name</th>
-                <th className="px-4 py-2.5">Category</th>
-                <th className="px-4 py-2.5">Currency</th>
-                <th className="px-4 py-2.5">Status</th>
+              <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Currency</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody>
               {stores.map((s) => (
-                <tr key={s.id} className="border-b border-[#f1f5f9] last:border-0">
-                  <td className="px-4 py-2.5 font-semibold text-[#0A2E1A]">{s.name}</td>
-                  <td className="px-4 py-2.5 capitalize text-slate-600">{s.category}</td>
-                  <td className="px-4 py-2.5 text-slate-600">{s.currency}</td>
-                  <td className="px-4 py-2.5 text-slate-600">{s.is_active ? "Active" : "Inactive"}</td>
+                <tr key={s.id}>
+                  <td className="font-semibold text-foreground">{s.name}</td>
+                  <td className="capitalize text-muted">{s.category}</td>
+                  <td className="text-muted">{s.currency}</td>
+                  <td className="text-muted">{s.is_active ? "Active" : "Inactive"}</td>
                 </tr>
               ))}
             </tbody>
@@ -89,44 +110,35 @@ export default function VendorDetailPage({ params }: { params: Promise<{ id: str
         )}
       </div>
 
-      <h2 className="mb-3 text-[14px] font-bold text-[#0A2E1A]">Recent sales</h2>
-      <div className="overflow-hidden rounded-[12px] border border-[#e2e8f0] bg-white">
+      <h2 className="mb-3 text-[14px] font-bold text-foreground">Recent sales</h2>
+      <div className="table-shell">
         {sales.length === 0 ? (
-          <p className="px-4 py-6 text-center text-[13px] text-slate-400">No sales yet.</p>
+          <p className="py-8 text-center text-[13px] text-muted-soft">No sales yet.</p>
         ) : (
-          <table className="w-full text-left text-[13px]">
+          <table>
             <thead>
-              <tr className="border-b border-[#e2e8f0] bg-[#F7F9F8] text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-2.5">Store</th>
-                <th className="px-4 py-2.5">Customer</th>
-                <th className="px-4 py-2.5">Status</th>
-                <th className="px-4 py-2.5">Total</th>
-                <th className="px-4 py-2.5">Date</th>
+              <tr>
+                <th>Store</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Date</th>
               </tr>
             </thead>
             <tbody>
               {sales.map((s) => (
-                <tr key={s.id} className="border-b border-[#f1f5f9] last:border-0">
-                  <td className="px-4 py-2.5 text-slate-600">{s.store_name}</td>
-                  <td className="px-4 py-2.5 text-slate-600">{s.customer_name}</td>
-                  <td className="px-4 py-2.5 capitalize text-slate-600">{s.status}</td>
-                  <td className="px-4 py-2.5 text-slate-600">{fmtNaira(s.total_kobo)}</td>
-                  <td className="px-4 py-2.5 text-slate-400">{fmtDate(s.created_at)}</td>
+                <tr key={s.id}>
+                  <td className="text-muted">{s.store_name}</td>
+                  <td className="text-muted">{s.customer_name}</td>
+                  <td className="capitalize text-muted">{s.status}</td>
+                  <td className="font-semibold text-foreground">{fmtNaira(s.total_kobo)}</td>
+                  <td className="text-muted-soft">{fmtDate(s.created_at)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[10px] border border-[#e2e8f0] bg-white p-4">
-      <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="truncate text-[16px] font-extrabold capitalize text-[#0A2E1A]">{value}</p>
     </div>
   );
 }

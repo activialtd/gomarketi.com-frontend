@@ -51,3 +51,21 @@ export function useVendor(id: string | undefined) {
     dedupingInterval: 30_000,
   });
 }
+
+export function useBatches(params: AdminListParams = {}) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const key = accessToken ? `admin:batches:${JSON.stringify(params)}` : null;
+  return useSWR(key, () => adminApi.listBatches(params, tok()), {
+    revalidateOnFocus: false,
+    dedupingInterval: 15_000, // ops queue — shorter than directory data, changes more often
+  });
+}
+
+export function useBatch(paymentReference: string | undefined) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const key = accessToken && paymentReference ? `admin:batch:${paymentReference}` : null;
+  return useSWR(key, () => adminApi.getBatch(paymentReference!, tok()), {
+    revalidateOnFocus: false,
+    dedupingInterval: 5_000,
+  });
+}

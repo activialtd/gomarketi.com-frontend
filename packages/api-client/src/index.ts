@@ -1193,4 +1193,88 @@ export const adminApi = {
 
   getVendor: (id: string, token: string) =>
     request<AdminVendorDetail>(`/v1/admin/vendors/${id}`, {}, token),
+
+  listBatches: (params: AdminListParams, token: string) =>
+    request<{ batches: AdminBatchSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/batches${toQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getBatch: (paymentReference: string, token: string) =>
+    request<AdminBatchDetail>(`/v1/admin/batches/${encodeURIComponent(paymentReference)}`, {}, token),
+
+  // Fastify's JSON body parser rejects Content-Type: application/json with a
+  // truly empty body (FST_ERR_CTP_EMPTY_JSON_BODY) — request() always sets
+  // that header, so these no-payload actions send an explicit "{}".
+  hubIntake: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/hub-intake`, { method: "POST", body: "{}" }, token),
+
+  dispatchBatch: (paymentReference: string, token: string) =>
+    request<AdminDispatchResult>(
+      `/v1/admin/batches/${encodeURIComponent(paymentReference)}/dispatch`,
+      { method: "POST", body: "{}" },
+      token,
+    ),
+
+  releaseEscrow: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/release-escrow`, { method: "POST", body: "{}" }, token),
 };
+
+// ── Batches / hub fulfillment ─────────────────────────────────────────────────
+
+export type AdminOrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+export type AdminEscrowStatus = "held" | "released" | "reversed" | null;
+
+export interface AdminBatchSummary {
+  payment_reference: string;
+  customer_name: string;
+  customer_email: string;
+  order_count: number;
+  at_hub_count: number;
+  shipped_count: number;
+  delivered_count: number;
+  cancelled_count: number;
+  total_kobo: string;
+  created_at: string;
+}
+
+export interface AdminBatchOrderItem {
+  order_id: string;
+  name: string;
+  quantity: number;
+  price_kobo: string;
+  image_url: string;
+}
+
+export interface AdminBatchOrder {
+  id: string;
+  store_id: string;
+  store_name: string;
+  customer_name: string;
+  customer_email: string;
+  status: AdminOrderStatus;
+  total_kobo: string;
+  hub_received_at: string | null;
+  dispatched_at: string | null;
+  delivered_at: string | null;
+  delivery_confirmed_at: string | null;
+  cancelled_reason: string | null;
+  refund_reference: string | null;
+  created_at: string;
+  wallet_status: "pending" | "completed" | "failed" | null;
+  items: AdminBatchOrderItem[];
+}
+
+export interface AdminBatchDetail {
+  payment_reference: string;
+  customer_name: string;
+  customer_email: string;
+  orders: AdminBatchOrder[];
+}
+
+export interface AdminDispatchResult {
+  shipped: string[];
+  refunded: string[];
+  refund_errors: { order_id: string; error: string }[];
+}
