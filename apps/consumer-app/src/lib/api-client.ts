@@ -423,17 +423,30 @@ export type CheckoutStoreOrder = {
   items: CheckoutOrderItem[];
 };
 
+// OrderStatus mirrors the backend's real lifecycle (see
+// services/orders/internal/dto/orders.go) — a vendor delivers to the
+// GoMarketi hub (at_hub), GoMarketi dispatches the consolidated batch
+// (shipped), the buyer confirms receipt (delivered).
+export type OrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+export type EscrowStatus = "held" | "released" | "reversed";
+
 export type OrderResp = {
   id: string;
   store_id: string;
   customer_id: string;
   customer_name: string;
   customer_email: string;
-  status: string;
+  status: OrderStatus;
   items: CheckoutOrderItem[];
   total_kobo: number;
   delivery_address: string;
   payment_reference?: string;
+  hub_received_at?: string;
+  dispatched_at?: string;
+  delivered_at?: string;
+  delivery_confirmed_at?: string;
+  cancelled_reason?: string;
+  escrow_status: EscrowStatus;
   created_at: string;
   updated_at: string;
 };
@@ -451,4 +464,23 @@ export async function createCheckout(input: {
   stores: CheckoutStoreOrder[];
 }): Promise<{ orders: OrderResp[] }> {
   return request<{ orders: OrderResp[] }>("/v1/orders/public/checkout", input);
+}
+
+// getMyOrders returns every order the authenticated buyer has ever placed —
+// the real order history behind OrdersScreen, replacing what used to be
+// purely in-memory state from registerOrders alone.
+export async function getMyOrders(): Promise<{ orders: OrderResp[] }> {
+  return authorizedRequest<{ orders: OrderResp[] }>("/v1/orders/mine");
+}
+
+export async function getMyOrder(orderId: string): Promise<OrderResp> {
+  return authorizedRequest<OrderResp>(`/v1/orders/mine/${orderId}`);
+}
+
+// confirmDelivery is the real "I've received this" action — releases the
+// vendor's held escrow. Public/email-gated on the backend (see
+// services/orders/internal/service/orders.go's ConfirmDelivery), matching
+// the existing public-checkout trust model rather than needing a buyer JWT.
+export async function confirmDelivery(orderId: string, email: string): Promise<OrderResp> {
+  return request<OrderResp>(`/v1/orders/public/${orderId}/confirm-delivery`, { email });
 }

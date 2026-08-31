@@ -90,7 +90,7 @@ const SCREENS: Record<ScreenName, (p: any) => ReactNode> = {
   cart: () => <CartScreen />,
   checkout: () => <CheckoutScreen />,
   orders: () => <OrdersScreen />,
-  track: (p) => <TrackOrderScreen orderId={p?.orderId} />,
+  track: (p) => <TrackOrderScreen reference={p?.reference} />,
   profile: () => <ProfileScreen />,
   settings: () => <SettingsScreen />,
   notifications: () => <NotificationsScreen />,

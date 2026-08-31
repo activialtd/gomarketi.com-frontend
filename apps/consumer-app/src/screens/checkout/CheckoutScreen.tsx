@@ -5,7 +5,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { PaystackSheet } from "../../components/PaystackSheet";
-import { useCart, formatNaira, toNaira, NGN_RATE } from "../../lib/cart-context";
+import { useCart, formatNaira, toNaira } from "../../lib/cart-context";
 import { useOrders } from "../../lib/orders-context";
 import { useAuth } from "../../lib/auth-context";
 import { useLocation } from "../../hooks/useLocation";
@@ -67,17 +67,7 @@ export function CheckoutScreen() {
         stores: grouped.stores,
       });
 
-      registerOrders(
-        orders.map((o) => ({
-          id: o.id,
-          reference: ref,
-          items: grouped.linesByStore[o.store_id] ?? [],
-          totalUsd: o.total_kobo / 100 / NGN_RATE,
-          address,
-          storeId: o.store_id,
-          storeName: grouped.stores.find((s) => s.store_id === o.store_id)?.store_name,
-        })),
-      );
+      registerOrders(orders);
       clear();
       reset("home");
       push("orders");

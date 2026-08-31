@@ -1,130 +1,126 @@
-import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
-import { useOrders, OrderStatus } from "../../lib/orders-context";
+import { Button } from "../../components/ui/Button";
+import { useOrders } from "../../lib/orders-context";
+import { STATUS_STEPS, summarizeBatch, formatKobo } from "../../lib/order-status";
 import { color, type, space } from "../../theme/tokens";
 
-/**
- * Live tracking. Courier position is MOCKED (vendor → home interpolation).
- * TODO(backend): feed real courier GPS into `pos`.
- *
- * MAP PROVIDER: defaults to Apple Maps (renders with no API key).
- * When your Google key is in app.json AND you've rebuilt with
- * `npx expo run:ios` AND "Maps SDK for iOS" is enabled in Google Cloud
- * Console, flip USE_GOOGLE to true.
- */
-const USE_GOOGLE = false;
+const VENDOR_STATUS_LABEL: Record<string, string> = {
+  pending: "Awaiting payment",
+  confirmed: "Confirmed — awaiting hub delivery",
+  at_hub: "At GoMarketi hub",
+  shipped: "Out for delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled — refunded",
+};
 
-const VENDOR = { latitude: 9.0643, longitude: 7.4892 };
-const HOME = { latitude: 9.0765, longitude: 7.3986 };
-
-const STEPS: { key: OrderStatus; label: string; icon: any }[] = [
-  { key: "confirmed", label: "Confirmed", icon: "checkmark-circle" },
-  { key: "preparing", label: "Preparing", icon: "restaurant" },
-  { key: "on_the_way", label: "On the way", icon: "bicycle" },
-  { key: "delivered", label: "Delivered", icon: "home" },
-];
-
-export function TrackOrderScreen({ orderId }: { orderId?: string }) {
-  const { orders, advance } = useOrders();
-  const order = orders.find((o) => o.id === orderId) ?? orders[0];
-
-  const [t, setT] = useState(0);
-  const tRef = useRef(0); // current progress, readable inside the interval
-  const statusRef = useRef(order?.status); // avoids stale-closure status checks
-  statusRef.current = order?.status;
+export function TrackOrderScreen({ reference }: { reference?: string }) {
+  const { batches, loading, refresh, confirmReceived } = useOrders();
+  const batch = batches.find((b) => b.reference === reference) ?? batches[0];
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!order || order.status === "delivered") return;
+    if (!batch) refresh();
+  }, [batch, refresh]);
 
-    const iv = setInterval(() => {
-      // 1. compute next progress OUTSIDE any state updater
-      const next = Math.min(tRef.current + 0.04, 1);
-      tRef.current = next;
-      setT(next); // pure set — no side effects inside
-
-      // 2. side effects happen here, in the interval callback (not render phase)
-      const status = statusRef.current;
-      if (next >= 1 && status === "on_the_way") advance(order.id);
-      else if (next > 0.3 && status === "preparing") advance(order.id);
-      else if (next > 0.1 && status === "confirmed") advance(order.id);
-    }, 2000);
-
-    return () => clearInterval(iv);
-  }, [order?.id, order?.status]);
-
-  if (!order) {
+  if (!batch) {
     return (
       <SafeAreaView style={s.root} edges={["top"]}>
         <ScreenHeader title="Track order" />
         <View style={s.center}>
-          <Text style={type.body}>No order found.</Text>
+          {loading ? <ActivityIndicator color={color.primary} /> : <Text style={type.body}>No order found.</Text>}
         </View>
       </SafeAreaView>
     );
   }
 
-  const pos = {
-    latitude: VENDOR.latitude + (HOME.latitude - VENDOR.latitude) * t,
-    longitude: VENDOR.longitude + (HOME.longitude - VENDOR.longitude) * t,
-  };
+  const summary = summarizeBatch(batch.orders);
+  const totalKobo = batch.orders.reduce((sum, o) => sum + o.total_kobo, 0);
+  const address = batch.orders[0]?.delivery_address ?? "";
+  const awaitingOrders = batch.orders.filter((o) => o.status === "shipped" && !o.delivery_confirmed_at);
 
-  const activeIdx = STEPS.findIndex((st) => st.key === order.status);
+  async function handleConfirm() {
+    setConfirming(true);
+    setConfirmError(null);
+    try {
+      for (const o of awaitingOrders) {
+        await confirmReceived(o.id);
+      }
+    } catch (err) {
+      setConfirmError(err instanceof Error ? err.message : "Couldn't confirm delivery — try again.");
+    } finally {
+      setConfirming(false);
+    }
+  }
 
   return (
-    <SafeAreaView style={s.root} edges={["top"]}>
-      <ScreenHeader title={`Order #${order.reference.slice(-8)}`} />
+    <SafeAreaView style={s.root} edges={["top", "bottom"]}>
+      <ScreenHeader title={`Order #${batch.reference.slice(-8)}`} />
 
-      <MapView
-        {...(USE_GOOGLE ? { provider: PROVIDER_GOOGLE } : {})}
-        style={{ flex: 1 }}
-        initialRegion={{
-          latitude: (VENDOR.latitude + HOME.latitude) / 2,
-          longitude: (VENDOR.longitude + HOME.longitude) / 2,
-          latitudeDelta: 0.09,
-          longitudeDelta: 0.09,
-        }}
-      >
-        <Marker coordinate={VENDOR} title="Vendor" pinColor={color.primary} />
-        <Marker coordinate={HOME} title="You" pinColor={color.ink} />
-        <Marker coordinate={pos} title="Courier">
-          <View style={s.courier}>
-            <Ionicons name="bicycle" size={16} color={color.onInk} />
-          </View>
-        </Marker>
-        <Polyline
-          coordinates={[VENDOR, HOME]}
-          strokeColor={color.primary}
-          strokeWidth={3}
-        />
-      </MapView>
-
-      <View style={s.panel}>
-        <View style={s.steps}>
-          {STEPS.map((st, i) => (
-            <View key={st.key} style={s.step}>
-              <View style={[s.stepDot, i <= activeIdx && s.stepDotOn]}>
-                <Ionicons
-                  name={st.icon}
-                  size={14}
-                  color={i <= activeIdx ? color.onInk : color.textFaint}
-                />
+      <ScrollView contentContainerStyle={{ padding: space.gutter }}>
+        {!summary.allCancelled && (
+          <View style={s.steps}>
+            {STATUS_STEPS.map((st, i) => (
+              <View key={st.key} style={s.step}>
+                <View style={[s.stepDot, i <= summary.activeIdx && s.stepDotOn]}>
+                  <Ionicons
+                    name={st.icon as any}
+                    size={14}
+                    color={i <= summary.activeIdx ? color.onInk : color.textFaint}
+                  />
+                </View>
+                <Text style={[s.stepLabel, i <= summary.activeIdx && { color: color.text }]}>{st.label}</Text>
               </View>
+            ))}
+          </View>
+        )}
+
+        <Text style={[type.body, { textAlign: "center", marginTop: space.lg }]}>
+          Delivering to: {address}
+        </Text>
+
+        {summary.anyAwaitingConfirmation && (
+          <View style={{ marginTop: space.lg }}>
+            <Button label="I've received this" onPress={handleConfirm} loading={confirming} />
+            {confirmError && <Text style={s.error}>{confirmError}</Text>}
+          </View>
+        )}
+
+        <View style={s.divider} />
+        <Text style={[type.title, { marginBottom: space.md }]}>
+          {batch.orders.length > 1 ? `${batch.orders.length} vendors in this order` : "Order details"}
+        </Text>
+
+        {batch.orders.map((o) => (
+          <View key={o.id} style={s.vendorCard}>
+            <View style={s.rowTop}>
+              <Text style={s.vendorName}>{o.customer_name}</Text>
               <Text
-                style={[s.stepLabel, i <= activeIdx && { color: color.text }]}
+                style={[
+                  s.vendorStatus,
+                  o.status === "cancelled" && { color: "#B3261E" },
+                  o.status === "delivered" && { color: color.primary },
+                ]}
               >
-                {st.label}
+                {VENDOR_STATUS_LABEL[o.status] ?? o.status}
               </Text>
             </View>
-          ))}
+            <Text style={type.meta} numberOfLines={2}>
+              {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ") || "—"}
+            </Text>
+            <Text style={s.vendorTotal}>{formatKobo(o.total_kobo)}</Text>
+          </View>
+        ))}
+
+        <View style={s.rowBottom}>
+          <Text style={type.body}>Total</Text>
+          <Text style={s.total}>{formatKobo(totalKobo)}</Text>
         </View>
-        <Text style={[type.body, { textAlign: "center", marginTop: space.md }]}>
-          Delivering to: {order.address}
-        </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -132,25 +128,7 @@ export function TrackOrderScreen({ orderId }: { orderId?: string }) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.canvas },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  courier: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: color.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: color.card,
-  },
-  panel: {
-    backgroundColor: color.card,
-    borderTopWidth: 1,
-    borderColor: color.line,
-    paddingHorizontal: space.gutter,
-    paddingTop: space.lg,
-    paddingBottom: 28,
-  },
-  steps: { flexDirection: "row", justifyContent: "space-between" },
+  steps: { flexDirection: "row", justifyContent: "space-between", marginTop: space.md },
   step: { alignItems: "center", flex: 1 },
   stepDot: {
     width: 34,
@@ -166,5 +144,29 @@ const s = StyleSheet.create({
     fontSize: 11,
     color: color.textFaint,
     marginTop: 6,
+    textAlign: "center",
   },
+  divider: { height: 1, backgroundColor: color.line, marginVertical: space.lg },
+  vendorCard: {
+    backgroundColor: color.card,
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: 16,
+    padding: space.md,
+    marginBottom: space.sm,
+  },
+  rowTop: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
+  vendorName: { fontFamily: "Jakarta_700", fontSize: 14, color: color.text },
+  vendorStatus: { fontFamily: "Jakarta_600", fontSize: 12, color: color.textFaint },
+  vendorTotal: { fontFamily: "Jakarta_700", fontSize: 13, color: color.text, marginTop: 6 },
+  rowBottom: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: space.md,
+    paddingTop: space.md,
+    borderTopWidth: 1,
+    borderColor: color.line,
+  },
+  total: { fontFamily: "Jakarta_700", fontSize: 16, color: color.text },
+  error: { fontFamily: "Jakarta_500", fontSize: 12, color: "#B3261E", marginTop: 8, textAlign: "center" },
 });

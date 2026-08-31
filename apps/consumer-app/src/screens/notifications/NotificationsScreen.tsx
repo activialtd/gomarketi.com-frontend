@@ -14,8 +14,8 @@ export function NotificationsScreen() {
   const items = orders.map((o) => ({
     id: o.id,
     icon: "cube-outline" as const,
-    title: `Order #${o.reference.slice(-8)} ${o.status.replace(/_/g, " ")}`,
-    time: new Date(o.placedAt).toLocaleTimeString([], {
+    title: `Order #${(o.payment_reference ?? o.id).slice(-8)} ${o.status.replace(/_/g, " ")}`,
+    time: new Date(o.created_at).toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
     }),
