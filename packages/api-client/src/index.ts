@@ -231,7 +231,15 @@ export interface OrderItem {
   price_kobo: number;
 }
 
-export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+// at_hub/shipped/delivered are hub-and-spoke states a vendor can only ever
+// read, never set — see VendorSettableOrderStatus below for what a vendor's
+// own PATCH /v1/orders/:id/status call may actually request.
+export type OrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+
+// The backend restricts a vendor's own status PATCH to these two values —
+// at_hub/shipped/delivered are exclusively admin-hub-intake/dispatch/buyer-
+// confirmation controlled under the consolidation-hub fulfillment model.
+export type VendorSettableOrderStatus = "confirmed" | "cancelled";
 
 export interface OrderResp {
   id: string;
@@ -495,6 +503,36 @@ async function request<T>(
 
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
+}
+
+// ── Client-side crash capture ─────────────────────────────────────────────────
+
+export interface ReportClientErrorInput {
+  service: string;
+  message: string;
+  level?: "error" | "warning";
+  stack?: string;
+  context?: unknown;
+  request_path?: string;
+  user_id?: string;
+}
+
+// Self-built crash capture for vendor-web/consumer-app — POSTs to admin-api's
+// unauthenticated /v1/admin/errors/report (reached through the gateway, same
+// API_BASE every other call in this file uses; the gateway pass-through for
+// /v1/admin/ is unconditional, see services/gateway/cmd/server/main.go).
+// Deliberately fire-and-forget: a crash handler that can itself throw or
+// block defeats the point, so failures here are swallowed, not surfaced.
+export function reportClientError(input: ReportClientErrorInput): void {
+  try {
+    fetch(`${API_BASE}/v1/admin/errors/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }).catch(() => {});
+  } catch {
+    // fetch itself throwing synchronously (e.g. unavailable in this runtime) — ignore.
+  }
 }
 
 // ── Auth API ───────────────────────────────────────────────────────────────────
@@ -765,7 +803,7 @@ export const ordersApi = {
   getOrder: (id: string, token: string) =>
     request<OrderResp>(`/v1/orders/${id}`, {}, token),
 
-  updateOrderStatus: (id: string, status: OrderStatus, token: string) =>
+  updateOrderStatus: (id: string, status: VendorSettableOrderStatus, token: string) =>
     request<OrderResp>(
       `/v1/orders/${id}/status`,
       { method: "PATCH", body: JSON.stringify({ status }) },
@@ -1219,6 +1257,18 @@ export const adminApi = {
 
   releaseEscrow: (orderId: string, token: string) =>
     request<{ ok: true }>(`/v1/admin/orders/${orderId}/release-escrow`, { method: "POST", body: "{}" }, token),
+
+  listErrors: (params: AdminErrorListParams, token: string) =>
+    request<{ errors: AdminErrorEvent[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/errors${toErrorQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getError: (id: string, token: string) => request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
+
+  resolveError: (id: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/errors/${id}/resolve`, { method: "POST", body: "{}" }, token),
 };
 
 // ── Batches / hub fulfillment ─────────────────────────────────────────────────
@@ -1277,4 +1327,38 @@ export interface AdminDispatchResult {
   shipped: string[];
   refunded: string[];
   refund_errors: { order_id: string; error: string }[];
+}
+
+// ── Error tracking ────────────────────────────────────────────────────────────
+
+export interface AdminErrorListParams extends AdminListParams {
+  service?: string;
+  resolved?: boolean;
+}
+
+function toErrorQueryString(params: AdminErrorListParams): string {
+  const search = new URLSearchParams();
+  if (params.q) search.set("q", params.q);
+  if (params.page) search.set("page", String(params.page));
+  if (params.per_page) search.set("per_page", String(params.per_page));
+  if (params.service) search.set("service", params.service);
+  if (params.resolved !== undefined) search.set("resolved", String(params.resolved));
+  const s = search.toString();
+  return s ? `?${s}` : "";
+}
+
+export interface AdminErrorEvent {
+  id: string;
+  service: string;
+  level: "error" | "warning";
+  message: string;
+  stack: string | null;
+  context: unknown;
+  request_path: string | null;
+  status_code: number | null;
+  user_id: string | null;
+  resolved: boolean;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  created_at: string;
 }

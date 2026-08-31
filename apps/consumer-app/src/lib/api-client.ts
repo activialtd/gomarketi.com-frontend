@@ -7,6 +7,34 @@ const API_URL = (Constants.expoConfig?.extra?.apiUrl as string) ??
 const ACCESS_TOKEN_KEY = "gomarketi_access_token";
 const REFRESH_TOKEN_KEY = "gomarketi_refresh_token";
 
+export interface ReportClientErrorInput {
+  service: string;
+  message: string;
+  level?: "error" | "warning";
+  stack?: string;
+  context?: unknown;
+  request_path?: string;
+  user_id?: string;
+}
+
+// Self-built crash capture — POSTs to admin-api's unauthenticated
+// /v1/admin/errors/report, reached through the same gateway (API_URL above)
+// as every other request here; the gateway passes /v1/admin/ through
+// unconditionally (see services/gateway/cmd/server/main.go). Deliberately
+// fire-and-forget: a crash handler that can itself throw or block defeats
+// the point, so failures here are swallowed, not surfaced.
+export function reportClientError(input: ReportClientErrorInput): void {
+  try {
+    fetch(`${API_URL}/v1/admin/errors/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }).catch(() => {});
+  } catch {
+    // ignore
+  }
+}
+
 export type UserDTO = {
   id: string;
   email?: string;

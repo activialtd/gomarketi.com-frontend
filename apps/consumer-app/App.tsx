@@ -6,8 +6,11 @@ import { CartProvider } from "./src/lib/cart-context";
 import { OrdersProvider } from "./src/lib/orders-context";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
+import { installGlobalErrorHandler } from "./src/lib/error-reporting";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { color } from "./src/theme/tokens";
+
+installGlobalErrorHandler();
 
 export default function App() {
   const fontsLoaded = useAppFonts();
