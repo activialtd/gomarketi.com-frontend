@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, CheckCircle2, ArrowDownLeft, ArrowUpRight, AlertCircle, Loader2 } from "lucide-react";
+import { X, CheckCircle2, ArrowDownLeft, ArrowUpRight, AlertCircle, Loader2, Lock, Undo2 } from "lucide-react";
 import { fmtNaira } from "@gomarket/shared-utils";
 import { walletApi, type WalletResp, type WalletTransactionResp } from "@gomarket/api-client";
 
@@ -21,10 +21,9 @@ export const NIGERIAN_BANKS = [
   "PalmPay",
 ];
 
-export const TXN_CFG: Record<
-  "credit" | "debit",
-  { icon: React.ElementType; bg: string; color: string }
-> = {
+type TxnVisual = { icon: React.ElementType; bg: string; color: string; label?: string };
+
+export const TXN_CFG: Record<"credit" | "debit", TxnVisual> = {
   credit: { icon: ArrowDownLeft, bg: "#dcfce7", color: "#15803d" },
   debit: { icon: ArrowUpRight, bg: "#fee2e2", color: "#dc2626" },
 };
@@ -232,6 +231,15 @@ export function WithdrawModal({
   );
 }
 
+// Debits are always synchronous/instant (Withdraw marks them completed in
+// the same call), so only credits ever sit in "pending" (held in escrow) or
+// land in "failed" (reversed — a vendor no-show refund, never paid).
+const CREDIT_STATE: Record<"pending" | "completed" | "failed", TxnVisual> = {
+  completed: { icon: ArrowDownLeft, bg: "#dcfce7", color: "#15803d" },
+  pending: { icon: Lock, bg: "#FEF3C7", color: "#b45309", label: "Held in escrow" },
+  failed: { icon: Undo2, bg: "#f1f5f9", color: "#94a3b8", label: "Reversed" },
+};
+
 export function TransactionRow({
   txn,
   hidden,
@@ -239,8 +247,10 @@ export function TransactionRow({
   txn: WalletTransactionResp;
   hidden: boolean;
 }) {
-  const cfg = TXN_CFG[txn.type];
   const isCredit = txn.type === "credit";
+  const state = isCredit ? CREDIT_STATE[txn.status] : TXN_CFG.debit;
+  const amountColor = isCredit ? (txn.status === "completed" ? "#15803d" : state.color) : "#1C1C1C";
+
   return (
     <div
       className="flex items-center gap-3 px-5 py-3.5 border-b last:border-0 transition-colors hover:bg-[#fafafa]"
@@ -248,28 +258,33 @@ export function TransactionRow({
     >
       <div
         className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
-        style={{ background: cfg.bg }}
+        style={{ background: state.bg }}
       >
-        <cfg.icon className="w-4 h-4" style={{ color: cfg.color }} />
+        <state.icon className="w-4 h-4" style={{ color: state.color }} />
       </div>
 
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-semibold truncate" style={{ color: "#1C1C1C" }}>
           {txn.description}
         </p>
-        {txn.reference && (
-          <span className="text-[10px] font-mono" style={{ color: "#94a3b8" }}>
-            {txn.reference}
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {txn.reference && (
+            <span className="text-[10px] font-mono" style={{ color: "#94a3b8" }}>
+              {txn.reference}
+            </span>
+          )}
+          {state.label && (
+            <span className="text-[10px] font-semibold" style={{ color: state.color }}>
+              {txn.reference && "· "}
+              {state.label}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="text-right shrink-0">
-        <p
-          className="text-[13px] font-bold tabular-nums"
-          style={{ color: isCredit ? "#15803d" : "#1C1C1C" }}
-        >
-          {isCredit ? "+" : "–"}
+        <p className="text-[13px] font-bold tabular-nums" style={{ color: amountColor }}>
+          {isCredit ? (txn.status === "failed" ? "" : "+") : "–"}
           {hidden ? "•••" : fmtNaira(txn.amount_kobo)}
         </p>
         <p className="text-[10px]" style={{ color: "#94a3b8" }}>
