@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   LogOut,
   Sparkles,
+  AlertTriangle,
 } from "lucide-react";
 import { useAuthStore, roleAtLeast } from "@/store/useAuthStore";
 import type { AdminRole } from "@gomarket/api-client";
@@ -28,6 +29,7 @@ const NAV: NavItem[] = [
   { href: "/customers", label: "Customers", icon: Users },
   { href: "/vendors", label: "Vendors", icon: Store },
   { href: "/orders", label: "Orders", icon: Package },
+  { href: "/errors", label: "Errors", icon: AlertTriangle },
   { href: "/tickets", label: "Tickets", icon: Ticket, comingSoon: true },
 ];
 
