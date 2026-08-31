@@ -371,7 +371,10 @@ export interface WalletTransactionResp {
   amount_kobo: number;
   description: string;
   reference?: string;
-  status: string;
+  // "pending" = a credit still held in escrow (order not yet delivered/
+  // confirmed) — not withdrawable yet. "failed" = reversed (vendor no-show
+  // refund) — never paid. "completed" is the only withdrawable state.
+  status: "pending" | "completed" | "failed";
   bank_name?: string;
   account_number?: string;
   account_name?: string;
@@ -381,6 +384,7 @@ export interface WalletTransactionResp {
 export interface WalletResp {
   balance_kobo: number;
   total_earned_kobo: number;
+  held_kobo: number; // credits still in escrow — not yet withdrawable
   transactions: WalletTransactionResp[];
 }
 

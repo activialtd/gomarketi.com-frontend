@@ -105,20 +105,25 @@ export default function WalletPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 divide-x" style={{ divideColor: "#f1f5f9" } as any}>
+          <div className="grid grid-cols-3 divide-x" style={{ divideColor: "#f1f5f9" } as any}>
             {[
               { label: "Total earned", value: wallet?.total_earned_kobo ?? 0 },
               {
                 label: "Withdrawn",
                 value: (wallet?.total_earned_kobo ?? 0) - (wallet?.balance_kobo ?? 0),
               },
+              { label: "Held in escrow", value: wallet?.held_kobo ?? 0, muted: true },
             ].map((s) => (
               <div
                 key={s.label}
                 className="flex flex-col items-center py-4 border-r last:border-0"
                 style={{ borderColor: "#f1f5f9" }}
               >
-                <p className="text-[14px] font-extrabold" style={{ color: "#1C1C1C" }}>
+                <p
+                  className="text-[14px] font-extrabold flex items-center gap-1"
+                  style={{ color: s.muted ? "#b45309" : "#1C1C1C" }}
+                >
+                  {s.muted && <Lock className="w-3 h-3" style={{ color: "#b45309" }} />}
                   {loading ? "—" : balanceVisible ? fmtNaira(s.value) : "• • •"}
                 </p>
                 <p
@@ -131,6 +136,21 @@ export default function WalletPage() {
             ))}
           </div>
         </div>
+
+        {/* ── Escrow note ──────────────────────────────────── */}
+        {(wallet?.held_kobo ?? 0) > 0 && (
+          <div
+            className="flex items-start gap-2.5 text-[11.5px] px-4 py-3 rounded-[10px]"
+            style={{ background: "#FFFBEB", border: "1px solid rgba(180,83,9,0.15)", color: "#92400e" }}
+          >
+            <Lock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+            <span>
+              {balanceVisible ? fmtNaira(wallet!.held_kobo) : "This amount"} is held in escrow for orders that
+              haven't reached your customer yet. It moves to your available balance once the buyer confirms
+              delivery — or automatically after 7 days if they don't.
+            </span>
+          </div>
+        )}
 
         {/* ── Trust note ───────────────────────────────────── */}
         <div className="flex items-center gap-2 text-[10px] px-1" style={{ color: "#94a3b8" }}>
