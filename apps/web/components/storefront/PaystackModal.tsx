@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { reportClientError } from "@gomarket/api-client";
 
 interface Props {
   amount: number; // kobo
@@ -75,6 +76,16 @@ export function PaystackModal({ amount, email, storeName, publicKey, onSuccess, 
     // by its own cleanup, and the second invocation runs to completion.
     if (!key) {
       setError("Payments aren't configured for this store yet. Please contact the store owner.");
+      // This is checkout-breaking — it deserves the same visibility as a
+      // thrown error, not just a silent fallback UI a customer sees and
+      // leaves. NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY missing at build time is
+      // the usual cause (see PaystackModal.tsx's own comment above).
+      reportClientError({
+        service: "web",
+        level: "warning",
+        message: "Storefront checkout has no Paystack public key configured",
+        context: { storeName, hasVendorKey: !!publicKey },
+      });
       return;
     }
 
@@ -93,8 +104,15 @@ export function PaystackModal({ amount, email, storeName, publicKey, onSuccess, 
           onClose: () => onClose(),
         }).openIframe();
       })
-      .catch(() => {
-        if (!cancelled) setError("Couldn't load the payment provider. Please check your connection and try again.");
+      .catch((err) => {
+        if (cancelled) return;
+        setError("Couldn't load the payment provider. Please check your connection and try again.");
+        reportClientError({
+          service: "web",
+          message: "Paystack inline script failed to load",
+          stack: err instanceof Error ? err.stack : undefined,
+          context: { storeName },
+        });
       });
 
     return () => {
