@@ -89,6 +89,8 @@ export interface StoreUpdatePayload {
   hero_image_url?: string;
   social_links?: SocialLinks;
   theme_config?: Partial<ThemeConfig>;
+  delivery_fee_kobo?: number;
+  free_delivery_threshold_kobo?: number;
 }
 
 export interface StoreAssetResp {
@@ -171,6 +173,8 @@ export interface StoreResp {
   site_description?: string;
   social_links?: SocialLinks;
   theme_config?: string; // raw JSON string
+  delivery_fee_kobo: number;
+  free_delivery_threshold_kobo: number;
   is_active: boolean;
   created_at: string;
 }

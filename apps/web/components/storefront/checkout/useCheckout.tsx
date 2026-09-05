@@ -68,6 +68,10 @@ export function fmtNaira(kobo: number) {
   );
 }
 
+// Fallback defaults — only used if a store's real settings somehow didn't
+// load. Matches the DB column defaults in stores.delivery_fee_kobo /
+// free_delivery_threshold_kobo (migration 0010), which is what the values
+// were hardcoded to before vendors could set them from their dashboard.
 export const FREE_SHIPPING_THRESHOLD_KOBO = 5_000_000;
 export const FLAT_SHIPPING_KOBO = 150_000;
 
@@ -75,9 +79,16 @@ export type CheckoutProps = {
   storeId: string | null;
   storeSlug?: string;
   storeName?: string;
+  deliveryFeeKobo?: number;
+  freeDeliveryThresholdKobo?: number;
 };
 
-export function useCheckout({ storeId, storeSlug = "" }: CheckoutProps) {
+export function useCheckout({
+  storeId,
+  storeSlug = "",
+  deliveryFeeKobo = FLAT_SHIPPING_KOBO,
+  freeDeliveryThresholdKobo = FREE_SHIPPING_THRESHOLD_KOBO,
+}: CheckoutProps) {
   const router = useRouter();
   const { lines, subtotal, setCustomer, clearCart } = useCart();
 
@@ -94,12 +105,16 @@ export function useCheckout({ storeId, storeSlug = "" }: CheckoutProps) {
     resolver: zodResolver(checkoutSchema),
   });
 
+  // Must mirror computeDeliveryFeeKobo in services/orders exactly (same
+  // free-threshold-disables-at-zero rule) — the backend independently
+  // recomputes this and requires an exact match against what Paystack
+  // actually charged, so any divergence here fails every checkout again.
   const allDigital = lines.every((l) => l.isDigital);
   const shipping = allDigital
     ? 0
-    : subtotal > FREE_SHIPPING_THRESHOLD_KOBO
+    : freeDeliveryThresholdKobo > 0 && subtotal > freeDeliveryThresholdKobo
       ? 0
-      : FLAT_SHIPPING_KOBO;
+      : deliveryFeeKobo;
   const total = subtotal + shipping;
 
   async function onSubmit(data: CheckoutValues) {
