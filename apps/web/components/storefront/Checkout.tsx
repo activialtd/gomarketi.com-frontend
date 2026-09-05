@@ -273,6 +273,7 @@ export default function CheckoutPage({
           quantity: l.quantity,
           price_kobo: l.unitPrice,
         })),
+        delivery_fee_kobo: shipping,
         payment_reference: ref,
         payment_method: gateway === "pos" || gateway === "manual" ? gateway : "online",
         payment_gateway: gateway,
