@@ -31,6 +31,7 @@ import {
 } from "recharts";
 import Link from "next/link";
 import { ROUTES } from "@/lib/config/routes";
+import { NoStoreBanner } from "@/components/common/NoStoreBanner";
 
 const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
@@ -187,6 +188,8 @@ export default function OverviewPage() {
 
   return (
     <div className="w-full space-y-5">
+      {!loadingStore && !store && <NoStoreBanner />}
+
       {/* ── ROW 1: Greeting + Store identity + Wallet ──────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5">
         {/* ── Left: Greeting + Store card ─── */}

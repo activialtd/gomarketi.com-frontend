@@ -250,6 +250,7 @@ export interface OrderResp {
   status: OrderStatus;
   items: OrderItem[];
   total_kobo: number;
+  delivery_fee_kobo: number;
   delivery_address: string;
   created_at: string;
   updated_at: string;
@@ -335,6 +336,7 @@ export interface CreateOrderReq {
   customer_phone?: string;
   delivery_address?: string;
   items: CreateOrderItem[];
+  delivery_fee_kobo?: number;
   payment_reference: string;
 }
 

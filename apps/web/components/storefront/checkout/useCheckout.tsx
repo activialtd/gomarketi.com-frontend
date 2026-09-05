@@ -133,6 +133,7 @@ export function useCheckout({ storeId, storeSlug = "" }: CheckoutProps) {
           quantity: l.quantity,
           price_kobo: l.unitPrice,
         })),
+        delivery_fee_kobo: shipping,
         payment_reference: ref,
       });
       setOrderNumber(`#${order.id.slice(0, 8).toUpperCase()}`);
