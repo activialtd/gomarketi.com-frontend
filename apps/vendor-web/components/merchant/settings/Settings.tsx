@@ -255,6 +255,8 @@ interface InfoState {
   tagline: string;
   description: string;
   site_description: string;
+  delivery_fee_naira: number;
+  free_delivery_threshold_naira: number;
 }
 
 function InformationTab({
@@ -347,6 +349,59 @@ function InformationTab({
             {info.site_description.length}/{charLimitSiteDesc} characters
           </p>
         </div>
+      </div>
+
+      <div>
+        <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
+          Delivery
+        </p>
+        <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
+          Charged to customers at checkout on physical orders — GoMarketi's hub
+          handles the actual delivery, so this doesn't come out of your payouts.
+        </p>
+      </div>
+
+      <div
+        className="rounded-[14px] border p-5 space-y-4"
+        style={{ background: "#fff", borderColor: "#e2e8f0" }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <FieldLabel>Delivery fee (₦)</FieldLabel>
+            <StyledInput
+              type="number"
+              min={0}
+              step={50}
+              value={info.delivery_fee_naira}
+              onChange={(e) =>
+                setInfo({ delivery_fee_naira: Math.max(0, Number(e.target.value) || 0) })
+              }
+            />
+            <p className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>
+              Set to 0 to always offer free delivery.
+            </p>
+          </div>
+          <div>
+            <FieldLabel>Free delivery above (₦)</FieldLabel>
+            <StyledInput
+              type="number"
+              min={0}
+              step={500}
+              value={info.free_delivery_threshold_naira}
+              onChange={(e) =>
+                setInfo({
+                  free_delivery_threshold_naira: Math.max(0, Number(e.target.value) || 0),
+                })
+              }
+            />
+            <p className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>
+              Set to 0 to disable free delivery by order size.
+            </p>
+          </div>
+        </div>
+        <p className="text-[11px]" style={{ color: "#94a3b8" }}>
+          Digital-only orders are always delivery-fee-free.
+        </p>
       </div>
     </div>
   );
@@ -1053,6 +1108,8 @@ export default function Settings() {
     tagline: "",
     description: "",
     site_description: "",
+    delivery_fee_naira: 1500,
+    free_delivery_threshold_naira: 50000,
   });
   const [custom, setCustom] = useState<CustomState>({
     logo_url: "",
@@ -1071,6 +1128,8 @@ export default function Settings() {
       tagline: store.tagline ?? "",
       description: store.description ?? "",
       site_description: store.site_description ?? "",
+      delivery_fee_naira: (store.delivery_fee_kobo ?? 150000) / 100,
+      free_delivery_threshold_naira: (store.free_delivery_threshold_kobo ?? 5000000) / 100,
     });
 
     // Parse theme from JSON string if present
@@ -1119,6 +1178,8 @@ export default function Settings() {
       tagline: info.tagline || undefined,
       description: info.description || undefined,
       site_description: info.site_description || undefined,
+      delivery_fee_kobo: Math.round(info.delivery_fee_naira * 100),
+      free_delivery_threshold_kobo: Math.round(info.free_delivery_threshold_naira * 100),
       // Customization fields
       logo_url: custom.logo_url || undefined,
       hero_image_url: custom.hero_image_url || undefined,
