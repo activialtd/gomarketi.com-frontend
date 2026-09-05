@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Modal, TextInput, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
@@ -17,11 +17,21 @@ const VENDOR_STATUS_LABEL: Record<string, string> = {
   cancelled: "Cancelled — refunded",
 };
 
+// A dispute can be reported on any order that's actually left the hub —
+// there's nothing to report missing before that.
+function canReportMissing(status: string, disputeStatus?: string): boolean {
+  return (status === "shipped" || status === "delivered") && !disputeStatus;
+}
+
 export function TrackOrderScreen({ reference }: { reference?: string }) {
-  const { batches, loading, refresh, confirmReceived } = useOrders();
+  const { batches, loading, refresh, confirmReceived, reportOrderMissing } = useOrders();
   const batch = batches.find((b) => b.reference === reference) ?? batches[0];
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState("");
+  const [reporting, setReporting] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!batch) refresh();
@@ -54,6 +64,21 @@ export function TrackOrderScreen({ reference }: { reference?: string }) {
       setConfirmError(err instanceof Error ? err.message : "Couldn't confirm delivery — try again.");
     } finally {
       setConfirming(false);
+    }
+  }
+
+  async function handleReportSubmit() {
+    if (!reportTarget) return;
+    setReporting(true);
+    setReportError(null);
+    try {
+      await reportOrderMissing(reportTarget, reportReason.trim() || undefined);
+      setReportTarget(null);
+      setReportReason("");
+    } catch (err) {
+      setReportError(err instanceof Error ? err.message : "Couldn't submit your report — try again.");
+    } finally {
+      setReporting(false);
     }
   }
 
@@ -113,6 +138,23 @@ export function TrackOrderScreen({ reference }: { reference?: string }) {
               {o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ") || "—"}
             </Text>
             <Text style={s.vendorTotal}>{formatKobo(o.total_kobo)}</Text>
+
+            {o.dispute_status === "reported" && (
+              <Text style={s.disputeNote}>Reported missing — our team is reviewing it.</Text>
+            )}
+            {o.dispute_status === "refunded" && <Text style={s.disputeNote}>Refunded.</Text>}
+            {canReportMissing(o.status, o.dispute_status) && (
+              <Pressable
+                onPress={() => {
+                  setReportTarget(o.id);
+                  setReportReason("");
+                  setReportError(null);
+                }}
+                hitSlop={8}
+              >
+                <Text style={s.reportLink}>Didn't receive this?</Text>
+              </Pressable>
+            )}
           </View>
         ))}
 
@@ -121,6 +163,34 @@ export function TrackOrderScreen({ reference }: { reference?: string }) {
           <Text style={s.total}>{formatKobo(totalKobo)}</Text>
         </View>
       </ScrollView>
+
+      <Modal visible={reportTarget !== null} transparent animationType="fade" onRequestClose={() => setReportTarget(null)}>
+        <View style={s.modalBackdrop}>
+          <View style={s.modalCard}>
+            <Text style={type.title}>Didn't receive this?</Text>
+            <Text style={[type.body, { marginTop: 4, marginBottom: space.md }]}>
+              Let us know what happened — our team will look into it and follow up.
+            </Text>
+            <TextInput
+              value={reportReason}
+              onChangeText={setReportReason}
+              placeholder="What went wrong? (optional)"
+              placeholderTextColor={color.textFaint}
+              multiline
+              style={s.reasonInput}
+            />
+            {reportError && <Text style={s.error}>{reportError}</Text>}
+            <View style={{ flexDirection: "row", gap: space.sm, marginTop: space.md }}>
+              <View style={{ flex: 1 }}>
+                <Button label="Cancel" variant="secondary" onPress={() => setReportTarget(null)} disabled={reporting} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button label="Submit report" onPress={handleReportSubmit} loading={reporting} />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -169,4 +239,29 @@ const s = StyleSheet.create({
   },
   total: { fontFamily: "Jakarta_700", fontSize: 16, color: color.text },
   error: { fontFamily: "Jakarta_500", fontSize: 12, color: "#B3261E", marginTop: 8, textAlign: "center" },
+  reportLink: { fontFamily: "Jakarta_600", fontSize: 12, color: color.textFaint, marginTop: 8, textDecorationLine: "underline" },
+  disputeNote: { fontFamily: "Jakarta_600", fontSize: 12, color: "#B3261E", marginTop: 8 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: color.card,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: space.gutter,
+    paddingBottom: space.xl,
+  },
+  reasonInput: {
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: 12,
+    padding: space.md,
+    minHeight: 80,
+    textAlignVertical: "top",
+    fontFamily: "Jakarta_400",
+    fontSize: 14,
+    color: color.text,
+  },
 });
