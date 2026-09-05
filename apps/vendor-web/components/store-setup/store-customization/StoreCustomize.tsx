@@ -6,13 +6,14 @@ import {
   ChevronDown, Eye, Palette, Type, Globe, Image as ImageIcon,
   AlignLeft, Megaphone, Package, Phone, Save, Undo2, Plus, Trash2,
   GripVertical, Layout, Link2, Search, Layers, Mail, MapPin,
-  Share2, Lock, Zap,
+  Share2, Lock,
 } from "lucide-react";
 import {
   LivePreview, COLOR_PRESETS, FONT_PRESETS, FONT_FAMILIES,
   TemplateId, ColorPreset, EkoThumb, LagosThumb, AbujaThumb,
 } from "./helpers";
 import { storefrontApi, authApi } from "@gomarket/api-client";
+import { PlanGate, planGte } from "@/components/common/PlanGate";
 import { useAuthStore } from "@/store/useAuthStore";
 import { FileUpload } from "@/components/common/FileUpload";
 import { useSubscription } from "@/lib/swr/hooks";
@@ -161,28 +162,9 @@ function ColorRow({ label, value, onChange }: { label: string; value: string; on
   );
 }
 
-// ─── Tier gating ─────────────────────────────────────────────────────────────
-
-const PLAN_ORDER: Record<string, number> = { free: 0, starter: 1, growth: 2 };
-function planGte(current: string | undefined, required: string) {
-  return (PLAN_ORDER[current ?? "free"] ?? 0) >= (PLAN_ORDER[required] ?? 0);
-}
-
-function PlanGate({ required, current, label, children }: { required: string; current?: string; label?: string; children?: React.ReactNode }) {
-  if (planGte(current, required)) return <>{children}</>;
-  const planLabel = required.charAt(0).toUpperCase() + required.slice(1);
-  return (
-    <div className="rounded-[8px] border border-dashed p-3 flex flex-col items-center gap-1.5 text-center" style={{ borderColor: "#e2e8f0", background: "#fafafa" }}>
-      <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: "#fef3c7" }}>
-        <Lock className="w-3.5 h-3.5" style={{ color: "#f59e0b" }} />
-      </div>
-      <p className="text-[11px] font-bold" style={{ color: "#374151" }}>{label ?? `${planLabel} plan required`}</p>
-      <a href="/merchant/plans" className="text-[10px] font-bold px-3 py-1 rounded-[5px] text-white" style={{ background: "#1A7A42" }}>
-        Upgrade <Zap className="w-2.5 h-2.5 inline" />
-      </a>
-    </div>
-  );
-}
+// PlanGate/planGte now live in @/components/common/PlanGate — shared with
+// CreateProduct and StaffRoles, which show the same lock-and-upgrade
+// treatment when a vendor hits their plan's product/team limit.
 
 const CTA_PAGES = [
   { label: "Shop all", value: "/shop" },

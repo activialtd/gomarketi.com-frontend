@@ -35,6 +35,7 @@ import { catalogueApi, ApiError, type CollectionResp, type CategoryResp, type Ca
 import { useAuthStore } from "@/store/useAuthStore";
 import CanonicalProductTypeahead from "./CanonicalProductTypeahead";
 import { invalidate, useSubscription, useProducts } from "@/lib/swr/hooks";
+import { UpgradeBanner } from "@/components/common/PlanGate";
 
 export default function CreateProductPage({ productId }: { productId?: string }) {
   const router = useRouter();
@@ -245,7 +246,7 @@ export default function CreateProductPage({ productId }: { productId?: string })
           {nameVal || (isEditing ? "Edit product" : "New product")}
         </h1>
         <div className="flex items-center gap-2">
-          {submitError && (
+          {submitError && !atProductLimit && (
             <span className="text-[12px] font-semibold text-red-500 max-w-[200px] truncate">{submitError}</span>
           )}
           <button
@@ -285,6 +286,15 @@ export default function CreateProductPage({ productId }: { productId?: string })
           </button>
         </div>
       </div>
+
+      {atProductLimit && (
+        <div className="px-6 lg:px-8 pt-5">
+          <UpgradeBanner
+            label={`You've reached your plan's ${plan?.product_limit}-product limit`}
+            message="Upgrade to add more products and unlock higher limits."
+          />
+        </div>
+      )}
 
       {/* ── Content: two-column layout ────────────────────── */}
       <form className="px-6 lg:px-8 py-6">
