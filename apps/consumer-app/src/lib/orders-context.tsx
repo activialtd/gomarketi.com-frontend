@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, ReactNode } from "react";
-import { getMyOrders, confirmDelivery, type OrderResp, type OrderStatus } from "./api-client";
+import { getMyOrders, confirmDelivery, reportMissing, type OrderResp, type OrderStatus } from "./api-client";
 import { useAuth } from "./auth-context";
 
 export type { OrderStatus };
@@ -30,6 +30,10 @@ type OrdersState = {
   // The real "I've received this" action — releases the vendor's held
   // escrow. Only meaningful once an order's status is "shipped".
   confirmReceived: (orderId: string) => Promise<void>;
+  // Flags one order as never having arrived, even though it was dispatched
+  // — distinct from confirmReceived, which means the opposite. Only
+  // meaningful once an order's status is "shipped" or "delivered".
+  reportOrderMissing: (orderId: string, reason?: string) => Promise<void>;
 };
 
 const OrdersContext = createContext<OrdersState | undefined>(undefined);
@@ -66,6 +70,15 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
     [user?.email],
   );
 
+  const reportOrderMissing = useCallback(
+    async (orderId: string, reason?: string) => {
+      if (!user?.email) throw new Error("No account email on file");
+      const updated = await reportMissing(orderId, user.email, reason);
+      setOrders((cur) => cur.map((o) => (o.id === orderId ? updated : o)));
+    },
+    [user?.email],
+  );
+
   const batches = useMemo<Batch[]>(() => {
     const byRef = new Map<string, Order[]>();
     for (const o of orders) {
@@ -84,7 +97,9 @@ export function OrdersProvider({ children }: { children: ReactNode }) {
   }, [orders]);
 
   return (
-    <OrdersContext.Provider value={{ orders, batches, loading, error, refresh, registerOrders, confirmReceived }}>
+    <OrdersContext.Provider
+      value={{ orders, batches, loading, error, refresh, registerOrders, confirmReceived, reportOrderMissing }}
+    >
       {children}
     </OrdersContext.Provider>
   );

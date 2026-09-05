@@ -457,6 +457,10 @@ export type CheckoutStoreOrder = {
 // (shipped), the buyer confirms receipt (delivered).
 export type OrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 export type EscrowStatus = "held" | "released" | "reversed";
+// A dispute is orthogonal to status — "reported" means the buyer says this
+// specific order never arrived, even though it was checked in and
+// dispatched; status stays 'shipped'/'delivered' for fulfillment tracking.
+export type DisputeStatus = "reported" | "refunded" | "dismissed";
 
 export type OrderResp = {
   id: string;
@@ -475,6 +479,9 @@ export type OrderResp = {
   delivery_confirmed_at?: string;
   cancelled_reason?: string;
   escrow_status: EscrowStatus;
+  dispute_status?: DisputeStatus;
+  dispute_reason?: string;
+  disputed_at?: string;
   created_at: string;
   updated_at: string;
 };
@@ -511,4 +518,14 @@ export async function getMyOrder(orderId: string): Promise<OrderResp> {
 // the existing public-checkout trust model rather than needing a buyer JWT.
 export async function confirmDelivery(orderId: string, email: string): Promise<OrderResp> {
   return request<OrderResp>(`/v1/orders/public/${orderId}/confirm-delivery`, { email });
+}
+
+// reportMissing flags one order within a batch as never having arrived,
+// even though it was dispatched — the gap ConfirmDelivery alone doesn't
+// cover, since that's the "everything showed up" path. Same email-gated
+// trust model (see services/orders/internal/service/orders.go's
+// ReportMissing). Does not change order status — a parallel dispute flag
+// admin resolves separately.
+export async function reportMissing(orderId: string, email: string, reason?: string): Promise<OrderResp> {
+  return request<OrderResp>(`/v1/orders/public/${orderId}/report-missing`, { email, reason });
 }

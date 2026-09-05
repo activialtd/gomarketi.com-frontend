@@ -87,3 +87,12 @@ export function useErrorEvent(id: string | undefined) {
     dedupingInterval: 5_000,
   });
 }
+
+export function useDisputes(params: AdminListParams = {}) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const key = accessToken ? `admin:disputes:${JSON.stringify(params)}` : null;
+  return useSWR(key, () => adminApi.listDisputes(params, tok()), {
+    revalidateOnFocus: false,
+    dedupingInterval: 10_000,
+  });
+}

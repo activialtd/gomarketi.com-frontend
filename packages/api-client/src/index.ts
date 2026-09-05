@@ -1262,6 +1262,19 @@ export const adminApi = {
   releaseEscrow: (orderId: string, token: string) =>
     request<{ ok: true }>(`/v1/admin/orders/${orderId}/release-escrow`, { method: "POST", body: "{}" }, token),
 
+  listDisputes: (params: AdminListParams, token: string) =>
+    request<{ disputes: AdminDisputeSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/disputes${toQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  dismissDispute: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/dismiss-dispute`, { method: "POST", body: "{}" }, token),
+
+  refundDispute: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/refund-dispute`, { method: "POST", body: "{}" }, token),
+
   listErrors: (params: AdminErrorListParams, token: string) =>
     request<{ errors: AdminErrorEvent[]; total: number; page: number; per_page: number }>(
       `/v1/admin/errors${toErrorQueryString(params)}`,
@@ -1279,6 +1292,7 @@ export const adminApi = {
 
 export type AdminOrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 export type AdminEscrowStatus = "held" | "released" | "reversed" | null;
+export type AdminDisputeStatus = "reported" | "refunded" | "dismissed";
 
 export interface AdminBatchSummary {
   payment_reference: string;
@@ -1315,9 +1329,24 @@ export interface AdminBatchOrder {
   delivery_confirmed_at: string | null;
   cancelled_reason: string | null;
   refund_reference: string | null;
+  dispute_status: AdminDisputeStatus | null;
+  dispute_reason: string | null;
+  disputed_at: string | null;
   created_at: string;
   wallet_status: "pending" | "completed" | "failed" | null;
   items: AdminBatchOrderItem[];
+}
+
+export interface AdminDisputeSummary {
+  id: string;
+  payment_reference: string | null;
+  store_id: string;
+  store_name: string;
+  customer_name: string;
+  customer_email: string;
+  total_kobo: string;
+  dispute_reason: string | null;
+  disputed_at: string;
 }
 
 export interface AdminBatchDetail {
