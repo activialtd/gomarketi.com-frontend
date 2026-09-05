@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ORDER_STATUS_CONFIG } from "@gomarket/shared-utils";
-import { useAnalyticsOverview, useOrders, useMyStore, useWallet, useRevenueTrend } from "@/lib/swr/hooks";
+import { useAnalyticsOverview, useOrders, useMyStore, useWallet, useSubscription, useRevenueTrend } from "@/lib/swr/hooks";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
@@ -168,15 +168,18 @@ export default function OverviewPage() {
   const { data: ordersData, isLoading: loadingOrders } = useOrders({ per_page: 5 });
   const { data: store, isLoading: loadingStore } = useMyStore();
   const { data: wallet } = useWallet();
+  const { data: subscription } = useSubscription();
   const { data: trend = [], isLoading: loadingTrend } = useRevenueTrend(30);
 
   const loading = loadingAnalytics || loadingOrders || loadingStore;
   const recentOrders = ordersData?.orders?.slice(0, 5) ?? [];
 
-  const accountNumber = "9740176746";
+  const accountNumber = subscription?.paystack_dva_account_number ?? null;
+  const bankName = subscription?.paystack_dva_bank_name ?? null;
   const storefrontUrl = store ? `http://${store.slug}.${STORE_DOMAIN}` : null;
 
   function handleCopy() {
+    if (!accountNumber) return;
     navigator.clipboard.writeText(accountNumber);
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
@@ -403,13 +406,16 @@ export default function OverviewPage() {
                     className="text-[12px] font-semibold truncate"
                     style={{ color: "#1C1C1C" }}
                   >
-                    Paystack-Titan · {accountNumber}
+                    {accountNumber
+                      ? `${bankName} · ${accountNumber}`
+                      : "Setting up your payment account…"}
                   </p>
                 </div>
               </div>
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[7px] border text-[11px] font-semibold transition-all shrink-0"
+                disabled={!accountNumber}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-[7px] border text-[11px] font-semibold transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"
                 style={{
                   borderColor: copied ? "#1A7A42" : "#e2e8f0",
                   background: copied ? "#F0FAF3" : "#fff",
