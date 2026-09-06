@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNav, ScreenName } from "../../navigation/AppNavigator";
+import { useNav, ScreenName } from "../../navigation/nav-context";
 import { useCart } from "../../lib/cart-context";
 import { color } from "../../theme/tokens";
 
@@ -104,9 +104,9 @@ export function FloatingHub() {
 }
 
 const s = StyleSheet.create({
-  layer: { ...StyleSheet.absoluteFill as any },
+  layer: { ...(StyleSheet.absoluteFill as any) },
   scrim: {
-    ...StyleSheet.absoluteFill as any,
+    ...(StyleSheet.absoluteFill as any),
     backgroundColor: "rgba(12,20,15,0.25)",
   },
   column: {

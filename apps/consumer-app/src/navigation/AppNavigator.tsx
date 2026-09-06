@@ -1,13 +1,8 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  ReactNode,
-} from "react";
+import React, { useEffect, useState, ReactNode } from "react";
 import { View } from "react-native";
 import { MotiView } from "moti";
 import { Easing } from "react-native-reanimated";
+import { NavContext, ScreenName, Route, Nav } from "./nav-context";
 import { useAuth } from "../lib/auth-context";
 import { SplashScreen } from "../screens/SplashScreen";
 import { OnboardingScreen } from "../screens/onboarding/OnboardingScreen";
@@ -30,37 +25,7 @@ import { StoreDetailScreen } from "../screens/store/StoreDetailScreen";
 import { MarketsScreen } from "../screens/markets/MarketsScreen";
 import { MarketDetailScreen } from "../screens/markets/MarketDetailScreen";
 
-export type ScreenName =
-  | "home"
-  | "cart"
-  | "checkout"
-  | "orders"
-  | "track"
-  | "profile"
-  | "settings"
-  | "product"
-  | "store"
-  | "markets"
-  | "marketDetail"
-  | "notifications";
-
-type Route = { id: number; name: ScreenName; params?: Record<string, any> };
-
 let nextRouteID = 1;
-
-type Nav = {
-  push: (name: ScreenName, params?: Record<string, any>) => void;
-  pop: () => void;
-  reset: (name: ScreenName) => void;
-  current: Route;
-};
-
-const NavContext = createContext<Nav | undefined>(undefined);
-export function useNav() {
-  const ctx = useContext(NavContext);
-  if (!ctx) throw new Error("useNav must be used inside AppNavigator");
-  return ctx;
-}
 
 /** Screens where the floating hub stays hidden (payment/tracking need the space). */
 const HUB_HIDDEN: ScreenName[] = ["checkout", "track"];
@@ -71,14 +36,24 @@ const HUB_HIDDEN: ScreenName[] = ["checkout", "track"];
  * changes — this app uses a custom stack instead of react-navigation, so
  * there's no navigator-level transition to hook into otherwise.
  */
-function Transition({ routeKey, children }: { routeKey: string; children: ReactNode }) {
+function Transition({
+  routeKey,
+  children,
+}: {
+  routeKey: string;
+  children: ReactNode;
+}) {
   return (
     <MotiView
       key={routeKey}
       style={{ flex: 1 }}
       from={{ opacity: 0, translateY: 14 }}
       animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", duration: 280, easing: Easing.out(Easing.cubic) }}
+      transition={{
+        type: "timing",
+        duration: 280,
+        easing: Easing.out(Easing.cubic),
+      }}
     >
       {children}
     </MotiView>
@@ -94,7 +69,9 @@ const SCREENS: Record<ScreenName, (p: any) => ReactNode> = {
   profile: () => <ProfileScreen />,
   settings: () => <SettingsScreen />,
   notifications: () => <NotificationsScreen />,
-  product: (p) => <ProductDetailScreen productId={p?.productId} product={p?.product} />,
+  product: (p) => (
+    <ProductDetailScreen productId={p?.productId} product={p?.product} />
+  ),
   store: (p) => <StoreDetailScreen store={p?.store} />,
   markets: () => <MarketsScreen />,
   marketDetail: (p) => <MarketDetailScreen market={p?.market} />,
@@ -187,7 +164,8 @@ export function AppNavigator() {
   const current = stack[stack.length - 1];
   const nav: Nav = {
     current,
-    push: (name, params) => setStack((s) => [...s, { id: nextRouteID++, name, params }]),
+    push: (name, params) =>
+      setStack((s) => [...s, { id: nextRouteID++, name, params }]),
     pop: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
     reset: (name) => setStack([{ id: nextRouteID++, name }]),
   };

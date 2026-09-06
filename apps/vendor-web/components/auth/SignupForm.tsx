@@ -24,6 +24,7 @@ import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 import { GoogleIcon } from "../common/GoogleIcon";
 import { useGoogleAuth } from "@/lib/auth/useGoogleAuth";
+import AppleIconRefined from "../common/AppleIcon";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -123,7 +124,9 @@ export function SignupForm() {
 
   // Form-level API error
   const [apiError, setApiError] = useState<string | null>(null);
-  const [existingVerifiedEmail, setExistingVerifiedEmail] = useState<string | null>(null);
+  const [existingVerifiedEmail, setExistingVerifiedEmail] = useState<
+    string | null
+  >(null);
 
   const busy = isLoading || !!oauthLoading;
 
@@ -191,7 +194,13 @@ export function SignupForm() {
           const nameParts = result.name.trim().split(" ");
           const firstName = nameParts[0] ?? "";
           const lastName = nameParts.slice(1).join(" ") || "";
-          const newUser: OAuthUser = { provider, firstName, lastName, email: result.email, credential: result.credential };
+          const newUser: OAuthUser = {
+            provider,
+            firstName,
+            lastName,
+            email: result.email,
+            credential: result.credential,
+          };
           setOauthUser(newUser);
           oauthForm.reset({ firstName, lastName, marketing: false });
           setStep("OAUTH_PROFILE");
@@ -201,9 +210,15 @@ export function SignupForm() {
         }
       }
     } catch (err) {
-      if (err instanceof Error && err.message !== "one_tap_unavailable" && err.message !== "Google Sign-In was cancelled") {
+      if (
+        err instanceof Error &&
+        err.message !== "one_tap_unavailable" &&
+        err.message !== "Google Sign-In was cancelled"
+      ) {
         setOauthApiError(
-          err instanceof ApiError ? err.message : "Google sign-in failed. Please try again."
+          err instanceof ApiError
+            ? err.message
+            : "Google sign-in failed. Please try again.",
         );
       }
     } finally {
@@ -242,7 +257,8 @@ export function SignupForm() {
     } catch (err) {
       const is409 =
         (err instanceof ApiError && err.status === 409) ||
-        (err instanceof Error && err.message.toLowerCase().includes("already exists"));
+        (err instanceof Error &&
+          err.message.toLowerCase().includes("already exists"));
       if (is409) {
         // Backend already found a real account row for this email — RequestOTP
         // has no verified-status gate and would succeed either way, so it can't
@@ -376,9 +392,22 @@ export function SignupForm() {
         <div className="space-y-3">
           {/* Hidden div where GSI renders the real Google button */}
           {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
-          <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
+          <div
+            ref={googleButtonRef}
+            style={{
+              position: "fixed",
+              left: -9999,
+              top: -9999,
+              width: 360,
+              height: 44,
+            }}
+            aria-hidden
+          />
           {oauthApiError && (
-            <p className="text-[12px] text-center font-medium" style={{ color: "#dc2626" }}>
+            <p
+              className="text-[12px] text-center font-medium"
+              style={{ color: "#dc2626" }}
+            >
               {oauthApiError}
             </p>
           )}
@@ -393,7 +422,7 @@ export function SignupForm() {
             onClick={() => handleOAuth("apple")}
             loading={oauthLoading === "apple"}
             disabled={busy}
-            icon={<Apple className="w-4 h-4 fill-current" />}
+            icon={<AppleIconRefined />}
             label="Sign up with Apple"
           />
 
@@ -564,15 +593,33 @@ export function SignupForm() {
 
           {/* API error / existing account */}
           {existingVerifiedEmail ? (
-            <div className="rounded-[12px] border p-4 space-y-3" style={{ background: "#F0FAF3", borderColor: "rgba(26,122,66,0.2)" }}>
-              <p className="text-[13px] font-semibold" style={{ color: "#1C1C1C" }}>Account already exists</p>
+            <div
+              className="rounded-[12px] border p-4 space-y-3"
+              style={{
+                background: "#F0FAF3",
+                borderColor: "rgba(26,122,66,0.2)",
+              }}
+            >
+              <p
+                className="text-[13px] font-semibold"
+                style={{ color: "#1C1C1C" }}
+              >
+                Account already exists
+              </p>
               <p className="text-[12px]" style={{ color: "#3D6B4F" }}>
-                <span className="font-semibold">{existingVerifiedEmail}</span> is already registered and verified.
+                <span className="font-semibold">{existingVerifiedEmail}</span>{" "}
+                is already registered and verified.
               </p>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => router.push(ROUTES.AUTH.LOGIN + '?email=' + encodeURIComponent(existingVerifiedEmail))}
+                  onClick={() =>
+                    router.push(
+                      ROUTES.AUTH.LOGIN +
+                        "?email=" +
+                        encodeURIComponent(existingVerifiedEmail),
+                    )
+                  }
                   className="flex-1 h-9 rounded-[9px] text-white text-[12px] font-bold"
                   style={{ background: "#1A7A42" }}
                 >
@@ -580,7 +627,11 @@ export function SignupForm() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setExistingVerifiedEmail(null); setApiError(null); signupForm.reset(); }}
+                  onClick={() => {
+                    setExistingVerifiedEmail(null);
+                    setApiError(null);
+                    signupForm.reset();
+                  }}
                   className="flex-1 h-9 rounded-[9px] border text-[12px] font-semibold"
                   style={{ borderColor: "#e2e8f0", color: "#374151" }}
                 >
@@ -1179,7 +1230,14 @@ function CountdownRing({ seconds, total }: { seconds: number; total: number }) {
       className="shrink-0"
       style={{ transform: "rotate(-90deg)" }}
     >
-      <circle cx="9" cy="9" r={r} fill="none" stroke="#e2e8f0" strokeWidth="2" />
+      <circle
+        cx="9"
+        cy="9"
+        r={r}
+        fill="none"
+        stroke="#e2e8f0"
+        strokeWidth="2"
+      />
       <circle
         cx="9"
         cy="9"

@@ -1,4 +1,3 @@
-import { ErrorUtils } from "react-native";
 import { reportClientError } from "./api-client";
 
 // Self-built crash capture, no Sentry — reports into the same admin-api
@@ -6,15 +5,21 @@ import { reportClientError } from "./api-client";
 // errors; this covers everything else (event handlers, timers, native
 // callbacks) via React Native's built-in global handler.
 export function installGlobalErrorHandler() {
-  const defaultHandler = ErrorUtils.getGlobalHandler();
+  const globalAny = global as any;
+  const defaultHandler = globalAny.ErrorUtils?.getGlobalHandler?.();
 
-  ErrorUtils.setGlobalHandler((error: Error, isFatal?: boolean) => {
-    reportClientError({
-      service: "consumer-app",
-      message: error?.message ?? String(error),
-      stack: error?.stack,
-      context: { isFatal: !!isFatal, kind: "global-handler" },
-    });
-    defaultHandler(error, isFatal);
-  });
+  globalAny.ErrorUtils?.setGlobalHandler?.(
+    (error: Error, isFatal?: boolean) => {
+      reportClientError({
+        service: "consumer-app",
+        message: error?.message ?? String(error),
+        stack: error?.stack,
+        context: { isFatal: !!isFatal, kind: "global-handler" },
+      });
+
+      if (defaultHandler) {
+        defaultHandler(error, isFatal);
+      }
+    },
+  );
 }

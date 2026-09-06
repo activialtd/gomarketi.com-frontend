@@ -5,7 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Button } from "../../components/ui/Button";
 import { useCart, formatNaira } from "../../lib/cart-context";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, type, space, tint, HIT } from "../../theme/tokens";
 
 export function CartScreen() {

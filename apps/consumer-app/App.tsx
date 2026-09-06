@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AuthProvider } from "./src/lib/auth-context";
@@ -10,10 +10,13 @@ import { installGlobalErrorHandler } from "./src/lib/error-reporting";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { color } from "./src/theme/tokens";
 
-installGlobalErrorHandler();
-
 export default function App() {
   const fontsLoaded = useAppFonts();
+
+  useEffect(() => {
+    installGlobalErrorHandler();
+  }, []);
+
   if (!fontsLoaded)
     return <View style={{ flex: 1, backgroundColor: color.canvas }} />;
 

@@ -22,7 +22,7 @@ import {
 import { catalogueProductToAppProduct } from "../../lib/catalogue-adapter";
 import { Product } from "../../lib/mock-products";
 import { useCart } from "../../lib/cart-context";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { usePaginatedList } from "../../hooks/usePaginatedList";
 import { categoryMeta } from "../../lib/store-category";
 import { color, tint, type, space } from "../../theme/tokens";

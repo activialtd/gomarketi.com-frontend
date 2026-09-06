@@ -6,7 +6,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Button } from "../../components/ui/Button";
 import { useAuth } from "../../lib/auth-context";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 
 export function ProfileScreen() {

@@ -19,9 +19,9 @@ import { SearchModal } from "../../components/ui/SearchModal";
 import { VoiceSearchOverlay } from "../../components/ui/VoiceSearchOverlay";
 import { WalkToMarketOverlay } from "../../components/ui/WalkToMarketOverlay";
 import { Bouncy } from "../../components/ui/Bouncy";
-import { useNav } from "../../navigation/AppNavigator";
 import { color, space, HIT, stickerShadow } from "../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
+import { useNav } from "../../navigation/nav-context";
 
 const PROMPTS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
   { label: "Order groceries", icon: "basket-outline" },
@@ -252,74 +252,78 @@ export function HomeScreen() {
 
         {/* fixed hero */}
         <View style={s.heroWrap}>
-        <KeyboardAvoidingView
-          style={s.hero}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-        >
-          {/* upper block: greeting + chips */}
-          <View style={s.top}>
-            <Animated.Text style={[s.eyebrow, riseIn(14)]}>
-              HELLO {firstName}!
-            </Animated.Text>
-            <Animated.Text style={[s.display, riseIn(20)]}>
-              What can I get{"\n"}you today?
-            </Animated.Text>
-            <Animated.View style={[s.chips, riseIn(26)]}>
-              {PROMPTS.map((p) => (
-                <Bouncy
-                  key={p.label}
-                  style={s.chip}
-                  onPress={() => commitSearch(p.label.split(" ").pop()!)}
-                >
-                  <Ionicons name={p.icon} size={14} color={color.ink} />
-                  <Text style={s.chipText}>{p.label}</Text>
+          <KeyboardAvoidingView
+            style={s.hero}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+          >
+            {/* upper block: greeting + chips */}
+            <View style={s.top}>
+              <Animated.Text style={[s.eyebrow, riseIn(14)]}>
+                HELLO {firstName}!
+              </Animated.Text>
+              <Animated.Text style={[s.display, riseIn(20)]}>
+                What can I get{"\n"}you today?
+              </Animated.Text>
+              <Animated.View style={[s.chips, riseIn(26)]}>
+                {PROMPTS.map((p) => (
+                  <Bouncy
+                    key={p.label}
+                    style={s.chip}
+                    onPress={() => commitSearch(p.label.split(" ").pop()!)}
+                  >
+                    <Ionicons name={p.icon} size={14} color={color.ink} />
+                    <Text style={s.chipText}>{p.label}</Text>
+                  </Bouncy>
+                ))}
+              </Animated.View>
+
+              <Animated.View style={riseIn(28)}>
+                <Bouncy style={s.marketsTab} onPress={() => push("markets")}>
+                  <Ionicons name="storefront" size={16} color={color.onInk} />
+                  <Text style={s.marketsTabText}>Popular Markets</Text>
+                  <Ionicons
+                    name="chevron-forward"
+                    size={14}
+                    color={color.onInk}
+                  />
                 </Bouncy>
-              ))}
-            </Animated.View>
+              </Animated.View>
+            </View>
 
-            <Animated.View style={riseIn(28)}>
-              <Bouncy style={s.marketsTab} onPress={() => push("markets")}>
-                <Ionicons name="storefront" size={16} color={color.onInk} />
-                <Text style={s.marketsTabText}>Popular Markets</Text>
-                <Ionicons name="chevron-forward" size={14} color={color.onInk} />
-              </Bouncy>
-            </Animated.View>
-          </View>
-
-          {/* center block: bloom + pill, dead-center of remaining space */}
-          <View style={s.centerZone}>
-            <AuroraField />
-            <Animated.View style={[s.pill, riseIn(32)]}>
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                onSubmitEditing={() => commitSearch(query)}
-                returnKeyType="search"
-                placeholder="Ask GoMarketi anything"
-                placeholderTextColor={color.textMuted}
-                accessibilityLabel="Search products"
-                style={s.pillInput}
-              />
-              <View style={s.micWrap}>
-                <MotiView
-                  from={{ scale: 1, opacity: 0.5 }}
-                  animate={{ scale: 1.55, opacity: 0 }}
-                  transition={{ type: "timing", duration: 1400, loop: true }}
-                  style={s.micPulse}
+            {/* center block: bloom + pill, dead-center of remaining space */}
+            <View style={s.centerZone}>
+              <AuroraField />
+              <Animated.View style={[s.pill, riseIn(32)]}>
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  onSubmitEditing={() => commitSearch(query)}
+                  returnKeyType="search"
+                  placeholder="Ask GoMarketi anything"
+                  placeholderTextColor={color.textMuted}
+                  accessibilityLabel="Search products"
+                  style={s.pillInput}
                 />
-                <Bouncy
-                  onPress={() => setListening(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Search by voice"
-                  style={s.mic}
-                  scaleTo={0.88}
-                >
-                  <Ionicons name="mic" size={22} color={color.onInk} />
-                </Bouncy>
-              </View>
-            </Animated.View>
-          </View>
-        </KeyboardAvoidingView>
+                <View style={s.micWrap}>
+                  <MotiView
+                    from={{ scale: 1, opacity: 0.5 }}
+                    animate={{ scale: 1.55, opacity: 0 }}
+                    transition={{ type: "timing", duration: 1400, loop: true }}
+                    style={s.micPulse}
+                  />
+                  <Bouncy
+                    onPress={() => setListening(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Search by voice"
+                    style={s.mic}
+                    scaleTo={0.88}
+                  >
+                    <Ionicons name="mic" size={22} color={color.onInk} />
+                  </Bouncy>
+                </View>
+              </Animated.View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </SafeAreaView>
 
@@ -451,7 +455,11 @@ const s = StyleSheet.create({
     backgroundColor: color.ink,
     ...stickerShadow(color.ink900, 3),
   },
-  marketsTabText: { fontFamily: "Jakarta_600", fontSize: 13, color: color.onInk },
+  marketsTabText: {
+    fontFamily: "Jakarta_600",
+    fontSize: 13,
+    color: color.onInk,
+  },
 
   centerZone: {
     flex: 1,
