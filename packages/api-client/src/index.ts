@@ -32,6 +32,7 @@ export interface CreateStoreReq {
   currency: string;
   team_size?: string;
   support_phone?: string;
+  market_id: string;
 }
 
 export interface UpdateStoreReq {
@@ -1453,29 +1454,41 @@ export const adminApi = {
     request<{ ok: true }>(
       `/v1/admin/orders/${orderId}/release-escrow`,
       { method: "POST", body: "{}" },
-    request<{ ok: true }>(`/v1/admin/orders/${orderId}/release-escrow`, { method: "POST", body: "{}" }, token),
+      token,
+    ),
 
   listDisputes: (params: AdminListParams, token: string) =>
-    request<{ disputes: AdminDisputeSummary[]; total: number; page: number; per_page: number }>(
-      `/v1/admin/disputes${toQueryString(params)}`,
-      {},
-      token,
-    ),
+    request<{
+      disputes: AdminDisputeSummary[];
+      total: number;
+      page: number;
+      per_page: number;
+    }>(`/v1/admin/disputes${toQueryString(params)}`, {}, token),
 
   dismissDispute: (orderId: string, token: string) =>
-    request<{ ok: true }>(`/v1/admin/orders/${orderId}/dismiss-dispute`, { method: "POST", body: "{}" }, token),
-
-  refundDispute: (orderId: string, token: string) =>
-    request<{ ok: true }>(`/v1/admin/orders/${orderId}/refund-dispute`, { method: "POST", body: "{}" }, token),
-
-  listErrors: (params: AdminErrorListParams, token: string) =>
-    request<{ errors: AdminErrorEvent[]; total: number; page: number; per_page: number }>(
-      `/v1/admin/errors${toErrorQueryString(params)}`,
-      {},
+    request<{ ok: true }>(
+      `/v1/admin/orders/${orderId}/dismiss-dispute`,
+      { method: "POST", body: "{}" },
       token,
     ),
 
-  getError: (id: string, token: string) => request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
+  refundDispute: (orderId: string, token: string) =>
+    request<{ ok: true }>(
+      `/v1/admin/orders/${orderId}/refund-dispute`,
+      { method: "POST", body: "{}" },
+      token,
+    ),
+
+  listErrors: (params: AdminErrorListParams, token: string) =>
+    request<{
+      errors: AdminErrorEvent[];
+      total: number;
+      page: number;
+      per_page: number;
+    }>(`/v1/admin/errors${toErrorQueryString(params)}`, {}, token),
+
+  getError: (id: string, token: string) =>
+    request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
 
   resolveError: (id: string, token: string) =>
     request<{ ok: true }>(

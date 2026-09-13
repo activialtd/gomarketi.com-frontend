@@ -111,7 +111,9 @@ export function StoreSetupForm() {
   const [kycLoading, setKycLoading] = useState(false);
   const [slugEdited, setSlugEdited] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "available" | "taken">("idle");
+  const [slugStatus, setSlugStatus] = useState<
+    "idle" | "checking" | "available" | "taken"
+  >("idle");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [markets, setMarkets] = useState<{ id: string; name: string }[]>([]);
 
@@ -137,29 +139,22 @@ export function StoreSetupForm() {
   const slugVal = watch("slug") ?? "";
   const currencyVal = watch("currency");
   const teamSizeVal = watch("teamSize");
-  const stateVal = watch("state");
-  const cityVal = watch("city");
 
   const { data: subscription } = useSubscription();
   const isFree = (subscription?.plan?.slug ?? "free") === "free";
 
-  // Populate the "major market" dropdown once the vendor's address gives us
-  // a state (and, ideally, a city) — e.g. an Awka/Anambra address shows
-  // Anambra's markets, not Lagos's.
+  // Fetch all markets on mount (including the seeded "General Market")
+  // Passing empty object {} to satisfy the TS signature requirements
   useEffect(() => {
-    if (!stateVal) {
-      setMarkets([]);
-      return;
-    }
     let cancelled = false;
     storefrontApi
-      .getMarkets({ state: stateVal, city: cityVal || undefined })
+      .getMarkets({})
       .then((res) => !cancelled && setMarkets(res))
       .catch(() => !cancelled && setMarkets([]));
     return () => {
       cancelled = true;
     };
-  }, [stateVal, cityVal]);
+  }, []);
 
   const slugRegister = register("slug", {
     onChange: () => setSlugEdited(true),
@@ -182,7 +177,10 @@ export function StoreSetupForm() {
     const timer = setTimeout(async () => {
       if (!accessToken) return;
       try {
-        const { available } = await storefrontApi.checkSlug(slugVal, accessToken);
+        const { available } = await storefrontApi.checkSlug(
+          slugVal,
+          accessToken,
+        );
         if (available) {
           setSlugStatus("available");
           setSuggestions([]);
@@ -198,10 +196,11 @@ export function StoreSetupForm() {
           ];
           const results = await Promise.all(
             candidates.map((s) =>
-              storefrontApi.checkSlug(s, accessToken)
+              storefrontApi
+                .checkSlug(s, accessToken)
                 .then((r) => (r.available ? s : null))
-                .catch(() => null)
-            )
+                .catch(() => null),
+            ),
           );
           setSuggestions(results.filter(Boolean).slice(0, 4) as string[]);
         }
@@ -228,12 +227,34 @@ export function StoreSetupForm() {
 
   async function handleStep1Next() {
     if (slugStatus === "checking" || slugStatus === "taken") return;
-    const valid = await trigger(["businessName", "category", "slug"]);
+    const valid = await trigger([
+      "businessName",
+      "category",
+      "slug",
+      "businessPhone",
+    ]);
     if (valid) goTo(2);
   }
 
   async function onSubmit(data: StoreSetupFormValues) {
     if (!accessToken) return;
+
+    // Enforce mandatory fields that might not be caught by older Zod schemas
+    let hasManualError = false;
+    if (!data.address) {
+      setError("address", { message: "Business address is required" });
+      hasManualError = true;
+    }
+    if (!data.market) {
+      setError("market", { message: "Please select a main market" });
+      hasManualError = true;
+    }
+    if (!data.teamSize) {
+      setError("teamSize", { message: "Team size is required" });
+      hasManualError = true;
+    }
+    if (hasManualError) return;
+
     setIsLoading(true);
     setSubmitError(null);
     try {
@@ -245,22 +266,35 @@ export function StoreSetupForm() {
           currency: data.currency,
           team_size: data.teamSize || undefined,
           support_phone: data.businessPhone || undefined,
+          market_id: data.market!,
         },
         accessToken,
       );
-      // Save address (and market, if one was picked) if provided
+
+      // Update location info (market_id already sent above)
       if (data.address && store?.id) {
-        await storefrontApi.updateStore(store.id, {
-          address: data.address,
-          city: data.city,
-          state: data.state,
-          market_id: data.market || undefined,
-        }, accessToken).catch(() => {/* non-fatal */});
+        await storefrontApi
+          .updateStore(
+            store.id,
+            {
+              address: data.address,
+              city: data.city,
+              state: data.state,
+            },
+            accessToken,
+          )
+          .catch(() => {
+            /* non-fatal */
+          });
       }
+
       try {
         const fresh = await authApi.refreshTokens();
         setAuth(fresh.user, fresh.access_token);
-      } catch { /* not fatal */ }
+      } catch {
+        /* not fatal */
+      }
+
       goTo(3);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -271,7 +305,9 @@ export function StoreSetupForm() {
             if (f.field === "slug") setError("slug", { message: f.message });
           });
         } else {
-          setSubmitError(err.message || "Failed to create store. Please try again.");
+          setSubmitError(
+            err.message || "Failed to create store. Please try again.",
+          );
         }
       } else {
         setSubmitError("Something went wrong. Please try again.");
@@ -289,7 +325,10 @@ export function StoreSetupForm() {
         <div className="max-w-sm w-full text-center py-14">
           <div
             className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-7"
-            style={{ background: BRAND_LIGHT, border: "1.5px solid rgba(26,122,66,0.15)" }}
+            style={{
+              background: BRAND_LIGHT,
+              border: "1.5px solid rgba(26,122,66,0.15)",
+            }}
           >
             <Store className="w-8 h-8" style={{ color: BRAND }} />
           </div>
@@ -301,7 +340,10 @@ export function StoreSetupForm() {
             >
               Set up your store
             </h1>
-            <p className="text-[14px] leading-relaxed" style={{ color: "#6b7280" }}>
+            <p
+              className="text-[14px] leading-relaxed"
+              style={{ color: "#6b7280" }}
+            >
               Just a few details and your store is live.
               <br />
               Takes under 2 minutes — you can update everything later.
@@ -313,7 +355,11 @@ export function StoreSetupForm() {
               <div
                 key={i}
                 className="rounded-full"
-                style={{ width: i === 0 ? 20 : 6, height: 6, background: i === 0 ? BRAND : BORDER }}
+                style={{
+                  width: i === 0 ? 20 : 6,
+                  height: 6,
+                  background: i === 0 ? BRAND : BORDER,
+                }}
               />
             ))}
           </div>
@@ -323,8 +369,13 @@ export function StoreSetupForm() {
               type="button"
               onClick={() => goTo(1)}
               className="w-full flex items-center justify-center gap-2 h-[46px] rounded-[12px] text-white text-[14px] font-bold transition-colors active:scale-[0.98]"
-              style={{ background: BRAND, boxShadow: "0 4px 18px rgba(26,122,66,0.28)" }}
-              onMouseOver={(e) => (e.currentTarget.style.background = "#239452")}
+              style={{
+                background: BRAND,
+                boxShadow: "0 4px 18px rgba(26,122,66,0.28)",
+              }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "#239452")
+              }
               onMouseOut={(e) => (e.currentTarget.style.background = BRAND)}
             >
               Let's go <ArrowRight className="w-4 h-4" />
@@ -356,9 +407,14 @@ export function StoreSetupForm() {
               className="text-[24px] font-extrabold"
               style={{ color: "#1C1C1C", letterSpacing: "-0.4px" }}
             >
-              {storeName ? `${storeName} is live! 🎉` : "Your store is live! 🎉"}
+              {storeName
+                ? `${storeName} is live! 🎉`
+                : "Your store is live! 🎉"}
             </h2>
-            <p className="text-[13px] leading-relaxed" style={{ color: "#6b7280" }}>
+            <p
+              className="text-[13px] leading-relaxed"
+              style={{ color: "#6b7280" }}
+            >
               Verify your identity to unlock higher transaction limits and build
               trust with customers. Only takes 2 minutes.
             </p>
@@ -366,7 +422,10 @@ export function StoreSetupForm() {
 
           <div
             className="rounded-[14px] p-4 text-left space-y-2.5 mb-6"
-            style={{ background: BRAND_LIGHT, border: "1px solid rgba(26,122,66,0.14)" }}
+            style={{
+              background: BRAND_LIGHT,
+              border: "1px solid rgba(26,122,66,0.14)",
+            }}
           >
             {[
               "Higher daily transaction limits",
@@ -380,7 +439,10 @@ export function StoreSetupForm() {
                 >
                   <Check className="w-2.5 h-2.5 text-white" />
                 </div>
-                <span className="text-[13px] font-medium" style={{ color: "#1C1C1C" }}>
+                <span
+                  className="text-[13px] font-medium"
+                  style={{ color: "#1C1C1C" }}
+                >
                   {b}
                 </span>
               </div>
@@ -390,25 +452,45 @@ export function StoreSetupForm() {
           <div className="space-y-2.5">
             <button
               type="button"
-              onClick={() => { setKycLoading(true); router.push(ROUTES.ONBOARDING.KYC); }}
+              onClick={() => {
+                setKycLoading(true);
+                router.push(ROUTES.ONBOARDING.KYC);
+              }}
               disabled={kycLoading}
               className="w-full flex items-center justify-center gap-2 h-[46px] rounded-[12px] text-white text-[13px] font-bold transition-colors active:scale-[0.98] disabled:opacity-60"
-              style={{ background: BRAND, boxShadow: "0 4px 14px rgba(26,122,66,0.25)" }}
-              onMouseOver={(e) => !kycLoading && (e.currentTarget.style.background = "#239452")}
+              style={{
+                background: BRAND,
+                boxShadow: "0 4px 14px rgba(26,122,66,0.25)",
+              }}
+              onMouseOver={(e) =>
+                !kycLoading && (e.currentTarget.style.background = "#239452")
+              }
               onMouseOut={(e) => (e.currentTarget.style.background = BRAND)}
             >
-              {kycLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Verify now <ArrowRight className="w-4 h-4" /></>}
+              {kycLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  Verify now <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
             <button
               type="button"
               onClick={() => {
-                // Clear tour flag so new users see the dashboard tour on first visit
-                if (typeof window !== "undefined") localStorage.removeItem("gm_dash_tour_v2");
+                if (typeof window !== "undefined")
+                  localStorage.removeItem("gm_dash_tour_v2");
                 router.push(ROUTES.MERCHANT.OVERVIEW);
               }}
               className="w-full flex items-center justify-center h-[44px] rounded-[12px] text-[13px] font-semibold transition-colors"
-              style={{ color: "#6b7280", background: "#f8fafc", border: `1px solid ${BORDER}` }}
-              onMouseOver={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+              style={{
+                color: "#6b7280",
+                background: "#f8fafc",
+                border: `1px solid ${BORDER}`,
+              }}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.background = "#f1f5f9")
+              }
               onMouseOut={(e) => (e.currentTarget.style.background = "#f8fafc")}
             >
               Skip — I'll do it later
@@ -441,20 +523,29 @@ export function StoreSetupForm() {
               ? `Almost there, ${firstName}!`
               : "Almost there!"}
         </h1>
-        <p className="text-[13px] mt-0.5 leading-relaxed" style={{ color: "#3D6B4F" }}>
+        <p
+          className="text-[13px] mt-0.5 leading-relaxed"
+          style={{ color: "#3D6B4F" }}
+        >
           {step === 1
             ? "This is what your customers will see on your storefront."
-            : "Your team size and store currency — then you're all set."}
+            : "Your business location, team size, and store currency — then you're all set."}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="py-8">
-
         {/* ── Step 1 ───────────────────────────────────────── */}
         {step === 1 && (
-          <div key="step1" className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200">
+          <div
+            key="step1"
+            className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-200"
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-              <Field label="Business name" error={errors.businessName?.message}>
+              <Field
+                label="Business name"
+                required
+                error={errors.businessName?.message}
+              >
                 <Input
                   id="businessName"
                   placeholder="e.g. Eko Fashion House"
@@ -466,6 +557,7 @@ export function StoreSetupForm() {
 
               <Field
                 label="WhatsApp business number"
+                required
                 hint={
                   <p className="text-[11px]" style={{ color: "#6b7280" }}>
                     Customers contact you here via WhatsApp. Editable anytime.
@@ -481,12 +573,19 @@ export function StoreSetupForm() {
                 />
               </Field>
 
-              <Field label="Store category" error={errors.category?.message}>
+              <Field
+                label="Store category"
+                required
+                error={errors.category?.message}
+              >
                 <Controller
                   control={control}
                   name="category"
                   render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value ?? ""}
+                    >
                       <SelectTrigger
                         className="h-[42px] px-3.5 text-[13px] rounded-[10px] border w-full"
                         style={{
@@ -510,21 +609,33 @@ export function StoreSetupForm() {
               </Field>
 
               <div className="sm:col-span-2">
-                <Field label="Store URL">
+                <Field label="Store URL" required>
                   <div
                     className="flex items-center h-[42px] rounded-[10px] border overflow-hidden"
                     style={{
-                      borderColor: slugStatus === "taken" ? "#ef4444" : slugStatus === "available" ? BRAND : BORDER,
+                      borderColor:
+                        slugStatus === "taken"
+                          ? "#ef4444"
+                          : slugStatus === "available"
+                            ? BRAND
+                            : BORDER,
                       transition: "border-color 0.15s",
                     }}
                     onFocusCapture={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = BRAND;
-                      (e.currentTarget as HTMLElement).style.outline = `2px solid ${BRAND}`;
-                      (e.currentTarget as HTMLElement).style.outlineOffset = "-2px";
+                      (e.currentTarget as HTMLElement).style.borderColor =
+                        BRAND;
+                      (e.currentTarget as HTMLElement).style.outline =
+                        `2px solid ${BRAND}`;
+                      (e.currentTarget as HTMLElement).style.outlineOffset =
+                        "-2px";
                     }}
                     onBlurCapture={(e) => {
                       (e.currentTarget as HTMLElement).style.borderColor =
-                        slugStatus === "taken" ? "#ef4444" : slugStatus === "available" ? BRAND : BORDER;
+                        slugStatus === "taken"
+                          ? "#ef4444"
+                          : slugStatus === "available"
+                            ? BRAND
+                            : BORDER;
                       (e.currentTarget as HTMLElement).style.outline = "none";
                     }}
                   >
@@ -541,15 +652,20 @@ export function StoreSetupForm() {
                       onChange={slugRegister.onChange}
                       onBlur={slugRegister.onBlur}
                     />
-                    {/* Status icon inside the field */}
                     {slugStatus === "checking" && (
                       <div className="px-3 flex items-center">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" style={{ color: "#94a3b8" }} />
+                        <Loader2
+                          className="w-3.5 h-3.5 animate-spin"
+                          style={{ color: "#94a3b8" }}
+                        />
                       </div>
                     )}
                     {slugStatus === "available" && (
                       <div className="px-3 flex items-center">
-                        <Check className="w-3.5 h-3.5" style={{ color: BRAND }} />
+                        <Check
+                          className="w-3.5 h-3.5"
+                          style={{ color: BRAND }}
+                        />
                       </div>
                     )}
                     {slugStatus === "taken" && (
@@ -559,23 +675,32 @@ export function StoreSetupForm() {
                     )}
                     <div
                       className="h-full flex items-center px-4 border-l text-[12px] font-semibold shrink-0 select-none"
-                      style={{ background: "#f8fafc", borderColor: BORDER, color: "#6b7280" }}
+                      style={{
+                        background: "#f8fafc",
+                        borderColor: BORDER,
+                        color: "#6b7280",
+                      }}
                     >
                       .gomarketi.com
                     </div>
                   </div>
 
-                  {/* Status message */}
                   {slugStatus === "available" && slugVal && (
-                    <p className="mt-1.5 text-[11px] font-medium flex items-center gap-1" style={{ color: BRAND }}>
-                      <Check className="w-3 h-3" /> {slugVal}.gomarketi.com is available
+                    <p
+                      className="mt-1.5 text-[11px] font-medium flex items-center gap-1"
+                      style={{ color: BRAND }}
+                    >
+                      <Check className="w-3 h-3" /> {slugVal}.gomarketi.com is
+                      available
                     </p>
                   )}
                   {slugStatus === "taken" && (
                     <div className="mt-1.5 space-y-2">
                       <p className="text-[11px] font-medium flex items-center gap-1 text-red-500">
                         <X className="w-3 h-3" /> That name is taken.
-                        {suggestions.length > 0 ? " Try one of these:" : " Try a different name."}
+                        {suggestions.length > 0
+                          ? " Try one of these:"
+                          : " Try a different name."}
                       </p>
                       {suggestions.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
@@ -590,8 +715,14 @@ export function StoreSetupForm() {
                                 color: BRAND,
                                 background: BRAND_LIGHT,
                               }}
-                              onMouseOver={(e) => { e.currentTarget.style.background = BRAND; e.currentTarget.style.color = "#fff"; }}
-                              onMouseOut={(e) => { e.currentTarget.style.background = BRAND_LIGHT; e.currentTarget.style.color = BRAND; }}
+                              onMouseOver={(e) => {
+                                e.currentTarget.style.background = BRAND;
+                                e.currentTarget.style.color = "#fff";
+                              }}
+                              onMouseOut={(e) => {
+                                e.currentTarget.style.background = BRAND_LIGHT;
+                                e.currentTarget.style.color = BRAND;
+                              }}
                             >
                               {s}
                             </button>
@@ -615,14 +746,24 @@ export function StoreSetupForm() {
                 onClick={handleStep1Next}
                 disabled={slugStatus === "checking" || slugStatus === "taken"}
                 className="flex items-center gap-2 px-8 h-[42px] rounded-[10px] text-white text-[13px] font-bold transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ background: BRAND, boxShadow: "0 4px 14px rgba(26,122,66,0.25)" }}
-                onMouseOver={(e) => { if (slugStatus !== "checking" && slugStatus !== "taken") e.currentTarget.style.background = "#239452"; }}
+                style={{
+                  background: BRAND,
+                  boxShadow: "0 4px 14px rgba(26,122,66,0.25)",
+                }}
+                onMouseOver={(e) => {
+                  if (slugStatus !== "checking" && slugStatus !== "taken")
+                    e.currentTarget.style.background = "#239452";
+                }}
                 onMouseOut={(e) => (e.currentTarget.style.background = BRAND)}
               >
                 {slugStatus === "checking" ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Checking…</>
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Checking…
+                  </>
                 ) : (
-                  <>Next <ArrowRight className="w-4 h-4" /></>
+                  <>
+                    Next <ArrowRight className="w-4 h-4" />
+                  </>
                 )}
               </button>
             </div>
@@ -631,85 +772,148 @@ export function StoreSetupForm() {
 
         {/* ── Step 2 ───────────────────────────────────────── */}
         {step === 2 && (
-          <div key="step2" className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-200">
-            <div className="space-y-6">
-              {/* Business address */}
-              <div className="space-y-2">
-                <FieldLabel>Business address</FieldLabel>
-                <AddressSearch
-                  defaultValue={watch("address") ?? ""}
-                  onSelect={(r) => {
-                    setValue("address", r.fullAddress, { shouldValidate: true });
-                    setValue("city", r.city, { shouldValidate: true });
-                    setValue("state", r.state, { shouldValidate: true });
-                    if (r.lat) setValue("latitude", r.lat);
-                    if (r.lng) setValue("longitude", r.lng);
-                  }}
-                />
-                {watch("address") ? (
-                  <p className="text-[12px] flex items-center gap-1.5" style={{color:"#1A7A42"}}>
-                    <span>📍</span> {watch("city")}, {watch("state")}
+          <div
+            key="step2"
+            className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-200"
+          >
+            <div className="space-y-8">
+              {/* Highlighted Business Location Section */}
+              <div
+                className="p-5 rounded-[12px] border-2 space-y-5 transition-colors"
+                style={{
+                  borderColor: errors.address ? "#ef4444" : BRAND,
+                  background: errors.address ? "#fef2f2" : "#F8FAFC",
+                }}
+              >
+                <div>
+                  <h3 className="text-[15px] font-extrabold text-gray-900 flex items-center gap-2">
+                    📍 Business Location <span className="text-red-500">*</span>
+                  </h3>
+                  <p className="text-[12px] text-gray-500 mt-1">
+                    Accurate location helps customers find you and calculate
+                    shipping costs.
                   </p>
-                ) : errors.address ? (
-                  <p className="text-[11px]" style={{color:"#dc2626"}}>{errors.address.message}</p>
-                ) : (
-                  <p className="text-[11px]" style={{color:"#94a3b8"}}>Search and select your business address above</p>
-                )}
-              </div>
+                </div>
 
-              {/* Major market — optional, populated once we know the state/city */}
-              {markets.length > 0 && (
-                <Field label="Major market (optional)">
-                  <Controller
-                    control={control}
-                    name="market"
-                    render={({ field }) => (
-                      <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                        <SelectTrigger
-                          className="h-[42px] px-3.5 text-[13px] rounded-[10px] border w-full"
-                          style={{
-                            background: "#F0FAF3",
-                            borderColor: BORDER,
-                            color: field.value ? "#1C1C1C" : "#3D6B4F",
-                          }}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <FieldLabel required>Search business address</FieldLabel>
+                    <AddressSearch
+                      defaultValue={watch("address") ?? ""}
+                      onSelect={(r) => {
+                        setValue("address", r.fullAddress, {
+                          shouldValidate: true,
+                        });
+                        setValue("city", r.city, { shouldValidate: true });
+                        setValue("state", r.state, { shouldValidate: true });
+                        if (r.lat) setValue("latitude", r.lat);
+                        if (r.lng) setValue("longitude", r.lng);
+                      }}
+                    />
+                    {watch("address") ? (
+                      <p
+                        className="text-[12px] flex items-center gap-1.5 font-medium"
+                        style={{ color: BRAND }}
+                      >
+                        {watch("city")}, {watch("state")}
+                      </p>
+                    ) : errors.address ? (
+                      <p
+                        className="text-[11px] font-medium"
+                        style={{ color: "#dc2626" }}
+                      >
+                        {errors.address.message}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <Field
+                    label="Select main market"
+                    required
+                    error={errors.market?.message}
+                  >
+                    <Controller
+                      control={control}
+                      name="market"
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value ?? ""}
                         >
-                          <SelectValue placeholder="Not part of a named market" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {markets.map((m) => (
-                            <SelectItem key={m.id} value={m.id}>
-                              {m.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  <p className="text-[11px] mt-1.5" style={{ color: "#94a3b8" }}>
-                    If your store is inside a well-known market like Balogun or Alaba, buyers searching for that market will find you. Leave blank otherwise.
-                  </p>
-                </Field>
-              )}
+                          <SelectTrigger
+                            className="h-[42px] px-3.5 text-[13px] rounded-[10px] border w-full bg-white transition-all"
+                            style={{
+                              borderColor: errors.market ? "#ef4444" : BORDER,
+                              color: field.value ? "#1C1C1C" : "#94a3b8",
+                            }}
+                          >
+                            <SelectValue placeholder="Select your main market" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {markets.length === 0 ? (
+                              <SelectItem value="__loading" disabled>
+                                Loading markets...
+                              </SelectItem>
+                            ) : (
+                              markets.map((m) => (
+                                <SelectItem
+                                  key={m.id}
+                                  value={m.id}
+                                  className="text-gray-900 font-medium"
+                                >
+                                  {m.name}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    <p
+                      className="text-[11px] mt-1.5"
+                      style={{ color: "#6b7280" }}
+                    >
+                      Select your specific market. If you are not inside a named
+                      market, choose "General Market".
+                    </p>
+                  </Field>
+                </div>
+              </div>
 
               {/* Team size */}
               <div className="space-y-2">
-                <FieldLabel>Team size</FieldLabel>
+                <FieldLabel required>Team size</FieldLabel>
+                {errors.teamSize && (
+                  <p
+                    className="text-[11px] font-medium"
+                    style={{ color: "#dc2626" }}
+                  >
+                    {errors.teamSize.message}
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {TEAM_SIZES.map((t) => {
-                    const disabled = isFree && !["solo", "2-10"].includes(t.value);
+                    const disabled =
+                      isFree && !["solo", "2-10"].includes(t.value);
                     return (
                       <button
                         key={t.value}
                         type="button"
                         disabled={disabled}
-                        title={disabled ? "Upgrade your plan to unlock" : undefined}
+                        title={
+                          disabled ? "Upgrade your plan to unlock" : undefined
+                        }
                         onClick={() => {
-                          if (!disabled) setValue("teamSize", t.value, { shouldValidate: true });
+                          if (!disabled)
+                            setValue("teamSize", t.value, {
+                              shouldValidate: true,
+                            });
                         }}
                         className="relative flex flex-col items-center px-5 py-2.5 rounded-[10px] border transition-colors"
                         style={{
                           borderColor: teamSizeVal === t.value ? BRAND : BORDER,
-                          background: teamSizeVal === t.value ? BRAND_LIGHT : "#F0FAF3",
+                          background:
+                            teamSizeVal === t.value ? BRAND_LIGHT : "#F0FAF3",
                           color: teamSizeVal === t.value ? BRAND : "#1C1C1C",
                           opacity: disabled ? 0.42 : 1,
                           cursor: disabled ? "not-allowed" : "pointer",
@@ -726,7 +930,9 @@ export function StoreSetupForm() {
                         <span className="font-bold text-[13px]">{t.label}</span>
                         <span
                           className="text-[10px] font-normal mt-0.5"
-                          style={{ color: teamSizeVal === t.value ? BRAND : "#6b7280" }}
+                          style={{
+                            color: teamSizeVal === t.value ? BRAND : "#6b7280",
+                          }}
                         >
                           {t.sub}
                         </span>
@@ -738,8 +944,11 @@ export function StoreSetupForm() {
 
               {/* Currency */}
               <div>
-                <FieldLabel>Store currency</FieldLabel>
-                <p className="text-[12px] mt-1 mb-3" style={{ color: "#6b7280" }}>
+                <FieldLabel required>Store currency</FieldLabel>
+                <p
+                  className="text-[12px] mt-1 mb-3"
+                  style={{ color: "#6b7280" }}
+                >
                   The primary currency your store accepts payments in.
                 </p>
                 <div className="grid grid-cols-2 gap-3 max-w-[200px]">
@@ -752,7 +961,8 @@ export function StoreSetupForm() {
                         selected={currencyVal === c.code}
                         disabled={disabled}
                         onSelect={() => {
-                          if (!disabled) setValue("currency", c.code as "NGN" | "USD");
+                          if (!disabled)
+                            setValue("currency", c.code as "NGN" | "USD");
                         }}
                       />
                     );
@@ -770,8 +980,14 @@ export function StoreSetupForm() {
                 type="button"
                 onClick={() => goTo(1)}
                 className="flex items-center gap-1.5 h-[42px] px-5 rounded-[10px] border text-[13px] font-semibold transition-colors"
-                style={{ borderColor: BORDER, color: "#6b7280", background: "#fff" }}
-                onMouseOver={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                style={{
+                  borderColor: BORDER,
+                  color: "#6b7280",
+                  background: "#fff",
+                }}
+                onMouseOver={(e) =>
+                  (e.currentTarget.style.background = "#f8fafc")
+                }
                 onMouseOut={(e) => (e.currentTarget.style.background = "#fff")}
               >
                 <ArrowLeft className="w-4 h-4" /> Back
@@ -788,14 +1004,21 @@ export function StoreSetupForm() {
                 type="submit"
                 disabled={isLoading}
                 className="flex items-center gap-2 px-8 h-[42px] rounded-[10px] text-white text-[13px] font-bold transition-colors active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed"
-                style={{ background: BRAND, boxShadow: "0 4px 14px rgba(26,122,66,0.25)" }}
-                onMouseOver={(e) => !isLoading && (e.currentTarget.style.background = "#239452")}
+                style={{
+                  background: BRAND,
+                  boxShadow: "0 4px 14px rgba(26,122,66,0.25)",
+                }}
+                onMouseOver={(e) =>
+                  !isLoading && (e.currentTarget.style.background = "#239452")
+                }
                 onMouseOut={(e) => (e.currentTarget.style.background = BRAND)}
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <>Set up store <ArrowRight className="w-4 h-4" /></>
+                  <>
+                    Set up store <ArrowRight className="w-4 h-4" />
+                  </>
                 )}
               </button>
             </div>

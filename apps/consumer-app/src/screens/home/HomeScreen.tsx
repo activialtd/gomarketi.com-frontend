@@ -13,7 +13,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { MotiView } from "moti";
-import { useAuth } from "../../lib/auth-context";
 import { useLocation } from "../../hooks/useLocation";
 import { SearchModal } from "../../components/ui/SearchModal";
 import { VoiceSearchOverlay } from "../../components/ui/VoiceSearchOverlay";
@@ -23,16 +22,13 @@ import { color, space, HIT, stickerShadow } from "../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNav } from "../../navigation/nav-context";
 
-const PROMPTS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { label: "Order groceries", icon: "basket-outline" },
-  { label: "Refill pharmacy", icon: "medkit-outline" },
-  { label: "Find a vendor", icon: "storefront-outline" },
+// Shifted from generic actions to actual market destinations
+const MARKETS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { label: "Computer Village", icon: "laptop-outline" },
+  { label: "Balogun Market", icon: "shirt-outline" },
+  { label: "Alaba Int'l", icon: "tv-outline" },
 ];
 
-/**
- * Bold Niva-style bloom: concentric brand-hue discs centered behind the pill,
- * breathing (scale+opacity loop) so it reads alive and tangible.
- */
 function AuroraField() {
   const t1 = useRef(new Animated.Value(0)).current;
   const t2 = useRef(new Animated.Value(0)).current;
@@ -82,7 +78,6 @@ function AuroraField() {
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {/* wide green base — anchored low, where the pill lives */}
       <Animated.View
         style={[
           b.layer,
@@ -97,8 +92,6 @@ function AuroraField() {
           style={b.fill}
         />
       </Animated.View>
-
-      {/* lime sweep crossing from the upper right */}
       <Animated.View
         style={[
           b.layer,
@@ -113,8 +106,6 @@ function AuroraField() {
           style={b.fill}
         />
       </Animated.View>
-
-      {/* mint whisper, upper left */}
       <Animated.View
         style={[
           b.layer,
@@ -129,8 +120,6 @@ function AuroraField() {
           style={b.fill}
         />
       </Animated.View>
-
-      {/* white melt so the pill floats on softness */}
       <Animated.View
         style={[
           b.layer,
@@ -154,23 +143,22 @@ function AuroraField() {
     </View>
   );
 }
+
 const b = StyleSheet.create({
   layer: { position: "absolute", borderRadius: 200, overflow: "hidden" },
   fill: { flex: 1 },
 });
 
 export function HomeScreen() {
-  const { user } = useAuth();
   const { status, city, coords, request } = useLocation();
   const { push } = useNav();
 
   const [query, setQuery] = useState("");
-  const [walking, setWalking] = useState(false); // animation phase
-  const [searchOpen, setSearchOpen] = useState(false); // modal phase
+  const [walking, setWalking] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [committedQuery, setCommittedQuery] = useState("");
   const [listening, setListening] = useState(false);
 
-  // entrance: greeting rises, chips follow, pill blooms in
   const enter = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.timing(enter, {
@@ -180,6 +168,7 @@ export function HomeScreen() {
       useNativeDriver: true,
     }).start();
   }, []);
+
   const riseIn = (from: number) => ({
     opacity: enter,
     transform: [
@@ -192,7 +181,6 @@ export function HomeScreen() {
     ],
   });
 
-  const firstName = (user?.fullName?.split(" ")[0] ?? "there").toUpperCase();
   const locationLabel =
     status === "granted"
       ? (city ?? "Current location")
@@ -200,17 +188,11 @@ export function HomeScreen() {
         ? "Set location"
         : "Locating…";
 
-  /** submit on Home → play the walk → then open the modal (which fires the search itself) */
   const commitSearch = (q: string) => {
     const cleaned = q.trim();
     if (!cleaned) return;
     setCommittedQuery(cleaned);
     setWalking(true);
-  };
-
-  const onWalkDone = () => {
-    setWalking(false);
-    setSearchOpen(true);
   };
 
   return (
@@ -220,7 +202,6 @@ export function HomeScreen() {
         <View style={s.topBar}>
           <Pressable
             hitSlop={HIT}
-            accessibilityLabel="Order history"
             onPress={() => push("orders")}
             style={s.iconBtn}
           >
@@ -229,8 +210,6 @@ export function HomeScreen() {
           <Pressable
             onPress={status === "denied" ? request : undefined}
             hitSlop={HIT}
-            accessibilityRole="button"
-            accessibilityLabel={`Delivery location: ${locationLabel}`}
             style={s.loc}
           >
             <Text style={s.locText}>{locationLabel}</Text>
@@ -239,7 +218,6 @@ export function HomeScreen() {
           <Pressable
             onPress={() => push("profile")}
             hitSlop={HIT}
-            accessibilityLabel="Profile"
             style={s.iconBtn}
           >
             <Ionicons
@@ -256,52 +234,63 @@ export function HomeScreen() {
             style={s.hero}
             behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
-            {/* upper block: greeting + chips */}
             <View style={s.top}>
-              <Animated.Text style={[s.eyebrow, riseIn(14)]}>
-                HELLO {firstName}!
+              <Animated.Text style={[s.display, riseIn(14)]}>
+                GOMARKETI
               </Animated.Text>
-              <Animated.Text style={[s.display, riseIn(20)]}>
-                What can I get{"\n"}you today?
+              <Animated.Text style={[s.subDisplay, riseIn(20)]}>
+                Instantly access inventory from every major market in the city.
               </Animated.Text>
-              <Animated.View style={[s.chips, riseIn(26)]}>
-                {PROMPTS.map((p) => (
+
+              <Animated.View style={[s.directoryCardWrap, riseIn(24)]}>
+                <Bouncy style={s.directoryCard} onPress={() => push("markets")}>
+                  <View style={s.dirContent}>
+                    <Text style={s.dirTitle}>Market Directory</Text>
+                    <Text style={s.dirSub}>
+                      Browse vendors physically located in major hubs
+                    </Text>
+                  </View>
+                  <View style={s.dirIconBox}>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={20}
+                      color={color.onInk}
+                    />
+                  </View>
+                </Bouncy>
+              </Animated.View>
+
+              <Animated.View style={[s.chips, riseIn(28)]}>
+                {MARKETS.map((p) => (
                   <Bouncy
                     key={p.label}
                     style={s.chip}
-                    onPress={() => commitSearch(p.label.split(" ").pop()!)}
+                    onPress={() => commitSearch(p.label)}
                   >
                     <Ionicons name={p.icon} size={14} color={color.ink} />
                     <Text style={s.chipText}>{p.label}</Text>
                   </Bouncy>
                 ))}
               </Animated.View>
-
-              <Animated.View style={riseIn(28)}>
-                <Bouncy style={s.marketsTab} onPress={() => push("markets")}>
-                  <Ionicons name="storefront" size={16} color={color.onInk} />
-                  <Text style={s.marketsTabText}>Popular Markets</Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={14}
-                    color={color.onInk}
-                  />
-                </Bouncy>
-              </Animated.View>
             </View>
 
-            {/* center block: bloom + pill, dead-center of remaining space */}
+            {/* center block: bloom + pill */}
             <View style={s.centerZone}>
               <AuroraField />
-              <Animated.View style={[s.pill, riseIn(32)]}>
+              <Animated.View style={[s.pill, riseIn(34)]}>
+                <Ionicons
+                  name="search"
+                  size={20}
+                  color={color.textMuted}
+                  style={s.searchIcon}
+                />
                 <TextInput
                   value={query}
                   onChangeText={setQuery}
                   onSubmitEditing={() => commitSearch(query)}
                   returnKeyType="search"
-                  placeholder="Ask GoMarketi anything"
+                  placeholder="Search for Ankara, iPhones, Generators..."
                   placeholderTextColor={color.textMuted}
-                  accessibilityLabel="Search products"
                   style={s.pillInput}
                 />
                 <View style={s.micWrap}>
@@ -313,12 +302,10 @@ export function HomeScreen() {
                   />
                   <Bouncy
                     onPress={() => setListening(true)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Search by voice"
                     style={s.mic}
                     scaleTo={0.88}
                   >
-                    <Ionicons name="mic" size={22} color={color.onInk} />
+                    <Ionicons name="mic" size={20} color={color.onInk} />
                   </Bouncy>
                 </View>
               </Animated.View>
@@ -327,16 +314,14 @@ export function HomeScreen() {
         </View>
       </SafeAreaView>
 
-      {/* walk-to-market plays first… */}
       {walking && (
         <WalkToMarketOverlay
           query={committedQuery}
-          onReveal={() => setSearchOpen(true)} // modal slides up under the scene
-          onGone={() => setWalking(false)} // scene has fully dissolved
+          onReveal={() => setSearchOpen(true)}
+          onGone={() => setWalking(false)}
         />
       )}
 
-      {/* …then the results modal */}
       <SearchModal
         visible={searchOpen}
         initialQuery={committedQuery}
@@ -384,9 +369,6 @@ const s = StyleSheet.create({
   loc: { flexDirection: "row", alignItems: "center", gap: 4 },
   locText: { fontFamily: "Jakarta_600", fontSize: 16, color: color.text },
 
-  // Shadow lives on the outer wrapper — a hard offset shadow gets clipped
-  // if it's on the same view as overflow:hidden, so the inner `hero` (which
-  // needs overflow:hidden to contain AuroraField's blobs) can't carry it.
   heroWrap: {
     flex: 1,
     margin: space.lg,
@@ -406,30 +388,67 @@ const s = StyleSheet.create({
     borderColor: color.ink900,
     overflow: "hidden",
   },
-  top: { paddingTop: 48 },
-  eyebrow: {
-    textAlign: "center",
-    fontFamily: "Jakarta_600",
-    fontSize: 11,
-    letterSpacing: 1.4,
-    color: color.textFaint,
-  },
+  top: { paddingTop: 40, paddingHorizontal: space.lg },
   display: {
     textAlign: "center",
-    fontFamily: "Fredoka_600",
-    fontSize: 32,
-    lineHeight: 40,
-    color: color.text,
-    marginTop: space.md,
-    letterSpacing: -0.2,
+    fontFamily: "Fredoka_700",
+    fontSize: 48,
+    lineHeight: 52,
+    color: color.ink900,
+    letterSpacing: -1.5,
   },
+  subDisplay: {
+    textAlign: "center",
+    fontFamily: "Jakarta_500",
+    fontSize: 15,
+    color: color.textMuted,
+    marginTop: 8,
+    paddingHorizontal: space.md,
+    lineHeight: 22,
+  },
+
+  directoryCardWrap: {
+    marginTop: space.xl,
+  },
+  directoryCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: color.ink,
+    borderRadius: 24,
+    padding: 20,
+    ...stickerShadow(color.ink900, 4),
+  },
+  dirContent: {
+    flex: 1,
+  },
+  dirTitle: {
+    fontFamily: "Fredoka_600",
+    fontSize: 22,
+    color: color.onInk,
+    marginBottom: 4,
+  },
+  dirSub: {
+    fontFamily: "Jakarta_500",
+    fontSize: 13,
+    color: color.onInk,
+    opacity: 0.8,
+  },
+  dirIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 16,
+  },
+
   chips: {
     flexDirection: "row",
     justifyContent: "center",
     flexWrap: "wrap",
     gap: space.sm,
-    marginTop: space.xl,
-    paddingHorizontal: space.lg,
+    marginTop: space.lg,
   },
   chip: {
     flexDirection: "row",
@@ -440,45 +459,30 @@ const s = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: color.card,
     justifyContent: "center",
-    ...stickerShadow(color.ink900, 3),
+    borderWidth: 1.5,
+    borderColor: color.ink900,
   },
-  chipText: { fontFamily: "Jakarta_500", fontSize: 13, color: color.text },
-  marketsTab: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "center",
-    gap: 8,
-    marginTop: space.lg,
-    height: 40,
-    paddingHorizontal: 18,
-    borderRadius: 20,
-    backgroundColor: color.ink,
-    ...stickerShadow(color.ink900, 3),
-  },
-  marketsTabText: {
-    fontFamily: "Jakarta_600",
-    fontSize: 13,
-    color: color.onInk,
-  },
+  chipText: { fontFamily: "Jakarta_600", fontSize: 13, color: color.ink900 },
 
   centerZone: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center", // pill sits at the true center of remaining space
+    justifyContent: "center",
   },
   pill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: space.sm,
+    gap: space.xs,
     height: 64,
     alignSelf: "stretch",
     marginHorizontal: space.xl,
-    paddingLeft: space.xl,
+    paddingLeft: 20,
     paddingRight: 8,
     borderRadius: 32,
     backgroundColor: color.card,
     ...stickerShadow(color.ink900, 5),
   },
+  searchIcon: { marginRight: 4 },
   pillInput: {
     flex: 1,
     fontFamily: "Jakarta_500",
@@ -487,22 +491,22 @@ const s = StyleSheet.create({
     padding: 0,
   },
   micWrap: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
   },
   micPulse: {
     position: "absolute",
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: color.sunshine,
   },
   mic: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: color.accent,
     alignItems: "center",
     justifyContent: "center",
