@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, space, HIT } from "../../theme/tokens";
 
 export function ScreenHeader({

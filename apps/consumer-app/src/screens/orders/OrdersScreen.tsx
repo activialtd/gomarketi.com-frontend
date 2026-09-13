@@ -1,11 +1,19 @@
 import React, { useEffect } from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet, ActivityIndicator, RefreshControl } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+  RefreshControl,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { useOrders } from "../../lib/orders-context";
 import { summarizeBatch, formatKobo } from "../../lib/order-status";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 
 export function OrdersScreen() {
@@ -25,38 +33,76 @@ export function OrdersScreen() {
             <ActivityIndicator color={color.primary} />
           ) : (
             <>
-              <Ionicons name="receipt-outline" size={48} color={color.textFaint} />
-              <Text style={[type.title, { marginTop: space.lg }]}>No orders yet</Text>
-              {error && <Text style={[type.body, { marginTop: 4, color: color.textFaint }]}>{error}</Text>}
+              <Ionicons
+                name="receipt-outline"
+                size={48}
+                color={color.textFaint}
+              />
+              <Text style={[type.title, { marginTop: space.lg }]}>
+                No orders yet
+              </Text>
+              {error && (
+                <Text
+                  style={[type.body, { marginTop: 4, color: color.textFaint }]}
+                >
+                  {error}
+                </Text>
+              )}
             </>
           )}
         </View>
       ) : (
         <ScrollView
           contentContainerStyle={{ padding: space.gutter }}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={refresh} tintColor={color.primary} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={refresh}
+              tintColor={color.primary}
+            />
+          }
         >
           {batches.map((b) => {
             const summary = summarizeBatch(b.orders);
-            const totalKobo = b.orders.reduce((sum, o) => sum + o.total_kobo, 0);
+            const totalKobo = b.orders.reduce(
+              (sum, o) => sum + o.total_kobo,
+              0,
+            );
             return (
-              <Pressable key={b.reference} onPress={() => push("track", { reference: b.reference })}>
+              <Pressable
+                key={b.reference}
+                onPress={() => push("track", { reference: b.reference })}
+              >
                 <View style={s.card}>
                   <View style={s.rowTop}>
                     <Text style={s.ref}>
-                      {b.orders.length > 1 ? `${b.orders.length} vendors · ` : ""}#{b.reference.slice(-8)}
+                      {b.orders.length > 1
+                        ? `${b.orders.length} vendors · `
+                        : ""}
+                      #{b.reference.slice(-8)}
                     </Text>
-                    <View style={[s.chip, summary.label === "Delivered" && { backgroundColor: "#E1F0E6" }]}>
+                    <View
+                      style={[
+                        s.chip,
+                        summary.label === "Delivered" && {
+                          backgroundColor: "#E1F0E6",
+                        },
+                      ]}
+                    >
                       <Text style={s.chipText}>{summary.label}</Text>
                     </View>
                   </View>
                   <Text style={type.body} numberOfLines={1}>
                     {b.orders
-                      .flatMap((o) => o.items.map((i) => `${i.quantity}× ${i.name}`))
+                      .flatMap((o) =>
+                        o.items.map((i) => `${i.quantity}× ${i.name}`),
+                      )
                       .join(", ") || "—"}
                   </Text>
                   {summary.anyAwaitingConfirmation && (
-                    <Text style={s.confirmHint}>Tap to confirm you've received it</Text>
+                    <Text style={s.confirmHint}>
+                      Tap to confirm you've received it
+                    </Text>
                   )}
                   <View style={s.rowBottom}>
                     <Text style={s.total}>{formatKobo(totalKobo)}</Text>
@@ -97,7 +143,12 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   chipText: { fontFamily: "Jakarta_600", fontSize: 11, color: color.ink },
-  confirmHint: { fontFamily: "Jakarta_600", fontSize: 12, color: color.primary, marginTop: 6 },
+  confirmHint: {
+    fontFamily: "Jakarta_600",
+    fontSize: 12,
+    color: color.primary,
+    marginTop: 6,
+  },
   rowBottom: {
     flexDirection: "row",
     justifyContent: "space-between",

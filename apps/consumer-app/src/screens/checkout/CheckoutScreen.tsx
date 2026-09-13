@@ -9,7 +9,7 @@ import { useCart, formatNaira, toNaira } from "../../lib/cart-context";
 import { useOrders } from "../../lib/orders-context";
 import { useAuth } from "../../lib/auth-context";
 import { useLocation } from "../../hooks/useLocation";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { groupCartByStore } from "../../lib/checkout-grouping";

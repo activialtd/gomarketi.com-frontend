@@ -32,6 +32,7 @@ export interface CreateStoreReq {
   currency: string;
   team_size?: string;
   support_phone?: string;
+  market_id: string;
 }
 
 export interface UpdateStoreReq {
@@ -238,7 +239,8 @@ export interface OrderItem {
 // at_hub/shipped/delivered are hub-and-spoke states a vendor can only ever
 // read, never set — see VendorSettableOrderStatus below for what a vendor's
 // own PATCH /v1/orders/:id/status call may actually request.
-export type OrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+export type OrderStatus =
+  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 
 // The backend restricts a vendor's own status PATCH to these two values —
 // at_hub/shipped/delivered are exclusively admin-hub-intake/dispatch/buyer-
@@ -498,8 +500,15 @@ async function request<T>(
         if (retry.status === 204) return undefined as T;
         return retry.json() as Promise<T>;
       }
-      const retryBody = (await retry.json().catch(() => ({}))) as { error?: string; fields?: Array<{ field: string; message: string }> };
-      throw new ApiError(retry.status, retryBody.error ?? retry.statusText, retryBody.fields);
+      const retryBody = (await retry.json().catch(() => ({}))) as {
+        error?: string;
+        fields?: Array<{ field: string; message: string }>;
+      };
+      throw new ApiError(
+        retry.status,
+        retryBody.error ?? retry.statusText,
+        retryBody.fields,
+      );
     }
   }
 
@@ -626,10 +635,23 @@ export interface UpdateCollectionReq {
 }
 
 export const uploadApi = {
-  presign: (data: { filename: string; content_type: string; size: number; purpose?: string }, token: string) =>
-    request<PresignResp>("/v1/storefront/uploads/presign", {
-      method: "POST", body: JSON.stringify(data),
-    }, token),
+  presign: (
+    data: {
+      filename: string;
+      content_type: string;
+      size: number;
+      purpose?: string;
+    },
+    token: string,
+  ) =>
+    request<PresignResp>(
+      "/v1/storefront/uploads/presign",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      token,
+    ),
 };
 
 // ── Storefront API ─────────────────────────────────────────────────────────────
@@ -645,7 +667,11 @@ export const storefrontApi = {
   getMyStore: (token: string) =>
     request<StoreResp>("/v1/storefront/stores/mine", {}, token),
 
-  updateStore: (id: string, data: UpdateStoreReq | StoreUpdatePayload, token: string) =>
+  updateStore: (
+    id: string,
+    data: UpdateStoreReq | StoreUpdatePayload,
+    token: string,
+  ) =>
     request<StoreResp>(
       `/v1/storefront/stores/${id}`,
       { method: "PATCH", body: JSON.stringify(data) },
@@ -665,11 +691,17 @@ export const storefrontApi = {
     const qs = new URLSearchParams();
     if (params.state) qs.set("state", params.state);
     if (params.city) qs.set("city", params.city);
-    return request<MarketResp[]>(`/v1/storefront/public/markets?${qs.toString()}`);
+    return request<MarketResp[]>(
+      `/v1/storefront/public/markets?${qs.toString()}`,
+    );
   },
 
   // Upload store asset (logo or hero image) via multipart form
-  uploadStoreAsset: async (token: string, file: File, type: "logo" | "hero"): Promise<StoreAssetResp> => {
+  uploadStoreAsset: async (
+    token: string,
+    file: File,
+    type: "logo" | "hero",
+  ): Promise<StoreAssetResp> => {
     const form = new FormData();
     form.append("file", file);
     form.append("type", type);
@@ -752,8 +784,11 @@ export const catalogueApi = {
     ),
 
   listCategories: (token: string) =>
-    request<{ categories: CategoryResp[] }>("/v1/catalogue/categories", {}, token)
-      .then((r) => r.categories),
+    request<{ categories: CategoryResp[] }>(
+      "/v1/catalogue/categories",
+      {},
+      token,
+    ).then((r) => r.categories),
 
   createCategory: (data: CategoryReq, token: string) =>
     request<CategoryResp>(
@@ -777,22 +812,46 @@ export const catalogueApi = {
     ),
 
   listCollections: (token: string) =>
-    request<{ collections: CollectionResp[] }>("/v1/catalogue/collections", {}, token),
+    request<{ collections: CollectionResp[] }>(
+      "/v1/catalogue/collections",
+      {},
+      token,
+    ),
 
   createCollection: (data: CreateCollectionReq, token: string) =>
-    request<CollectionResp>("/v1/catalogue/collections", { method: "POST", body: JSON.stringify(data) }, token),
+    request<CollectionResp>(
+      "/v1/catalogue/collections",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   updateCollection: (id: string, data: UpdateCollectionReq, token: string) =>
-    request<CollectionResp>(`/v1/catalogue/collections/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
+    request<CollectionResp>(
+      `/v1/catalogue/collections/${id}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      token,
+    ),
 
   deleteCollection: (id: string, token: string) =>
-    request<void>(`/v1/catalogue/collections/${id}`, { method: "DELETE" }, token),
+    request<void>(
+      `/v1/catalogue/collections/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
 
   publishCollection: (id: string, token: string) =>
-    request<CollectionResp>(`/v1/catalogue/collections/${id}/publish`, { method: "POST" }, token),
+    request<CollectionResp>(
+      `/v1/catalogue/collections/${id}/publish`,
+      { method: "POST" },
+      token,
+    ),
 
   unpublishCollection: (id: string, token: string) =>
-    request<CollectionResp>(`/v1/catalogue/collections/${id}/unpublish`, { method: "POST" }, token),
+    request<CollectionResp>(
+      `/v1/catalogue/collections/${id}/unpublish`,
+      { method: "POST" },
+      token,
+    ),
 };
 
 // ── Orders API ─────────────────────────────────────────────────────────────────
@@ -813,7 +872,11 @@ export const ordersApi = {
   getOrder: (id: string, token: string) =>
     request<OrderResp>(`/v1/orders/${id}`, {}, token),
 
-  updateOrderStatus: (id: string, status: VendorSettableOrderStatus, token: string) =>
+  updateOrderStatus: (
+    id: string,
+    status: VendorSettableOrderStatus,
+    token: string,
+  ) =>
     request<OrderResp>(
       `/v1/orders/${id}/status`,
       { method: "PATCH", body: JSON.stringify({ status }) },
@@ -822,27 +885,44 @@ export const ordersApi = {
 
   // No auth — called directly from the storefront checkout after payment succeeds.
   createOrder: (data: CreateOrderReq) =>
-    request<OrderResp>("/v1/orders/public", { method: "POST", body: JSON.stringify(data) }),
+    request<OrderResp>("/v1/orders/public", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
-  listAbandonedCarts: (params: { page?: number; per_page?: number }, token: string) => {
+  listAbandonedCarts: (
+    params: { page?: number; per_page?: number },
+    token: string,
+  ) => {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
     if (params.per_page) qs.set("per_page", String(params.per_page));
-    return request<{ carts: AbandonedCartResp[] }>(`/v1/orders/abandoned?${qs}`, {}, token);
+    return request<{ carts: AbandonedCartResp[] }>(
+      `/v1/orders/abandoned?${qs}`,
+      {},
+      token,
+    );
   },
 
   // No auth — lightweight storefront page-view beacon.
   trackVisit: (data: { store_id: string; session_id: string; page?: string }) =>
-    request<{ ok: boolean }>("/v1/orders/public/visit", { method: "POST", body: JSON.stringify(data) }),
+    request<{ ok: boolean }>("/v1/orders/public/visit", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // No auth — storefront checkout fetches enabled payment gateways.
   getPublicGateways: (storeId: string) =>
-    request<{ gateways: PaymentGatewayResp[] }>(`/v1/orders/public/gateways/${storeId}`)
-      .then((r) => r.gateways),
+    request<{ gateways: PaymentGatewayResp[] }>(
+      `/v1/orders/public/gateways/${storeId}`,
+    ).then((r) => r.gateways),
 
   // No auth — storefront newsletter subscribe.
   subscribe: (data: { store_id: string; email: string; name?: string }) =>
-    request<{ ok: boolean }>("/v1/orders/public/subscribe", { method: "POST", body: JSON.stringify(data) }),
+    request<{ ok: boolean }>("/v1/orders/public/subscribe", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // No auth — pre-payment cart summary email. Fire-and-forget from storefront checkout.
   sendCartEmail: (data: {
@@ -850,10 +930,18 @@ export const ordersApi = {
     customer_name: string;
     store_slug: string;
     store_name: string;
-    items: Array<{ name: string; image_url?: string; quantity: number; price_kobo: number }>;
+    items: Array<{
+      name: string;
+      image_url?: string;
+      quantity: number;
+      price_kobo: number;
+    }>;
     total_kobo: number;
   }) =>
-    request<{ ok: boolean }>("/v1/orders/public/cart-email", { method: "POST", body: JSON.stringify(data) }),
+    request<{ ok: boolean }>("/v1/orders/public/cart-email", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
 // ── Analytics API ──────────────────────────────────────────────────────────────
@@ -869,18 +957,27 @@ export const analyticsApi = {
     request<AnalyticsOverviewResp>("/v1/analytics/overview", {}, token),
 
   getTopProducts: (limit: number, token: string) =>
-    request<{ products: TopProductResp[] }>(`/v1/analytics/top-products?limit=${limit}`, {}, token)
-      .then((r) => r.products),
+    request<{ products: TopProductResp[] }>(
+      `/v1/analytics/top-products?limit=${limit}`,
+      {},
+      token,
+    ).then((r) => r.products),
 
   getRevenueTrend: (days: number, token: string) =>
-    request<{ trend: RevenueTrendPoint[] }>(`/v1/analytics/revenue-trend?days=${days}`, {}, token)
-      .then((r) => r.trend),
+    request<{ trend: RevenueTrendPoint[] }>(
+      `/v1/analytics/revenue-trend?days=${days}`,
+      {},
+      token,
+    ).then((r) => r.trend),
 };
 
 // ── CRM / Customers API ───────────────────────────────────────────────────────
 
 export const crmApi = {
-  listCustomers: (params: { page?: number; per_page?: number; q?: string }, token: string) => {
+  listCustomers: (
+    params: { page?: number; per_page?: number; q?: string },
+    token: string,
+  ) => {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
     if (params.per_page) qs.set("per_page", String(params.per_page));
@@ -891,7 +988,10 @@ export const crmApi = {
   getCustomer: (id: string, token: string) =>
     request<CustomerResp>(`/v1/crm/customers/${id}`, {}, token),
 
-  listSubscribers: (params: { page?: number; per_page?: number }, token: string) => {
+  listSubscribers: (
+    params: { page?: number; per_page?: number },
+    token: string,
+  ) => {
     const qs = new URLSearchParams();
     if (params.page) qs.set("page", String(params.page));
     if (params.per_page) qs.set("per_page", String(params.per_page));
@@ -899,29 +999,45 @@ export const crmApi = {
   },
 
   unsubscribe: (id: string, token: string) =>
-    request<{ ok: boolean }>(`/v1/crm/subscribers/${id}`, { method: "DELETE" }, token),
+    request<{ ok: boolean }>(
+      `/v1/crm/subscribers/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
 };
 
 // ── Campaigns API ─────────────────────────────────────────────────────────────
 
 export const campaignsApi = {
   list: (token: string) =>
-    request<{ campaigns: CampaignResp[] }>("/v1/campaigns", {}, token)
-      .then((r) => r.campaigns),
+    request<{ campaigns: CampaignResp[] }>("/v1/campaigns", {}, token).then(
+      (r) => r.campaigns,
+    ),
 
   create: (data: CreateCampaignReq, token: string) =>
-    request<CampaignResp>("/v1/campaigns", { method: "POST", body: JSON.stringify(data) }, token),
+    request<CampaignResp>(
+      "/v1/campaigns",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   send: (id: string, token: string) =>
-    request<CampaignResp>(`/v1/campaigns/${id}/send`, { method: "POST" }, token),
+    request<CampaignResp>(
+      `/v1/campaigns/${id}/send`,
+      { method: "POST" },
+      token,
+    ),
 };
 
 // ── Payment Gateways API ──────────────────────────────────────────────────────
 
 export const paymentGatewaysApi = {
   list: (token: string) =>
-    request<{ gateways: PaymentGatewayResp[] }>("/v1/store/payment-gateways", {}, token)
-      .then((r) => r.gateways),
+    request<{ gateways: PaymentGatewayResp[] }>(
+      "/v1/store/payment-gateways",
+      {},
+      token,
+    ).then((r) => r.gateways),
 
   upsert: (gateway: string, data: UpsertPaymentGatewayReq, token: string) =>
     request<PaymentGatewayResp>(
@@ -938,7 +1054,11 @@ export const walletApi = {
     request<WalletResp>("/v1/wallet/balance", {}, token),
 
   withdraw: (data: WithdrawReq, token: string) =>
-    request<WalletResp>("/v1/wallet/withdraw", { method: "POST", body: JSON.stringify(data) }, token),
+    request<WalletResp>(
+      "/v1/wallet/withdraw",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 };
 
 // ── Identity / Plans API ───────────────────────────────────────────────────────
@@ -972,46 +1092,72 @@ export interface SubscriptionResp {
 
 export const identityApi = {
   listPlans: (token: string) =>
-    request<{ plans: PlanResp[] }>("/v1/identity/plans", {}, token)
-      .then((r) => r.plans),
+    request<{ plans: PlanResp[] }>("/v1/identity/plans", {}, token).then(
+      (r) => r.plans,
+    ),
 
-  selectPlan: (data: { plan_id: string; payment_reference?: string }, token: string) =>
-    request<SubscriptionResp>("/v1/identity/vendor/plan", { method: "POST", body: JSON.stringify(data) }, token),
+  selectPlan: (
+    data: { plan_id: string; payment_reference?: string },
+    token: string,
+  ) =>
+    request<SubscriptionResp>(
+      "/v1/identity/vendor/plan",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   getSubscription: (token: string) =>
     request<SubscriptionResp>("/v1/identity/vendor/subscription", {}, token),
 
   startOnboarding: (token: string) =>
-    request<{ id: string; onboarding_step: string }>("/v1/identity/vendor/onboard", { method: "POST" }, token),
+    request<{ id: string; onboarding_step: string }>(
+      "/v1/identity/vendor/onboard",
+      { method: "POST" },
+      token,
+    ),
 
-  updateBusiness: (data: {
-    business_name: string;
-    business_type: string;
-    employee_range?: string;
-    year_established?: number;
-    social_url?: string;
-  }, token: string) =>
-    request<{ onboarding_step: string }>("/v1/identity/vendor/onboard/business", { method: "PATCH", body: JSON.stringify(data) }, token),
+  updateBusiness: (
+    data: {
+      business_name: string;
+      business_type: string;
+      employee_range?: string;
+      year_established?: number;
+      social_url?: string;
+    },
+    token: string,
+  ) =>
+    request<{ onboarding_step: string }>(
+      "/v1/identity/vendor/onboard/business",
+      { method: "PATCH", body: JSON.stringify(data) },
+      token,
+    ),
 
-  submitKYC: (data: {
-    // Identity fields for Smile ID name/DOB matching
-    first_name?: string;
-    last_name?: string;
-    dob?: string; // YYYY-MM-DD
-    // Tier 1 — one of bvn or nin
-    bvn?: string;
-    nin?: string;
-    // Tier 2 — KYB
-    cac_number?: string;
-    tin?: string;
-    cac_document_url?: string;
-    // Optional supporting docs
-    id_type?: string;
-    id_number?: string;
-    id_document_url?: string;
-    selfie_url?: string;
-  }, token: string) =>
-    request<{ kyc_status: string; onboarding_step: string }>("/v1/identity/vendor/onboard/kyc", { method: "POST", body: JSON.stringify(data) }, token),
+  submitKYC: (
+    data: {
+      // Identity fields for Smile ID name/DOB matching
+      first_name?: string;
+      last_name?: string;
+      dob?: string; // YYYY-MM-DD
+      // Tier 1 — one of bvn or nin
+      bvn?: string;
+      nin?: string;
+      // Tier 2 — KYB
+      cac_number?: string;
+      tin?: string;
+      cac_document_url?: string;
+      // Optional supporting docs
+      id_type?: string;
+      id_number?: string;
+      id_document_url?: string;
+      selfie_url?: string;
+    },
+    token: string,
+  ) =>
+    request<{ kyc_status: string; onboarding_step: string }>(
+      "/v1/identity/vendor/onboard/kyc",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   getVendorProfile: (token: string) =>
     request<{
@@ -1033,19 +1179,26 @@ export const identityApi = {
       email?: string;
       full_name?: string;
       is_email_verified: boolean;
-      vendor?: { id: string; onboarding_step: string; kyc_status: string; is_active: boolean };
+      vendor?: {
+        id: string;
+        onboarding_step: string;
+        kyc_status: string;
+        is_active: boolean;
+      };
     }>("/v1/identity/me", {}, token),
 
   listVendorBanks: (token: string) =>
-    request<Array<{
-      id: string;
-      bank_name: string;
-      bank_code: string;
-      account_number_masked: string;
-      account_name: string;
-      is_primary: boolean;
-      is_verified: boolean;
-    }>>("/v1/identity/vendor/banks", {}, token),
+    request<
+      Array<{
+        id: string;
+        bank_name: string;
+        bank_code: string;
+        account_number_masked: string;
+        account_name: string;
+        is_primary: boolean;
+        is_verified: boolean;
+      }>
+    >("/v1/identity/vendor/banks", {}, token),
 };
 
 // ── Staff & Roles API ─────────────────────────────────────────────────────────
@@ -1076,23 +1229,41 @@ export interface UpdateStaffReq {
 
 export const staffApi = {
   list: (token: string) =>
-    request<{ staff: StaffResp[] }>("/v1/identity/vendor/staff", {}, token)
-      .then((r) => r.staff),
+    request<{ staff: StaffResp[] }>(
+      "/v1/identity/vendor/staff",
+      {},
+      token,
+    ).then((r) => r.staff),
 
   create: (data: CreateStaffReq, token: string) =>
-    request<StaffResp>("/v1/identity/vendor/staff", { method: "POST", body: JSON.stringify(data) }, token),
+    request<StaffResp>(
+      "/v1/identity/vendor/staff",
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
 
   update: (id: string, data: UpdateStaffReq, token: string) =>
-    request<StaffResp>(`/v1/identity/vendor/staff/${id}`, { method: "PATCH", body: JSON.stringify(data) }, token),
+    request<StaffResp>(
+      `/v1/identity/vendor/staff/${id}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      token,
+    ),
 
   remove: (id: string, token: string) =>
-    request<void>(`/v1/identity/vendor/staff/${id}`, { method: "DELETE" }, token),
+    request<void>(
+      `/v1/identity/vendor/staff/${id}`,
+      { method: "DELETE" },
+      token,
+    ),
 
   staffLogin: (email: string, password: string) =>
-    request<{ access_token: string; user: { id: string; email?: string } }>("/v1/auth/staff/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password }),
-    }),
+    request<{ access_token: string; user: { id: string; email?: string } }>(
+      "/v1/auth/staff/login",
+      {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      },
+    ),
 };
 
 // ── Admin Center ─────────────────────────────────────────────────────────────
@@ -1216,47 +1387,61 @@ export const adminApi = {
     }),
 
   me: (token: string) =>
-    request<{ admin: AdminResp & { is_admin: true; jti: string; iat: number; exp: number } }>(
-      "/v1/admin/auth/me",
-      {},
-      token,
-    ),
+    request<{
+      admin: AdminResp & {
+        is_admin: true;
+        jti: string;
+        iat: number;
+        exp: number;
+      };
+    }>("/v1/admin/auth/me", {}, token),
 
   listCustomers: (params: AdminListParams, token: string) =>
-    request<{ customers: AdminCustomerSummary[]; total: number; page: number; per_page: number }>(
-      `/v1/admin/customers${toQueryString(params)}`,
-      {},
-      token,
-    ),
+    request<{
+      customers: AdminCustomerSummary[];
+      total: number;
+      page: number;
+      per_page: number;
+    }>(`/v1/admin/customers${toQueryString(params)}`, {}, token),
 
   getCustomer: (id: string, token: string) =>
     request<AdminCustomerDetail>(`/v1/admin/customers/${id}`, {}, token),
 
   listVendors: (params: AdminListParams, token: string) =>
-    request<{ vendors: AdminVendorSummary[]; total: number; page: number; per_page: number }>(
-      `/v1/admin/vendors${toQueryString(params)}`,
-      {},
-      token,
-    ),
+    request<{
+      vendors: AdminVendorSummary[];
+      total: number;
+      page: number;
+      per_page: number;
+    }>(`/v1/admin/vendors${toQueryString(params)}`, {}, token),
 
   getVendor: (id: string, token: string) =>
     request<AdminVendorDetail>(`/v1/admin/vendors/${id}`, {}, token),
 
   listBatches: (params: AdminListParams, token: string) =>
-    request<{ batches: AdminBatchSummary[]; total: number; page: number; per_page: number }>(
-      `/v1/admin/batches${toQueryString(params)}`,
+    request<{
+      batches: AdminBatchSummary[];
+      total: number;
+      page: number;
+      per_page: number;
+    }>(`/v1/admin/batches${toQueryString(params)}`, {}, token),
+
+  getBatch: (paymentReference: string, token: string) =>
+    request<AdminBatchDetail>(
+      `/v1/admin/batches/${encodeURIComponent(paymentReference)}`,
       {},
       token,
     ),
-
-  getBatch: (paymentReference: string, token: string) =>
-    request<AdminBatchDetail>(`/v1/admin/batches/${encodeURIComponent(paymentReference)}`, {}, token),
 
   // Fastify's JSON body parser rejects Content-Type: application/json with a
   // truly empty body (FST_ERR_CTP_EMPTY_JSON_BODY) — request() always sets
   // that header, so these no-payload actions send an explicit "{}".
   hubIntake: (orderId: string, token: string) =>
-    request<{ ok: true }>(`/v1/admin/orders/${orderId}/hub-intake`, { method: "POST", body: "{}" }, token),
+    request<{ ok: true }>(
+      `/v1/admin/orders/${orderId}/hub-intake`,
+      { method: "POST", body: "{}" },
+      token,
+    ),
 
   dispatchBatch: (paymentReference: string, token: string) =>
     request<AdminDispatchResult>(
@@ -1266,37 +1451,57 @@ export const adminApi = {
     ),
 
   releaseEscrow: (orderId: string, token: string) =>
-    request<{ ok: true }>(`/v1/admin/orders/${orderId}/release-escrow`, { method: "POST", body: "{}" }, token),
+    request<{ ok: true }>(
+      `/v1/admin/orders/${orderId}/release-escrow`,
+      { method: "POST", body: "{}" },
+      token,
+    ),
 
   listDisputes: (params: AdminListParams, token: string) =>
-    request<{ disputes: AdminDisputeSummary[]; total: number; page: number; per_page: number }>(
-      `/v1/admin/disputes${toQueryString(params)}`,
-      {},
-      token,
-    ),
+    request<{
+      disputes: AdminDisputeSummary[];
+      total: number;
+      page: number;
+      per_page: number;
+    }>(`/v1/admin/disputes${toQueryString(params)}`, {}, token),
 
   dismissDispute: (orderId: string, token: string) =>
-    request<{ ok: true }>(`/v1/admin/orders/${orderId}/dismiss-dispute`, { method: "POST", body: "{}" }, token),
-
-  refundDispute: (orderId: string, token: string) =>
-    request<{ ok: true }>(`/v1/admin/orders/${orderId}/refund-dispute`, { method: "POST", body: "{}" }, token),
-
-  listErrors: (params: AdminErrorListParams, token: string) =>
-    request<{ errors: AdminErrorEvent[]; total: number; page: number; per_page: number }>(
-      `/v1/admin/errors${toErrorQueryString(params)}`,
-      {},
+    request<{ ok: true }>(
+      `/v1/admin/orders/${orderId}/dismiss-dispute`,
+      { method: "POST", body: "{}" },
       token,
     ),
 
-  getError: (id: string, token: string) => request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
+  refundDispute: (orderId: string, token: string) =>
+    request<{ ok: true }>(
+      `/v1/admin/orders/${orderId}/refund-dispute`,
+      { method: "POST", body: "{}" },
+      token,
+    ),
+
+  listErrors: (params: AdminErrorListParams, token: string) =>
+    request<{
+      errors: AdminErrorEvent[];
+      total: number;
+      page: number;
+      per_page: number;
+    }>(`/v1/admin/errors${toErrorQueryString(params)}`, {}, token),
+
+  getError: (id: string, token: string) =>
+    request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
 
   resolveError: (id: string, token: string) =>
-    request<{ ok: true }>(`/v1/admin/errors/${id}/resolve`, { method: "POST", body: "{}" }, token),
+    request<{ ok: true }>(
+      `/v1/admin/errors/${id}/resolve`,
+      { method: "POST", body: "{}" },
+      token,
+    ),
 };
 
 // ── Batches / hub fulfillment ─────────────────────────────────────────────────
 
-export type AdminOrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+export type AdminOrderStatus =
+  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 export type AdminEscrowStatus = "held" | "released" | "reversed" | null;
 export type AdminDisputeStatus = "reported" | "refunded" | "dismissed";
 
@@ -1381,7 +1586,8 @@ function toErrorQueryString(params: AdminErrorListParams): string {
   if (params.page) search.set("page", String(params.page));
   if (params.per_page) search.set("per_page", String(params.per_page));
   if (params.service) search.set("service", params.service);
-  if (params.resolved !== undefined) search.set("resolved", String(params.resolved));
+  if (params.resolved !== undefined)
+    search.set("resolved", String(params.resolved));
   const s = search.toString();
   return s ? `?${s}` : "";
 }

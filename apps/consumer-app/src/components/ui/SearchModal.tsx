@@ -17,7 +17,7 @@ import Reanimated, { useAnimatedStyle } from "react-native-reanimated";
 import { StoreResult } from "../../lib/api-client";
 import { useProductSearch } from "../../hooks/useProductSearch";
 import { useCart } from "../../lib/cart-context";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { ProductGrid } from "./ProductGrid";
 import { VendorCarousel } from "./VendorCarousel";
 import { useKeyboardHeight } from "../../hooks/useKeyboardHeight";
@@ -175,14 +175,19 @@ export function SearchModal({
                   <View style={s.carouselWrap}>
                     <Text style={type.meta}>Also sold by</Text>
                     <View style={s.carouselBleed}>
-                      <VendorCarousel items={carouselItems} onOpenStore={onOpenStore} />
+                      <VendorCarousel
+                        items={carouselItems}
+                        onOpenStore={onOpenStore}
+                      />
                     </View>
                   </View>
                 )}
                 <ProductGrid
                   products={gridProducts}
                   onAdd={(p) => add(p)}
-                  onOpen={(p) => push("product", { productId: p.id, product: p })}
+                  onOpen={(p) =>
+                    push("product", { productId: p.id, product: p })
+                  }
                   onEndReached={hasMore ? loadMore : undefined}
                   loadingMore={loadingMore}
                 />

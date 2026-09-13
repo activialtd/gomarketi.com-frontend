@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import React from "react";
 
 export const BRAND = "#0A2E1A";
 export const BRAND_LIGHT = "rgba(26,122,66,0.07)";
@@ -142,16 +143,18 @@ export function Field({
   label,
   error,
   hint,
+  required,
   children,
 }: {
-  label?: string;
+  label?: React.ReactNode;
   error?: string;
   hint?: React.ReactNode;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="space-y-1.5">
-      {label && <FieldLabel>{label}</FieldLabel>}
+      {label && <FieldLabel required={required}>{label}</FieldLabel>}
       {children}
       {hint && <div className="mt-1">{hint}</div>}
       {error && !hint && <FieldError>{error}</FieldError>}
@@ -159,13 +162,22 @@ export function Field({
   );
 }
 
-export function FieldLabel({ children }: { children: React.ReactNode }) {
+export function FieldLabel({
+  children,
+  required,
+}: {
+  children: React.ReactNode;
+  required?: boolean;
+}) {
   return (
     <label
-      className="text-[10px] font-extrabold uppercase block"
+      className="text-[10px] font-extrabold uppercase flex items-center gap-0.5"
       style={{ letterSpacing: "0.1em", color: "#3D6B4F" }}
     >
       {children}
+      {required && (
+        <span className="text-red-500 text-[12px] leading-none mt-0.5">*</span>
+      )}
     </label>
   );
 }

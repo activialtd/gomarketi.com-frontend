@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -8,6 +9,9 @@ import {
   Loader2,
   AlertCircle,
   ArrowRight,
+  Search,
+  RefreshCw,
+  X as XIcon,
 } from "lucide-react";
 import { PaystackModal } from "@/components/storefront/PaystackModal";
 import {
@@ -18,17 +22,59 @@ import {
   type CheckoutProps,
 } from "../checkout/useCheckout";
 
+const STRATEGIC_LOCATIONS = [
+  {
+    id: "ogba",
+    name: "Ogba Busstop",
+    price: 2500,
+    note: "If your package is big, dispatch company will call You to balance",
+  },
+  {
+    id: "festac",
+    name: "Festac",
+    price: 4000,
+    note: "If package big you be called",
+  },
+  {
+    id: "abeokuta",
+    name: "Abeokuta",
+    price: 3000,
+    note: "If package big, you will be called to balance up",
+  },
+  {
+    id: "ikeja",
+    name: "Ikeja",
+    price: 2500,
+    note: "Standard delivery. Dispatch may call for oversized items.",
+  },
+  {
+    id: "lekki",
+    name: "Lekki / Ajah",
+    price: 3500,
+    note: "Standard delivery. Dispatch may call for oversized items.",
+  },
+  { id: "vi", name: "Victoria Island", price: 3000, note: "Standard delivery" },
+  {
+    id: "yaba",
+    name: "Yaba / Surulere",
+    price: 2000,
+    note: "Standard delivery",
+  },
+  { id: "ikoyi", name: "Ikoyi", price: 3000, note: "Standard delivery" },
+  { id: "magodo", name: "Magodo", price: 2500, note: "Standard delivery" },
+  { id: "gbagada", name: "Gbagada", price: 2000, note: "Standard delivery" },
+];
+
 export default function LagosCheckout(props: CheckoutProps) {
   const {
     form: {
       register,
       handleSubmit,
+      setValue,
       formState: { errors },
     },
     lines,
     subtotal,
-    shipping,
-    total,
     isPlacing,
     orderPlaced,
     orderNumber,
@@ -40,12 +86,33 @@ export default function LagosCheckout(props: CheckoutProps) {
     handlePaystackSuccess,
   } = useCheckout(props);
 
+  const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedZone, setSelectedZone] = useState(STRATEGIC_LOCATIONS[0]);
+
   const shopUrl = "/shop";
   const accent = "var(--store-primary, #22C55E)";
   const inputCls = (err?: boolean) =>
     `w-full h-12 px-4 rounded-[10px] border text-[13px] outline-none text-white bg-white/[0.03] placeholder:text-white/30 transition-colors focus:bg-white/[0.06] focus:border-white/30 ${
       err ? "border-red-500/50" : "border-white/10"
     }`;
+
+  // Override shipping with local selection
+  const currentShipping = selectedZone.price;
+  const currentTotal = subtotal + currentShipping;
+
+  const filteredLocations = STRATEGIC_LOCATIONS.filter((loc) =>
+    loc.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  const handlePlaceOrder = (data: any) => {
+    // Attach selected shipping info to the form data submission
+    onSubmit({
+      ...data,
+      shippingMethod: selectedZone.name,
+      shippingCost: currentShipping,
+    });
+  };
 
   if (orderPlaced) {
     return (
@@ -88,8 +155,8 @@ export default function LagosCheckout(props: CheckoutProps) {
 
   if (lines.length === 0) {
     return (
-      <div className="min-h-screen bg-black text-white">
-        <div className="max-w-md mx-auto px-5 py-24 text-center">
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+        <div className="max-w-md w-full px-5 py-24 text-center">
           <ShoppingBag className="w-10 h-10 mx-auto mb-4 text-white/20" />
           <p className="text-base font-bold mb-2">Your cart is empty</p>
           <p className="text-sm text-white/50 mb-5">
@@ -107,8 +174,8 @@ export default function LagosCheckout(props: CheckoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <div className="max-w-5xl mx-auto px-5 pt-6 pb-20">
+    <div className="min-h-screen bg-black text-white relative">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 pb-24 lg:pb-20">
         <Link
           href={shopUrl}
           className="inline-flex items-center gap-1.5 text-[13px] text-white/50 hover:text-white transition-colors mb-6"
@@ -123,11 +190,16 @@ export default function LagosCheckout(props: CheckoutProps) {
           </div>
         )}
 
-        <div className="grid gap-10 lg:grid-cols-[1fr_400px]">
+        <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_400px]">
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)}>
-            <div className="flex items-baseline gap-3 mb-8">
-              <h1 className="text-3xl font-black tracking-tight">Checkout</h1>
+          <form
+            onSubmit={handleSubmit(handlePlaceOrder)}
+            className="flex flex-col gap-8"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+                Checkout
+              </h1>
               <span className="text-[11px] font-semibold text-white/40 uppercase tracking-[0.12em]">
                 {lines.length} item{lines.length !== 1 && "s"}
               </span>
@@ -159,13 +231,14 @@ export default function LagosCheckout(props: CheckoutProps) {
                   />
                 </Field>
               </div>
-              <p className="text-[11px] text-white/40 mt-1">
-                We&apos;ll use this to send order updates and coordinate
-                delivery.
+              <p className="text-[11px] font-medium text-amber-400 mt-1.5 flex items-center gap-1.5 bg-amber-400/10 p-2.5 rounded-lg border border-amber-400/20">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                Please enter a valid email and phone number so the vendor can
+                contact you regarding your order.
               </p>
             </Section>
 
-            <Section step={2} title="Delivery address" accent={accent}>
+            <Section step={2} title="Delivery details" accent={accent}>
               <Field label="Street address" error={errors.address?.message}>
                 <input
                   className={inputCls(!!errors.address)}
@@ -200,8 +273,30 @@ export default function LagosCheckout(props: CheckoutProps) {
               </div>
             </Section>
 
+            <Section step={3} title="Shipping Method" accent={accent}>
+              <div
+                onClick={() => setIsShippingModalOpen(true)}
+                className="w-full rounded-[10px] border border-white/20 bg-white/[0.05] p-4 cursor-pointer hover:bg-white/[0.08] transition-colors flex items-center justify-between"
+              >
+                <div>
+                  <p className="text-[13px] font-semibold text-white">
+                    {selectedZone.name}
+                  </p>
+                  <p className="text-[11px] text-white/60 mt-0.5 line-clamp-1">
+                    {selectedZone.note}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] font-bold text-white">
+                    {fmtNaira(selectedZone.price)}
+                  </span>
+                  <ChevronLeft className="w-4 h-4 text-white/40 rotate-180" />
+                </div>
+              </div>
+            </Section>
+
             <Section
-              step={3}
+              step={4}
               accent={accent}
               title={
                 <>
@@ -219,26 +314,11 @@ export default function LagosCheckout(props: CheckoutProps) {
                 {...register("note")}
               />
             </Section>
-
-            <button
-              type="submit"
-              disabled={isPlacing}
-              className="lg:hidden w-full h-12 rounded-xl bg-white text-black text-sm font-extrabold flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {isPlacing ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Lock className="w-4 h-4" />
-              )}
-              {isPlacing
-                ? "Placing order…"
-                : `Place order · ${fmtNaira(total)}`}
-            </button>
           </form>
 
           {/* Summary */}
-          <aside>
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 lg:sticky lg:top-6">
+          <aside className="w-full">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 lg:sticky lg:top-6">
               <div className="flex items-center justify-between mb-5">
                 <p className="text-[12px] font-extrabold uppercase tracking-[0.12em]">
                   Order summary
@@ -284,15 +364,20 @@ export default function LagosCheckout(props: CheckoutProps) {
                 <Row label="Subtotal" value={fmtNaira(subtotal)} />
                 <Row
                   label="Shipping"
-                  value={shipping === 0 ? "Free" : fmtNaira(shipping)}
+                  value={
+                    currentShipping === 0 ? "Free" : fmtNaira(currentShipping)
+                  }
                 />
-                {shipping > 0 && (
+                {currentShipping > 0 && (
                   <p
                     className="text-[10px] font-semibold"
                     style={{ color: accent }}
                   >
-                    Add {fmtNaira(FREE_SHIPPING_THRESHOLD_KOBO - subtotal)} more
-                    for free shipping
+                    Add{" "}
+                    {fmtNaira(
+                      Math.max(0, FREE_SHIPPING_THRESHOLD_KOBO - subtotal),
+                    )}{" "}
+                    more for free shipping
                   </p>
                 )}
                 <div className="flex items-baseline justify-between pt-3 mt-1 border-t border-white/10">
@@ -300,23 +385,25 @@ export default function LagosCheckout(props: CheckoutProps) {
                     Total
                   </span>
                   <span className="text-xl font-black text-white">
-                    {fmtNaira(total)}
+                    {fmtNaira(currentTotal)}
                   </span>
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={handleSubmit(onSubmit)}
+                onClick={handleSubmit(handlePlaceOrder)}
                 disabled={isPlacing}
-                className="hidden lg:flex mt-6 w-full h-12 rounded-xl bg-white text-black text-sm font-extrabold items-center justify-center gap-2 disabled:opacity-60 hover:bg-white/90 active:scale-[0.99] transition-all"
+                className="mt-6 w-full h-12 rounded-xl bg-white text-black text-sm font-extrabold flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-white/90 active:scale-[0.99] transition-all"
               >
                 {isPlacing ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <Lock className="w-4 h-4" />
                 )}
-                {isPlacing ? "Placing order…" : "Place order"}
+                {isPlacing
+                  ? "Placing order…"
+                  : `Place order · ${fmtNaira(currentTotal)}`}
               </button>
 
               <p className="text-[10px] text-white/40 text-center mt-3 flex items-center justify-center gap-1.5">
@@ -329,12 +416,93 @@ export default function LagosCheckout(props: CheckoutProps) {
 
       {showPaystack && pendingCustomer && (
         <PaystackModal
-          amount={total}
+          amount={currentTotal}
           email={pendingCustomer.email}
           storeName={props.storeName ?? "GoMarketi Store"}
           onSuccess={handlePaystackSuccess}
           onClose={() => setShowPaystack(false)}
         />
+      )}
+
+      {/* Shipping Location Modal matching "WhatsApp Image 2026-09-08 at 11.34.06.jpeg" */}
+      {isShippingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+          <div className="bg-white text-black w-full max-w-[420px] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
+              <h2 className="text-[17px] font-bold text-gray-900">
+                Select Shipping
+              </h2>
+              <div className="flex items-center gap-1">
+                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                  <Search className="w-4 h-4" />
+                </button>
+                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setIsShippingModalOpen(false)}
+                  className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <XIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search shipping..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-11 pl-4 pr-10 rounded-xl border border-gray-200 bg-white text-[14px] outline-none placeholder:text-gray-400 focus:border-green-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto max-h-[50vh] sm:max-h-[400px]">
+              {filteredLocations.map((loc) => {
+                const isSelected = selectedZone.id === loc.id;
+                return (
+                  <label
+                    key={loc.id}
+                    className={`flex items-start gap-3 p-5 cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50 ${isSelected ? "bg-green-50/30" : ""}`}
+                    onClick={() => {
+                      setSelectedZone(loc);
+                      setTimeout(() => setIsShippingModalOpen(false), 200);
+                    }}
+                  >
+                    <div
+                      className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-green-600" : "border-gray-300"}`}
+                    >
+                      {isSelected && (
+                        <div className="w-2.5 h-2.5 bg-green-600 rounded-full" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4">
+                        <p className="text-[14px] font-bold text-gray-900">
+                          {loc.name}
+                        </p>
+                        <p className="text-[14px] font-extrabold text-gray-900 shrink-0">
+                          {fmtNaira(loc.price)}
+                        </p>
+                      </div>
+                      <p className="text-[12px] text-gray-500 mt-1 leading-snug pr-4">
+                        {loc.note}
+                      </p>
+                    </div>
+                  </label>
+                );
+              })}
+              {filteredLocations.length === 0 && (
+                <div className="p-8 text-center text-gray-500 text-sm">
+                  No shipping locations found.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -352,10 +520,10 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-8">
+    <div className="mb-6 sm:mb-8">
       <p className="text-[12px] font-extrabold text-white/90 mb-4 flex items-center gap-2.5 uppercase tracking-[0.1em]">
         <span
-          className="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center"
+          className="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center shrink-0"
           style={{ background: accent }}
         >
           {step}

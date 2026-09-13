@@ -16,7 +16,7 @@ import { BentoSkeleton } from "../../components/ui/BentoSkeleton";
 import { StoreBentoCard } from "../../components/ui/StoreBentoCard";
 import { searchStores, Market, StoreResult } from "../../lib/api-client";
 import { usePaginatedList } from "../../hooks/usePaginatedList";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 
 const PAGE_SIZE = 8;
@@ -34,15 +34,13 @@ export function MarketDetailScreen({ market }: { market: Market }) {
     [market.id],
   );
 
-  const { items, loading, loadingMore, hasMore, loadMore } = usePaginatedList<StoreResult>(
-    fetcher,
-    PAGE_SIZE,
-    [market.id],
-  );
+  const { items, loading, loadingMore, hasMore, loadMore } =
+    usePaginatedList<StoreResult>(fetcher, PAGE_SIZE, [market.id]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    const distanceFromBottom =
+      contentSize.height - layoutMeasurement.height - contentOffset.y;
     if (distanceFromBottom < NEAR_BOTTOM_PX && hasMore && !loadingMore) {
       loadMore();
     }
@@ -68,7 +66,9 @@ export function MarketDetailScreen({ market }: { market: Market }) {
           <BentoSkeleton count={6} />
         ) : items.length === 0 ? (
           <View style={s.empty}>
-            <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>No vendors yet</Text>
+            <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
+              No vendors yet
+            </Text>
             <Text style={[type.body, { marginTop: 4 }]}>Check back soon.</Text>
           </View>
         ) : (

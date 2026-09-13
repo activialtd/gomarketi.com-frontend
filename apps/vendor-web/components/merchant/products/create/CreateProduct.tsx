@@ -4,13 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Image as ImageIcon,
-  Loader2,
-  Info,
-  Star,
-  ArrowLeft,
-} from "lucide-react";
+import { Loader2, Star, ArrowLeft, HelpCircle } from "lucide-react";
 import {
   Input,
   Select,
@@ -24,20 +18,24 @@ import {
   CreateProductFormValues,
   createProductSchema,
 } from "@/lib/validations/schemas";
+import { Field, ImageUpload, Toggle, Section } from "./helpers";
 import {
-  Field,
-  ImageUpload,
-  Toggle,
-  VariantOptionBuilder,
-  Section,
-} from "./helpers";
-import { catalogueApi, ApiError, type CollectionResp, type CategoryResp, type CanonicalProductResp } from "@gomarket/api-client";
+  catalogueApi,
+  ApiError,
+  type CollectionResp,
+  type CategoryResp,
+  type CanonicalProductResp,
+} from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import CanonicalProductTypeahead from "./CanonicalProductTypeahead";
 import { invalidate, useSubscription, useProducts } from "@/lib/swr/hooks";
 import { UpgradeBanner } from "@/components/common/PlanGate";
 
-export default function CreateProductPage({ productId }: { productId?: string }) {
+export default function CreateProductPage({
+  productId,
+}: {
+  productId?: string;
+}) {
   const router = useRouter();
   const accessToken = useAuthStore((s) => s.accessToken);
   const isEditing = !!productId;
@@ -51,7 +49,8 @@ export default function CreateProductPage({ productId }: { productId?: string })
     plan.product_limit !== -1 &&
     (productsData?.total ?? 0) >= plan.product_limit;
   const [images, setImages] = useState<string[]>([]);
-  const [canonicalProduct, setCanonicalProduct] = useState<CanonicalProductResp | null>(null);
+  const [canonicalProduct, setCanonicalProduct] =
+    useState<CanonicalProductResp | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -62,10 +61,12 @@ export default function CreateProductPage({ productId }: { productId?: string })
 
   useEffect(() => {
     if (!accessToken) return;
-    catalogueApi.listCollections(accessToken)
+    catalogueApi
+      .listCollections(accessToken)
       .then((r) => setCollections(r.collections))
       .catch(() => {});
-    catalogueApi.listCategories(accessToken)
+    catalogueApi
+      .listCategories(accessToken)
       .then((cats) => setCategories(cats))
       .catch(() => {});
   }, [accessToken]);
@@ -75,15 +76,12 @@ export default function CreateProductPage({ productId }: { productId?: string })
     handleSubmit,
     control,
     watch,
-    setValue,
     reset,
     formState: { errors },
   } = useForm<CreateProductFormValues>({
     resolver: zodResolver(createProductSchema) as any,
     defaultValues: {
       status: "draft",
-      hasVariants: false,
-      trackInventory: true,
       featured: false,
     },
   });
@@ -97,7 +95,10 @@ export default function CreateProductPage({ productId }: { productId?: string })
         p = await catalogueApi.getProduct(productId, accessToken);
       } catch (err) {
         if (!cancelled) {
-          const message = err instanceof ApiError ? err.message : "Could not load this product. It may have been deleted.";
+          const message =
+            err instanceof ApiError
+              ? err.message
+              : "Could not load this product. It may have been deleted.";
           // eslint-disable-next-line no-console
           console.error("Failed to load product for editing:", err);
           setLoadError(message);
@@ -117,14 +118,15 @@ export default function CreateProductPage({ productId }: { productId?: string })
           stock: p.stock,
           sku: p.sku ?? "",
           status: p.is_published ? "active" : "draft",
-          trackInventory: true,
-          hasVariants: false,
           featured: false,
         });
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error("Product loaded but failed to populate the form:", err);
-        if (!cancelled) setLoadError("This product loaded but couldn't be displayed. Please try again.");
+        if (!cancelled)
+          setLoadError(
+            "This product loaded but couldn't be displayed. Please try again.",
+          );
       } finally {
         if (!cancelled) setLoadingProduct(false);
       }
@@ -136,17 +138,8 @@ export default function CreateProductPage({ productId }: { productId?: string })
 
   const { onBlur: descriptionOnBlur, ...descriptionRegister } =
     register("description");
-  const { onBlur: seoDescriptionOnBlur, ...seoDescriptionRegister } =
-    register("seoDescription");
 
-  const hasVariants = watch("hasVariants");
   const nameVal = watch("name") ?? "";
-  const priceVal = watch("price");
-  const costVal = watch("costPerItem");
-  const margin =
-    priceVal && costVal
-      ? Math.round(((priceVal - costVal) / priceVal) * 100)
-      : null;
 
   async function onSubmit(
     data: CreateProductFormValues,
@@ -168,30 +161,41 @@ export default function CreateProductPage({ productId }: { productId?: string })
         description: data.description || undefined,
         category_id: data.category || undefined,
         price_kobo: Math.round((data.price ?? 0) * 100),
-        stock: data.trackInventory ? (data.stock ?? 0) : 9999,
+        stock: data.stock ?? 9999,
         sku: data.sku || undefined,
         images,
-        tags: data.tags ? data.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+        tags: data.tags
+          ? data.tags
+              .split(",")
+              .map((t) => t.trim())
+              .filter(Boolean)
+          : [],
         canonical_product_id: canonicalProduct?.id ?? undefined,
       };
 
       const productIdForPublish = isEditing
-        ? (await catalogueApi.updateProduct(productId!, payload, accessToken)).id
-        : (await catalogueApi.createProduct({ ...payload, is_digital: false }, accessToken)).id;
+        ? (await catalogueApi.updateProduct(productId!, payload, accessToken))
+            .id
+        : (
+            await catalogueApi.createProduct(
+              { ...payload, is_digital: false },
+              accessToken,
+            )
+          ).id;
 
       if (status === "active") {
         await catalogueApi.publishProduct(productIdForPublish, accessToken);
       } else if (isEditing) {
         await catalogueApi.unpublishProduct(productIdForPublish, accessToken);
       }
-      // Without this, the products list keeps serving its cached SWR
-      // response (5 min dedupingInterval) after navigating back — the new
-      // or edited product wouldn't show up until the cache expired or the
-      // page was hard-refreshed.
       invalidate.products();
       router.push(ROUTES.MERCHANT.PRODUCTS);
     } catch (err) {
-      setSubmitError(err instanceof ApiError ? err.message : "Failed to save product. Please try again.");
+      setSubmitError(
+        err instanceof ApiError
+          ? err.message
+          : "Failed to save product. Please try again.",
+      );
     } finally {
       setter(false);
     }
@@ -199,7 +203,10 @@ export default function CreateProductPage({ productId }: { productId?: string })
 
   if (loadingProduct) {
     return (
-      <div className="w-full flex items-center justify-center py-32 gap-2" style={{ color: "#94a3b8" }}>
+      <div
+        className="w-full flex items-center justify-center py-32 gap-2"
+        style={{ color: "#94a3b8" }}
+      >
         <Loader2 className="w-5 h-5 animate-spin" />
         <span className="text-[13px]">Loading product…</span>
       </div>
@@ -209,7 +216,9 @@ export default function CreateProductPage({ productId }: { productId?: string })
   if (loadError) {
     return (
       <div className="w-full flex flex-col items-center justify-center py-32 gap-3">
-        <p className="text-[13px] font-semibold" style={{ color: "#374151" }}>{loadError}</p>
+        <p className="text-[13px] font-semibold" style={{ color: "#374151" }}>
+          {loadError}
+        </p>
         <button
           type="button"
           onClick={() => router.push(ROUTES.MERCHANT.PRODUCTS)}
@@ -247,7 +256,9 @@ export default function CreateProductPage({ productId }: { productId?: string })
         </h1>
         <div className="flex items-center gap-2">
           {submitError && !atProductLimit && (
-            <span className="text-[12px] font-semibold text-red-500 max-w-[200px] truncate">{submitError}</span>
+            <span className="text-[12px] font-semibold text-red-500 max-w-[200px] truncate">
+              {submitError}
+            </span>
           )}
           <button
             type="button"
@@ -418,7 +429,9 @@ export default function CreateProductPage({ productId }: { productId?: string })
               <ImageUpload
                 images={images}
                 onAdd={(url) => setImages((p) => [...p, url])}
-                onRemove={(i) => setImages((p) => p.filter((_, idx) => idx !== i))}
+                onRemove={(i) =>
+                  setImages((p) => p.filter((_, idx) => idx !== i))
+                }
                 accessToken={accessToken ?? ""}
                 maxImages={maxImages}
               />
@@ -427,9 +440,9 @@ export default function CreateProductPage({ productId }: { productId?: string })
             {/* Pricing */}
             <Section
               title="Pricing"
-              description="Set your selling price, compare price, and cost."
+              description="Set your customer selling price."
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Field label="Price (₦)" required error={errors.price?.message}>
                   <Input
                     type="number"
@@ -440,7 +453,7 @@ export default function CreateProductPage({ productId }: { productId?: string })
                 </Field>
                 <Field
                   label="Compare-at price (₦)"
-                  hint="Shown as strikethrough"
+                  hint="Shown as strikethrough for sales/discounts"
                 >
                   <Input
                     type="number"
@@ -449,253 +462,49 @@ export default function CreateProductPage({ productId }: { productId?: string })
                     {...register("compareAtPrice")}
                   />
                 </Field>
-                <Field label="Cost per item (₦)" hint="Not shown to customers">
-                  <Input
-                    type="number"
-                    min={0}
-                    placeholder="0.00"
-                    {...register("costPerItem")}
-                  />
-                </Field>
               </div>
-
-              {margin !== null && (
-                <div
-                  className="mt-3 flex items-center gap-3 px-4 py-2.5 rounded-[8px] text-[12px]"
-                  style={{
-                    background: "#F0FAF3",
-                    border: "1px solid rgba(26,122,66,0.15)",
-                  }}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ color: "#3D6B4F" }}>Margin:</span>
-                    <strong style={{ color: "#1A7A42" }}>{margin}%</strong>
-                  </div>
-                  <div
-                    className="w-px h-4"
-                    style={{ background: "rgba(26,122,66,0.2)" }}
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <span style={{ color: "#3D6B4F" }}>Profit per unit:</span>
-                    <strong style={{ color: "#1A7A42" }}>
-                      ₦{((priceVal ?? 0) - (costVal ?? 0)).toLocaleString()}
-                    </strong>
-                  </div>
-                </div>
-              )}
             </Section>
 
             {/* Inventory */}
             <Section
               title="Inventory"
-              description="Stock levels, SKU, and tracking."
+              description="Stock levels and internal identification."
             >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-1">
-                  <div>
-                    <p
-                      className="text-[13px] font-semibold"
-                      style={{ color: "#1C1C1C" }}
-                    >
-                      Track inventory
-                    </p>
-                    <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                      GoMarket will count down stock as orders come in
-                    </p>
-                  </div>
-                  <Controller
-                    control={control}
-                    name="trackInventory"
-                    render={({ field }) => (
-                      <Toggle
-                        checked={!!field.value}
-                        onChange={field.onChange}
-                      />
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Field label="Stock quantity" error={errors.stock?.message}>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="0"
-                      {...register("stock")}
-                    />
-                  </Field>
-                  <Field label="SKU" hint="Stock Keeping Unit">
-                    <Input placeholder="e.g. ANK-M-CB" {...register("sku")} />
-                  </Field>
-                  <Field label="Barcode">
-                    <Input
-                      placeholder="ISBN, UPC, GTIN…"
-                      {...register("barcode")}
-                    />
-                  </Field>
-                </div>
-
-                <Field
-                  label="Weight (kg)"
-                  hint="Used to calculate shipping cost"
-                >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field label="Stock quantity" error={errors.stock?.message}>
                   <Input
                     type="number"
                     min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    className="max-w-[140px]"
-                    {...register("weight")}
-                  />
-                </Field>
-              </div>
-            </Section>
-
-            {/* Variants */}
-            <Section
-              title="Variants"
-              description="Add options like size or color. Each combination becomes a variant."
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between py-1">
-                  <div>
-                    <p
-                      className="text-[13px] font-semibold"
-                      style={{ color: "#1C1C1C" }}
-                    >
-                      This product has variants
-                    </p>
-                    <p className="text-[11px]" style={{ color: "#6b7280" }}>
-                      e.g. different sizes, colors, or materials
-                    </p>
-                  </div>
-                  <Controller
-                    control={control}
-                    name="hasVariants"
-                    render={({ field }) => (
-                      <Toggle
-                        checked={!!field.value}
-                        onChange={(v) => {
-                          field.onChange(v);
-                        }}
-                      />
-                    )}
-                  />
-                </div>
-
-                {hasVariants && (
-                  <div
-                    className="pt-2 border-t"
-                    style={{ borderColor: "#f1f5f9" }}
-                  >
-                    <VariantOptionBuilder
-                      control={control}
-                      register={register}
-                      errors={errors}
-                    />
-                    <div
-                      className="mt-4 flex items-start gap-2.5 px-3.5 py-2.5 rounded-[8px] text-[11px]"
-                      style={{
-                        background: "#fffbeb",
-                        border: "1px solid rgba(245,158,11,0.2)",
-                        color: "#92400e",
-                      }}
-                    >
-                      <Info
-                        className="w-3.5 h-3.5 shrink-0 mt-0.5"
-                        style={{ color: "#f59e0b" }}
-                      />
-                      Variant prices, stock, and SKUs can be set individually
-                      after saving the product.
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Section>
-
-            {/* SEO */}
-            <Section
-              title="SEO & storefront"
-              description="Control how this product appears on search engines."
-              collapsible
-            >
-              <div className="space-y-4">
-                <Field
-                  label="Page title"
-                  hint="Shown in browser tabs and search results. Defaults to product name."
-                >
-                  <Input
-                    placeholder={nameVal || "Product page title"}
-                    {...register("seoTitle")}
+                    placeholder="0"
+                    {...register("stock")}
                   />
                 </Field>
                 <Field
-                  label="Meta description"
-                  hint="Short description for search results (under 160 chars)"
+                  label={
+                    <span className="flex items-center gap-1.5">
+                      SKU (Stock Keeping Unit)
+                      <span className="group relative inline-flex">
+                        <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                        <span className="invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-48 p-2 bg-gray-900 text-white text-[10px] rounded shadow-lg z-50 font-normal">
+                          Optional internal code (e.g. ANK-M-CB) to track unique
+                          product styles/variants in your inventory.
+                        </span>
+                      </span>
+                    </span>
+                  }
+                  hint="Optional internal reference code"
                 >
-                  <textarea
-                    rows={2}
-                    placeholder="Describe this product for search engines…"
-                    className="w-full px-3.5 py-2.5 rounded-[10px] border text-[13px] resize-none transition-all outline-none"
-                    style={{
-                      borderColor: "#e2e8f0",
-                      background: "#F0FAF3",
-                      color: "#1C1C1C",
-                      lineHeight: "1.6",
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.background = "#fff";
-                      e.currentTarget.style.borderColor = "#1A7A42";
-                      e.currentTarget.style.outline = "2px solid #1A7A42";
-                      e.currentTarget.style.outlineOffset = "-2px";
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.background = "#F0FAF3";
-                      e.currentTarget.style.borderColor = "#e2e8f0";
-                      e.currentTarget.style.outline = "none";
-                      seoDescriptionOnBlur(e);
-                    }}
-                    {...seoDescriptionRegister}
-                  />
-                </Field>
-                <Field label="URL slug" hint="gomarketi.com/products/…">
-                  <div
-                    className="flex items-center h-[42px] rounded-[10px] border overflow-hidden"
-                    style={{ borderColor: "#e2e8f0" }}
-                    onFocusCapture={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor =
-                        "#1A7A42";
-                      (e.currentTarget as HTMLElement).style.outline =
-                        "2px solid #1A7A42";
-                      (e.currentTarget as HTMLElement).style.outlineOffset =
-                        "-2px";
-                    }}
-                    onBlurCapture={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor =
-                        "#e2e8f0";
-                      (e.currentTarget as HTMLElement).style.outline = "none";
-                    }}
-                  >
-                    <div
-                      className="h-full flex items-center px-3 border-r text-[12px] font-medium shrink-0 select-none"
-                      style={{
-                        background: "#f8fafc",
-                        borderColor: "#e2e8f0",
-                        color: "#6b7280",
-                      }}
-                    >
-                      /products/
-                    </div>
-                    <input
-                      placeholder="ankara-crop-top"
-                      className="flex-1 h-full px-3 text-[13px] outline-none font-mono bg-[#F0FAF3] focus:bg-white transition-colors"
-                      style={{ color: "#1C1C1C" }}
-                      {...register("slug")}
-                    />
-                  </div>
+                  <Input placeholder="e.g. ANK-M-CB" {...register("sku")} />
                 </Field>
               </div>
             </Section>
+
+            {/* Variant Option Builder commented out or removed per request */}
+            {/* 
+            <Section title="Variants" ...>
+              ...
+            </Section> 
+            */}
           </div>
 
           {/* ── RIGHT: Sidebar ─────────────────────────── */}
@@ -841,7 +650,10 @@ export default function CreateProductPage({ productId }: { productId?: string })
                 render={({ field }) => (
                   <div className="space-y-1.5">
                     {collections.length === 0 && (
-                      <p className="text-[12px] py-2" style={{ color: "#94a3b8" }}>
+                      <p
+                        className="text-[12px] py-2"
+                        style={{ color: "#94a3b8" }}
+                      >
                         No collections yet — create one from the Products page.
                       </p>
                     )}

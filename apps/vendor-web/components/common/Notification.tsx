@@ -5,9 +5,9 @@ import {
   AlertCircle,
   CheckCircle2,
   Bell,
-  Link,
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
 
 type NotificationKind = "order" | "vendor" | "system" | "success";
 type Notification = {

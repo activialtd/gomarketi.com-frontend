@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../components/ui/Button";
 import { PRODUCTS, Product } from "../../lib/mock-products";
 import { useCart, formatNaira } from "../../lib/cart-context";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, type, space, tint, HIT } from "../../theme/tokens";
 
 const { width } = Dimensions.get("window");

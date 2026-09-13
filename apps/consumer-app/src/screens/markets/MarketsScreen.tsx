@@ -6,7 +6,7 @@ import { BentoGrid } from "../../components/ui/BentoGrid";
 import { BentoSkeleton } from "../../components/ui/BentoSkeleton";
 import { MarketBentoCard } from "../../components/ui/MarketBentoCard";
 import { getMarkets, Market } from "../../lib/api-client";
-import { useNav } from "../../navigation/AppNavigator";
+import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 
 export function MarketsScreen() {
@@ -24,16 +24,22 @@ export function MarketsScreen() {
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
       <ScreenHeader title="Popular Markets" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={s.scroll}
+      >
         <Text style={[type.body, s.intro]}>
-          Browse well-known markets and see everything vendors there are selling.
+          Browse well-known markets and see everything vendors there are
+          selling.
         </Text>
 
         {loading ? (
           <BentoSkeleton count={8} />
         ) : markets.length === 0 ? (
           <View style={s.empty}>
-            <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>No markets yet</Text>
+            <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
+              No markets yet
+            </Text>
           </View>
         ) : (
           <BentoGrid
