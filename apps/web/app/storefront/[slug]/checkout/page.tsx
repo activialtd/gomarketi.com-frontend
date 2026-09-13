@@ -21,6 +21,8 @@ async function getStoreData(slug: string) {
       id: string;
       name: string;
       theme_config?: string;
+      delivery_fee_kobo?: number;
+      free_delivery_threshold_kobo?: number;
     };
   } catch {
     return null;
@@ -36,7 +38,13 @@ export default async function Page({
   const store = await getStoreData(slug);
   if (!store) notFound();
 
-  const props = { storeId: store.id, storeSlug: slug, storeName: store.name };
+  const props = {
+    storeId: store.id,
+    storeSlug: slug,
+    storeName: store.name,
+    deliveryFeeKobo: store.delivery_fee_kobo ?? 150000,
+    freeDeliveryThresholdKobo: store.free_delivery_threshold_kobo ?? 5000000,
+  };
 
   switch (STORE_CONFIG.template) {
     case "lagos":

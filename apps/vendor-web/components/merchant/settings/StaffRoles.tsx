@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { Loader2, UserPlus, Trash2, PencilLine, CheckCircle2, ShieldCheck, Eye, Package, Headphones, BarChart2 } from "lucide-react";
 import { staffApi, type StaffResp, type CreateStaffReq } from "@gomarket/api-client";
-import { useStaff, invalidate } from "@/lib/swr/hooks";
+import { useStaff, useSubscription, invalidate } from "@/lib/swr/hooks";
 import { useAuthStore } from "@/store/useAuthStore";
+import { UpgradeBanner } from "@/components/common/PlanGate";
 
 function tok() { return useAuthStore.getState().accessToken ?? ""; }
 
@@ -208,7 +209,11 @@ function StaffCard({ member, onRemove }: { member: StaffResp; onRemove: () => vo
 
 export default function StaffRoles() {
   const { data: staff = [], isLoading } = useStaff();
+  const { data: subscription } = useSubscription();
   const [showModal, setShowModal] = useState(false);
+
+  const teamLimit = subscription?.plan?.team_limit;
+  const atTeamLimit = typeof teamLimit === "number" && teamLimit !== -1 && staff.length >= teamLimit;
 
   return (
     <div className="w-full">
@@ -222,12 +227,22 @@ export default function StaffRoles() {
           </div>
           <button
             onClick={() => setShowModal(true)}
-            style={{ display: "flex", alignItems: "center", gap: "7px", height: "38px", padding: "0 16px", borderRadius: "9px", border: "none", background: "#1A7A42", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}
+            disabled={atTeamLimit}
+            style={{ display: "flex", alignItems: "center", gap: "7px", height: "38px", padding: "0 16px", borderRadius: "9px", border: "none", background: atTeamLimit ? "#94a3b8" : "#1A7A42", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: atTeamLimit ? "not-allowed" : "pointer", flexShrink: 0 }}
           >
             <UserPlus className="w-4 h-4" /> Add staff
           </button>
         </div>
       </div>
+
+      {atTeamLimit && (
+        <div className="px-6 lg:px-8 pt-5">
+          <UpgradeBanner
+            label={`You've reached your plan's ${teamLimit}-team-member limit`}
+            message="Upgrade to add more people to your team."
+          />
+        </div>
+      )}
 
       {/* Role overview */}
       <div className="px-6 lg:px-8 pt-6 pb-2">

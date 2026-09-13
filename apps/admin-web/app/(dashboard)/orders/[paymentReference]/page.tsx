@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { mutate } from "swr";
-import { ArrowLeft, CheckCircle2, Truck, RotateCcw, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Truck, RotateCcw, Loader2, AlertTriangle, XCircle, Banknote } from "lucide-react";
 import { adminApi, type AdminOrderStatus } from "@gomarket/api-client";
 import { useAuthStore, roleAtLeast } from "@/store/useAuthStore";
 import { useBatch } from "@/lib/swr/hooks";
@@ -77,6 +77,35 @@ export default function BatchDetailPage({ params }: { params: Promise<{ paymentR
     }
   }
 
+  async function handleDismissDispute(orderId: string) {
+    if (!accessToken) return;
+    setBusyId(orderId);
+    setActionError(null);
+    try {
+      await adminApi.dismissDispute(orderId, accessToken);
+      await mutate(key);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Dismissing dispute failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleRefundDispute(orderId: string) {
+    if (!accessToken) return;
+    if (!confirm("Refund the buyer for this order via Paystack? This cancels the order and reverses the vendor's payout.")) return;
+    setBusyId(orderId);
+    setActionError(null);
+    try {
+      await adminApi.refundDispute(orderId, accessToken);
+      await mutate(key);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Dispute refund failed");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (isLoading) return <p className="text-[13px] text-muted-soft">Loading…</p>;
   if (error || !data) return <p className="text-[13px] text-red-600">Order not found.</p>;
 
@@ -131,10 +160,23 @@ export default function BatchDetailPage({ params }: { params: Promise<{ paymentR
             <div key={o.id} className="card p-4">
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[14px] font-bold text-foreground">{o.store_name}</p>
-                <span className="badge" style={{ background: style.bg, color: style.fg }}>
-                  {style.label}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {o.dispute_status === "reported" && (
+                    <span className="badge" style={{ background: "rgba(239,68,68,0.1)", color: "#dc2626" }}>
+                      <AlertTriangle className="h-3 w-3" /> Reported missing
+                    </span>
+                  )}
+                  <span className="badge" style={{ background: style.bg, color: style.fg }}>
+                    {style.label}
+                  </span>
+                </div>
               </div>
+              {o.dispute_status === "reported" && (
+                <p className="mb-2 text-[12px] text-red-600">
+                  Buyer says this wasn't received{o.dispute_reason ? `: "${o.dispute_reason}"` : "."}
+                  {o.disputed_at ? ` — reported ${fmtDate(o.disputed_at)}` : ""}
+                </p>
+              )}
               <p className="mb-3 text-[13px] text-muted">
                 {o.items.map((i) => `${i.name} ×${i.quantity}`).join(", ") || "—"} · {fmtNaira(o.total_kobo)}
               </p>
@@ -180,6 +222,27 @@ export default function BatchDetailPage({ params }: { params: Promise<{ paymentR
                     {busyId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
                     Release escrow manually
                   </button>
+                )}
+                {canDispatch && o.dispute_status === "reported" && (
+                  <>
+                    <button
+                      onClick={() => handleRefundDispute(o.id)}
+                      disabled={busyId !== null}
+                      className="btn h-8 px-3"
+                      style={{ background: "rgba(239,68,68,0.1)", color: "#dc2626" }}
+                    >
+                      {busyId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Banknote className="h-3.5 w-3.5" />}
+                      Refund buyer
+                    </button>
+                    <button
+                      onClick={() => handleDismissDispute(o.id)}
+                      disabled={busyId !== null}
+                      className="btn btn-ghost h-8 px-3"
+                    >
+                      {busyId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
+                      Dismiss dispute
+                    </button>
+                  </>
                 )}
               </div>
             </div>

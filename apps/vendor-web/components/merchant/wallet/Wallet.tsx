@@ -5,15 +5,28 @@ import { Eye, EyeOff, ArrowUpRight, Lock, Zap, Wallet, Loader2 } from "lucide-re
 import { fmtNaira } from "@gomarket/shared-utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { WithdrawModal, TransactionRow } from "./helpers";
-import { useWallet, useSubscription, invalidate } from "@/lib/swr/hooks";
+import { useWallet, useSubscription, useMyStore, invalidate } from "@/lib/swr/hooks";
+import { NoStoreBanner } from "@/components/common/NoStoreBanner";
 
 export default function WalletPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const [balanceVisible, setBalanceVisible] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
+  const { data: store, isLoading: loadingStore } = useMyStore();
   const { data: wallet, isLoading: loading, mutate } = useWallet();
   const { data: subscription } = useSubscription();
+
+  if (!loadingStore && !store) {
+    return (
+      <div className="w-full px-6 lg:px-8 py-5">
+        <NoStoreBanner
+          title="Your wallet isn't set up yet"
+          body="GoMarket Wallet activates once you've created your store — that's what your dedicated account and balance are tied to."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

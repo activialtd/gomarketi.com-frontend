@@ -89,6 +89,8 @@ export interface StoreUpdatePayload {
   hero_image_url?: string;
   social_links?: SocialLinks;
   theme_config?: Partial<ThemeConfig>;
+  delivery_fee_kobo?: number;
+  free_delivery_threshold_kobo?: number;
 }
 
 export interface StoreAssetResp {
@@ -171,6 +173,8 @@ export interface StoreResp {
   site_description?: string;
   social_links?: SocialLinks;
   theme_config?: string; // raw JSON string
+  delivery_fee_kobo: number;
+  free_delivery_threshold_kobo: number;
   is_active: boolean;
   created_at: string;
 }
@@ -251,6 +255,7 @@ export interface OrderResp {
   status: OrderStatus;
   items: OrderItem[];
   total_kobo: number;
+  delivery_fee_kobo: number;
   delivery_address: string;
   created_at: string;
   updated_at: string;
@@ -336,6 +341,7 @@ export interface CreateOrderReq {
   customer_phone?: string;
   delivery_address?: string;
   items: CreateOrderItem[];
+  delivery_fee_kobo?: number;
   payment_reference: string;
 }
 
@@ -1447,19 +1453,29 @@ export const adminApi = {
     request<{ ok: true }>(
       `/v1/admin/orders/${orderId}/release-escrow`,
       { method: "POST", body: "{}" },
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/release-escrow`, { method: "POST", body: "{}" }, token),
+
+  listDisputes: (params: AdminListParams, token: string) =>
+    request<{ disputes: AdminDisputeSummary[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/disputes${toQueryString(params)}`,
+      {},
       token,
     ),
 
-  listErrors: (params: AdminErrorListParams, token: string) =>
-    request<{
-      errors: AdminErrorEvent[];
-      total: number;
-      page: number;
-      per_page: number;
-    }>(`/v1/admin/errors${toErrorQueryString(params)}`, {}, token),
+  dismissDispute: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/dismiss-dispute`, { method: "POST", body: "{}" }, token),
 
-  getError: (id: string, token: string) =>
-    request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
+  refundDispute: (orderId: string, token: string) =>
+    request<{ ok: true }>(`/v1/admin/orders/${orderId}/refund-dispute`, { method: "POST", body: "{}" }, token),
+
+  listErrors: (params: AdminErrorListParams, token: string) =>
+    request<{ errors: AdminErrorEvent[]; total: number; page: number; per_page: number }>(
+      `/v1/admin/errors${toErrorQueryString(params)}`,
+      {},
+      token,
+    ),
+
+  getError: (id: string, token: string) => request<AdminErrorEvent>(`/v1/admin/errors/${id}`, {}, token),
 
   resolveError: (id: string, token: string) =>
     request<{ ok: true }>(
@@ -1474,6 +1490,7 @@ export const adminApi = {
 export type AdminOrderStatus =
   "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 export type AdminEscrowStatus = "held" | "released" | "reversed" | null;
+export type AdminDisputeStatus = "reported" | "refunded" | "dismissed";
 
 export interface AdminBatchSummary {
   payment_reference: string;
@@ -1510,9 +1527,24 @@ export interface AdminBatchOrder {
   delivery_confirmed_at: string | null;
   cancelled_reason: string | null;
   refund_reference: string | null;
+  dispute_status: AdminDisputeStatus | null;
+  dispute_reason: string | null;
+  disputed_at: string | null;
   created_at: string;
   wallet_status: "pending" | "completed" | "failed" | null;
   items: AdminBatchOrderItem[];
+}
+
+export interface AdminDisputeSummary {
+  id: string;
+  payment_reference: string | null;
+  store_id: string;
+  store_name: string;
+  customer_name: string;
+  customer_email: string;
+  total_kobo: string;
+  dispute_reason: string | null;
+  disputed_at: string;
 }
 
 export interface AdminBatchDetail {

@@ -11,7 +11,6 @@ import {
   Crown,
   Loader2,
   ArrowRight,
-  X,
 } from "lucide-react";
 import { identityApi, type PlanResp } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -88,9 +87,10 @@ export default function PlanSelection() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Top nav */}
+      {/* Top nav — no skip: a plan (even Free) is required before setup,
+          there's no cost-based reason left to defer it. */}
       <div className="border-b border-slate-200">
-        <div className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
+        <div className="px-6 py-4 flex items-center max-w-6xl mx-auto">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-[8px] flex items-center justify-center bg-[#0A2E1A]">
               <span className="text-white text-[13px] font-extrabold">G</span>
@@ -99,12 +99,6 @@ export default function PlanSelection() {
               GoMarketi
             </span>
           </div>
-          <button
-            onClick={() => router.push(ROUTES.ONBOARDING.SETUP)}
-            className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500 hover:text-slate-700 transition-colors"
-          >
-            Skip for now <X className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 

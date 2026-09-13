@@ -10,7 +10,7 @@ import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
 import { SWRProvider } from "@/lib/swr/provider";
 import { useOrderEvents } from "@/lib/swr/hooks";
-import { authApi, storefrontApi } from "@gomarket/api-client";
+import { authApi, storefrontApi, identityApi } from "@gomarket/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 
@@ -24,6 +24,9 @@ export default function MerchantLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [storeName, setStoreName] = useState("My Store");
   const [storeSlug, setStoreSlug] = useState("");
+  // Starts true so the dashboard never flashes before the onboarding-step
+  // check below has had a chance to redirect an incomplete vendor away.
+  const [checkingOnboarding, setCheckingOnboarding] = useState(true);
   const router = useRouter();
   const { user, hydrating, clearAuth, accessToken } = useAuthStore();
 
@@ -74,9 +77,25 @@ export default function MerchantLayout({
       router.replace(`${ROUTES.AUTH.SIGNUP}?email=${encodeURIComponent(user.email ?? "")}`);
       return;
     }
-  }, [hydrating, user, router]);
+    if (!accessToken) return;
 
-  if (hydrating || !user || !user.is_email_verified) {
+    // A plan (even Free) is mandatory before the dashboard — there's no
+    // cost-based reason left to defer it. This is the back-door check:
+    // PlanSelection's own "skip" button is gone, but a vendor could still
+    // navigate here directly (bookmark, browser history, typed URL).
+    identityApi
+      .getMe(accessToken)
+      .then((me) => {
+        if (me.vendor && me.vendor.onboarding_step === "account_created") {
+          router.replace(ROUTES.ONBOARDING.PLANS);
+          return;
+        }
+        setCheckingOnboarding(false);
+      })
+      .catch(() => setCheckingOnboarding(false)); // fail open — don't strand a vendor behind a broken check
+  }, [hydrating, user, accessToken, router]);
+
+  if (hydrating || !user || !user.is_email_verified || checkingOnboarding) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f8fafc]">
         <div
