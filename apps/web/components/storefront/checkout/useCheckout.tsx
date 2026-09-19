@@ -79,7 +79,10 @@ export const FREE_SHIPPING_THRESHOLD_KOBO = 5_000_000;
 export const FLAT_SHIPPING_KOBO = 150_000;
 
 // ── Delivery zones ────────────────────────────────────────────────────────────
-// All fees in kobo (₦2,500 = 250_000).
+// All fees in kobo (₦1,500 = 150_000).
+// The orders service rejects any delivery fee above maxDeliveryFeeKobo
+// (currently ₦4,000, the Festac fee). Raise that constant in the backend
+// before adding a zone that costs more.
 
 export type DeliveryZone = {
   id: string;
@@ -92,7 +95,7 @@ export const DELIVERY_ZONES: DeliveryZone[] = [
   {
     id: "ogba",
     name: "Ogba Busstop",
-    feeKobo: 250_000,
+    feeKobo: 150_000,
     note: "If your package is big, the dispatch company will call you to balance up.",
   },
   {
@@ -141,11 +144,11 @@ export const DELIVERY_ZONES: DeliveryZone[] = [
   },
 ];
 
-// TODO(backend): services/orders CreateOrder verifies the Paystack amount
-// against the items total only and ignores delivery_fee_kobo. Until the
-// backend adds delivery to that check, Paystack charges items only and the
-// delivery fee is paid on delivery. Set to true once the backend is fixed.
-export const CHARGE_DELIVERY_AT_CHECKOUT = false;
+// When true, Paystack charges items + delivery and the order sends the same
+// delivery_fee_kobo; the orders service verifies Paystack against that sum.
+// Requires the backend change that adds delivery_fee_kobo to the verify step.
+// Set to false to fall back to charging items only (delivery paid on arrival).
+export const CHARGE_DELIVERY_AT_CHECKOUT = true;
 
 export type CheckoutProps = {
   storeId: string | null;
@@ -307,6 +310,7 @@ export function useCheckout({
     // No delivery or note field on the order yet, so the vendor sees the
     // chosen zone and note inside the delivery address.
     const zone = pendingZone.current;
+    const zoneFee = allDigital ? 0 : zone.feeKobo;
     const addressParts = [
       `${pendingCustomer.address}, ${pendingCustomer.city}, ${pendingCustomer.state}`,
     ];
@@ -336,8 +340,8 @@ export function useCheckout({
         quantity: l.quantity,
         price_kobo: unitKobo(l.unitPrice),
       })),
-      delivery_fee_kobo:
-        CHARGE_DELIVERY_AT_CHECKOUT && !allDigital ? zone.feeKobo : 0,
+      // Must equal the delivery part of what Paystack charged.
+      delivery_fee_kobo: CHARGE_DELIVERY_AT_CHECKOUT ? zoneFee : 0,
       payment_reference: ref,
     };
 
