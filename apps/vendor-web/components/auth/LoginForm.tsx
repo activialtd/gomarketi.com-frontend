@@ -198,13 +198,13 @@ export function LoginForm() {
             label="Continue with Google"
           />
           <div className="mb-2" />
-          <OAuthBtn
+          {/* <OAuthBtn
             onClick={() => handleOAuth("apple")}
             loading={oauthLoading === "apple"}
             disabled={busy}
             icon={<AppleIconRefined className="w-4 h-4 fill-current" />}
             label="Continue with Apple"
-          />
+          /> */}
 
           {/* ── Divider ─────────────────────────────────────── */}
           <div className="flex items-center gap-2.5 my-[18px]">

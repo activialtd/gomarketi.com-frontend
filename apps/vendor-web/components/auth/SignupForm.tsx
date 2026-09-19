@@ -418,13 +418,13 @@ export function SignupForm() {
             icon={<GoogleIcon />}
             label="Sign up with Google"
           />
-          <OAuthBtn
+          {/* <OAuthBtn
             onClick={() => handleOAuth("apple")}
             loading={oauthLoading === "apple"}
             disabled={busy}
             icon={<AppleIconRefined className="w-4 h-4 fill-current" />}
             label="Sign up with Apple"
-          />
+          /> */}
 
           <OrDivider />
 
