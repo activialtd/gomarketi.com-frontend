@@ -422,7 +422,7 @@ export function SignupForm() {
             onClick={() => handleOAuth("apple")}
             loading={oauthLoading === "apple"}
             disabled={busy}
-            icon={<AppleIconRefined />}
+            icon={<AppleIconRefined className="w-4 h-4 fill-current" />}
             label="Sign up with Apple"
           />
 
