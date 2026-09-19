@@ -55,17 +55,29 @@ export function LoginForm() {
       if (isStaffMode) {
         const resp = await staffApi.staffLogin(data.email, data.password);
         setAuth(
-          { id: resp.user.id, email: resp.user.email, is_email_verified: true, profile_completed: true, is_buyer: false, is_vendor: false },
+          {
+            id: resp.user.id,
+            email: resp.user.email,
+            is_email_verified: true,
+            profile_completed: true,
+            is_buyer: false,
+            is_vendor: false,
+          },
           resp.access_token,
         );
         setAuthSession();
         router.push(ROUTES.MERCHANT.OVERVIEW);
       } else {
-        const resp = await authApi.login({ email: data.email, password: data.password });
+        const resp = await authApi.login({
+          email: data.email,
+          password: data.password,
+        });
         setAuth(resp.user, resp.access_token);
         setAuthSession();
         if (!resp.user.is_email_verified) {
-          router.push(`${ROUTES.AUTH.SIGNUP}?email=${encodeURIComponent(data.email)}`);
+          router.push(
+            `${ROUTES.AUTH.SIGNUP}?email=${encodeURIComponent(data.email)}`,
+          );
         } else {
           router.push(ROUTES.MERCHANT.OVERVIEW);
         }
@@ -95,7 +107,7 @@ export function LoginForm() {
         let destination: string = ROUTES.MERCHANT.OVERVIEW;
         try {
           const profile = await identityApi.getVendorProfile(resp.access_token);
-          if (!profile.is_active) destination = ROUTES.ONBOARDING.WELCOME;
+          if (!profile.is_active) destination = ROUTES.MERCHANT.OVERVIEW;
         } catch {
           // No vendor profile — create it and send to onboarding
           await identityApi.startOnboarding(resp.access_token).catch(() => {});
@@ -120,15 +132,29 @@ export function LoginForm() {
     <div className="animate-in fade-in duration-500 w-full">
       {/* ── Header ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[10px] font-extrabold uppercase"
-          style={{ letterSpacing: "0.18em", color: isStaffMode ? "#7c3aed" : "#1A7A42" }}>
+        <p
+          className="text-[10px] font-extrabold uppercase"
+          style={{
+            letterSpacing: "0.18em",
+            color: isStaffMode ? "#7c3aed" : "#1A7A42",
+          }}
+        >
           {isStaffMode ? "Staff portal" : "Vendor portal"}
         </p>
         <button
           type="button"
-          onClick={() => { setIsStaffMode((v) => !v); setApiError(null); reset(); }}
+          onClick={() => {
+            setIsStaffMode((v) => !v);
+            setApiError(null);
+            reset();
+          }}
           className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1.5 rounded-lg transition-colors"
-          style={{ color: isStaffMode ? "#1A7A42" : "#7c3aed", background: isStaffMode ? "#f0fdf4" : "#f5f3ff", border: "none", cursor: "pointer" }}
+          style={{
+            color: isStaffMode ? "#1A7A42" : "#7c3aed",
+            background: isStaffMode ? "#f0fdf4" : "#f5f3ff",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
           <Users className="w-3 h-3" />
           {isStaffMode ? "Vendor login" : "Staff login"}
@@ -151,7 +177,17 @@ export function LoginForm() {
 
       {/* ── OAuth buttons (vendor mode only) ────────────────── */}
       {/* Off-screen div where GSI renders the real Google button (needs real dimensions, not 0×0) */}
-      <div ref={googleButtonRef} style={{ position: "fixed", left: -9999, top: -9999, width: 360, height: 44 }} aria-hidden />
+      <div
+        ref={googleButtonRef}
+        style={{
+          position: "fixed",
+          left: -9999,
+          top: -9999,
+          width: 360,
+          height: 44,
+        }}
+        aria-hidden
+      />
       {!isStaffMode && (
         <>
           <OAuthBtn
@@ -173,7 +209,10 @@ export function LoginForm() {
           {/* ── Divider ─────────────────────────────────────── */}
           <div className="flex items-center gap-2.5 my-[18px]">
             <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
-            <span className="text-[10px] font-bold uppercase" style={{ letterSpacing: "0.12em", color: "rgba(61,107,79,0.5)" }}>
+            <span
+              className="text-[10px] font-bold uppercase"
+              style={{ letterSpacing: "0.12em", color: "rgba(61,107,79,0.5)" }}
+            >
               or
             </span>
             <div className="flex-1 h-px" style={{ background: "#e2e8f0" }} />
