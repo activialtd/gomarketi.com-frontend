@@ -8,9 +8,6 @@ import {
   ShoppingBag,
   Loader2,
   AlertCircle,
-  ArrowRight,
-  Search,
-  RefreshCw,
   X as XIcon,
 } from "lucide-react";
 import { PaystackModal } from "@/components/storefront/PaystackModal";
@@ -18,63 +15,26 @@ import {
   useCheckout,
   fmtNaira,
   NIGERIAN_STATES,
-  FREE_SHIPPING_THRESHOLD_KOBO,
+  DELIVERY_ZONES,
   type CheckoutProps,
 } from "../checkout/useCheckout";
-
-const STRATEGIC_LOCATIONS = [
-  {
-    id: "ogba",
-    name: "Ogba Busstop",
-    price: 2500,
-    note: "If your package is big, dispatch company will call You to balance",
-  },
-  {
-    id: "festac",
-    name: "Festac",
-    price: 4000,
-    note: "If package big you be called",
-  },
-  {
-    id: "abeokuta",
-    name: "Abeokuta",
-    price: 3000,
-    note: "If package big, you will be called to balance up",
-  },
-  {
-    id: "ikeja",
-    name: "Ikeja",
-    price: 2500,
-    note: "Standard delivery. Dispatch may call for oversized items.",
-  },
-  {
-    id: "lekki",
-    name: "Lekki / Ajah",
-    price: 3500,
-    note: "Standard delivery. Dispatch may call for oversized items.",
-  },
-  { id: "vi", name: "Victoria Island", price: 3000, note: "Standard delivery" },
-  {
-    id: "yaba",
-    name: "Yaba / Surulere",
-    price: 2000,
-    note: "Standard delivery",
-  },
-  { id: "ikoyi", name: "Ikoyi", price: 3000, note: "Standard delivery" },
-  { id: "magodo", name: "Magodo", price: 2500, note: "Standard delivery" },
-  { id: "gbagada", name: "Gbagada", price: 2000, note: "Standard delivery" },
-];
 
 export default function LagosCheckout(props: CheckoutProps) {
   const {
     form: {
       register,
       handleSubmit,
-      setValue,
       formState: { errors },
     },
     lines,
     subtotal,
+    shipping,
+    total,
+    allDigital,
+    deliveryPaidLater,
+    deliveryZone,
+    setDeliveryZone,
+    storeReady,
     isPlacing,
     orderPlaced,
     orderNumber,
@@ -88,7 +48,6 @@ export default function LagosCheckout(props: CheckoutProps) {
 
   const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedZone, setSelectedZone] = useState(STRATEGIC_LOCATIONS[0]);
 
   const shopUrl = "/shop";
   const accent = "var(--store-primary, #22C55E)";
@@ -97,31 +56,25 @@ export default function LagosCheckout(props: CheckoutProps) {
       err ? "border-red-500/50" : "border-white/10"
     }`;
 
-  // Override shipping with local selection
-  const currentShipping = selectedZone.price;
-  const currentTotal = subtotal + currentShipping;
-
-  const filteredLocations = STRATEGIC_LOCATIONS.filter((loc) =>
-    loc.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredZones = DELIVERY_ZONES.filter((z) =>
+    z.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const handlePlaceOrder = (data: any) => {
-    // Attach selected shipping info to the form data submission
-    onSubmit({
-      ...data,
-      shippingMethod: selectedZone.name,
-      shippingCost: currentShipping,
-    });
-  };
+  const shippingLabel =
+    shipping === 0
+      ? "Free"
+      : deliveryPaidLater
+        ? `${fmtNaira(shipping)} on delivery`
+        : fmtNaira(shipping);
+
+  const placeDisabled = isPlacing || !storeReady;
+  const submit = handleSubmit(onSubmit);
 
   if (orderPlaced) {
     return (
       <div className="min-h-screen bg-black text-white">
         <div className="max-w-md mx-auto px-5 py-24 text-center">
-          <div
-            className="w-16 h-16 rounded-full border border-white/10 flex items-center justify-center mx-auto mb-6"
-            style={{ background: "rgba(255,255,255,0.03)" }}
-          >
+          <div className="w-16 h-16 rounded-full border border-white/10 bg-white/[0.03] flex items-center justify-center mx-auto mb-6">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
               <path
                 d="M5 13l4 4L19 7"
@@ -146,7 +99,7 @@ export default function LagosCheckout(props: CheckoutProps) {
             href={shopUrl}
             className="inline-flex items-center gap-2 bg-white text-black rounded-xl px-6 py-3 text-sm font-extrabold hover:bg-white/90 transition-colors"
           >
-            Continue shopping <ArrowRight className="w-4 h-4" />
+            Continue shopping
           </Link>
         </div>
       </div>
@@ -166,7 +119,7 @@ export default function LagosCheckout(props: CheckoutProps) {
             href={shopUrl}
             className="text-white font-bold text-sm border-b border-white/40 pb-0.5"
           >
-            Browse products →
+            Browse products
           </Link>
         </div>
       </div>
@@ -192,15 +145,12 @@ export default function LagosCheckout(props: CheckoutProps) {
 
         <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_400px]">
           {/* Form */}
-          <form
-            onSubmit={handleSubmit(handlePlaceOrder)}
-            className="flex flex-col gap-8"
-          >
+          <form onSubmit={submit} className="flex flex-col gap-8">
             <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
                 Checkout
               </h1>
-              <span className="text-[11px] font-semibold text-white/40 uppercase tracking-[0.12em]">
+              <span className="text-[11px] font-semibold text-white/40">
                 {lines.length} item{lines.length !== 1 && "s"}
               </span>
             </div>
@@ -273,37 +223,44 @@ export default function LagosCheckout(props: CheckoutProps) {
               </div>
             </Section>
 
-            <Section step={3} title="Shipping Method" accent={accent}>
-              <div
-                onClick={() => setIsShippingModalOpen(true)}
-                className="w-full rounded-[10px] border border-white/20 bg-white/[0.05] p-4 cursor-pointer hover:bg-white/[0.08] transition-colors flex items-center justify-between"
-              >
-                <div>
-                  <p className="text-[13px] font-semibold text-white">
-                    {selectedZone.name}
+            {!allDigital && (
+              <Section step={3} title="Shipping method" accent={accent}>
+                <button
+                  type="button"
+                  onClick={() => setIsShippingModalOpen(true)}
+                  className="w-full text-left rounded-[10px] border border-white/20 bg-white/[0.05] p-4 hover:bg-white/[0.08] transition-colors flex items-center justify-between"
+                >
+                  <div>
+                    <p className="text-[13px] font-semibold text-white">
+                      {deliveryZone.name}
+                    </p>
+                    <p className="text-[11px] text-white/60 mt-0.5 line-clamp-1">
+                      {deliveryZone.note}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-[13px] font-bold text-white">
+                      {fmtNaira(deliveryZone.feeKobo)}
+                    </span>
+                    <ChevronLeft className="w-4 h-4 text-white/40 rotate-180" />
+                  </div>
+                </button>
+                {deliveryPaidLater && (
+                  <p className="text-[11px] text-white/50">
+                    You pay the delivery fee to the dispatch rider when your
+                    order arrives.
                   </p>
-                  <p className="text-[11px] text-white/60 mt-0.5 line-clamp-1">
-                    {selectedZone.note}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-[13px] font-bold text-white">
-                    {fmtNaira(selectedZone.price)}
-                  </span>
-                  <ChevronLeft className="w-4 h-4 text-white/40 rotate-180" />
-                </div>
-              </div>
-            </Section>
+                )}
+              </Section>
+            )}
 
             <Section
-              step={4}
+              step={allDigital ? 3 : 4}
               accent={accent}
               title={
                 <>
                   Order note{" "}
-                  <span className="normal-case tracking-normal font-medium text-white/40">
-                    (optional)
-                  </span>
+                  <span className="font-medium text-white/40">(optional)</span>
                 </>
               }
             >
@@ -320,9 +277,7 @@ export default function LagosCheckout(props: CheckoutProps) {
           <aside className="w-full">
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 lg:sticky lg:top-6">
               <div className="flex items-center justify-between mb-5">
-                <p className="text-[12px] font-extrabold uppercase tracking-[0.12em]">
-                  Order summary
-                </p>
+                <p className="text-[13px] font-extrabold">Order summary</p>
                 <span className="text-[11px] text-white/40">
                   {lines.length} item{lines.length !== 1 && "s"}
                 </span>
@@ -362,38 +317,21 @@ export default function LagosCheckout(props: CheckoutProps) {
 
               <div className="border-t border-white/10 pt-4 flex flex-col gap-2.5">
                 <Row label="Subtotal" value={fmtNaira(subtotal)} />
-                <Row
-                  label="Shipping"
-                  value={
-                    currentShipping === 0 ? "Free" : fmtNaira(currentShipping)
-                  }
-                />
-                {currentShipping > 0 && (
-                  <p
-                    className="text-[10px] font-semibold"
-                    style={{ color: accent }}
-                  >
-                    Add{" "}
-                    {fmtNaira(
-                      Math.max(0, FREE_SHIPPING_THRESHOLD_KOBO - subtotal),
-                    )}{" "}
-                    more for free shipping
-                  </p>
-                )}
+                <Row label="Delivery" value={shippingLabel} />
                 <div className="flex items-baseline justify-between pt-3 mt-1 border-t border-white/10">
-                  <span className="text-[12px] font-extrabold uppercase tracking-[0.12em]">
-                    Total
+                  <span className="text-[13px] font-extrabold">
+                    {deliveryPaidLater ? "Pay now" : "Total"}
                   </span>
                   <span className="text-xl font-black text-white">
-                    {fmtNaira(currentTotal)}
+                    {fmtNaira(total)}
                   </span>
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={handleSubmit(handlePlaceOrder)}
-                disabled={isPlacing}
+                onClick={submit}
+                disabled={placeDisabled}
                 className="mt-6 w-full h-12 rounded-xl bg-white text-black text-sm font-extrabold flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-white/90 active:scale-[0.99] transition-all"
               >
                 {isPlacing ? (
@@ -401,9 +339,7 @@ export default function LagosCheckout(props: CheckoutProps) {
                 ) : (
                   <Lock className="w-4 h-4" />
                 )}
-                {isPlacing
-                  ? "Placing order…"
-                  : `Place order · ${fmtNaira(currentTotal)}`}
+                {isPlacing ? "Placing order…" : `Pay ${fmtNaira(total)}`}
               </button>
 
               <p className="text-[10px] text-white/40 text-center mt-3 flex items-center justify-center gap-1.5">
@@ -416,7 +352,7 @@ export default function LagosCheckout(props: CheckoutProps) {
 
       {showPaystack && pendingCustomer && (
         <PaystackModal
-          amount={currentTotal}
+          amount={total}
           email={pendingCustomer.email}
           storeName={props.storeName ?? "GoMarketi Store"}
           onSuccess={handlePaystackSuccess}
@@ -424,56 +360,53 @@ export default function LagosCheckout(props: CheckoutProps) {
         />
       )}
 
-      {/* Shipping Location Modal matching "WhatsApp Image 2026-09-08 at 11.34.06.jpeg" */}
       {isShippingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="bg-white text-black w-full max-w-[420px] rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white text-black w-full max-w-[420px] rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
             <div className="px-5 py-4 flex items-center justify-between border-b border-gray-100">
               <h2 className="text-[17px] font-bold text-gray-900">
-                Select Shipping
+                Select delivery area
               </h2>
-              <div className="flex items-center gap-1">
-                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-                  <Search className="w-4 h-4" />
-                </button>
-                <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsShippingModalOpen(false)}
-                  className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <XIcon className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsShippingModalOpen(false)}
+                aria-label="Close"
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <XIcon className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search shipping..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-11 pl-4 pr-10 rounded-xl border border-gray-200 bg-white text-[14px] outline-none placeholder:text-gray-400 focus:border-green-500 transition-colors"
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="Search areas"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-11 px-4 rounded-xl border border-gray-200 bg-white text-[14px] outline-none placeholder:text-gray-400 focus:border-green-500 transition-colors"
+              />
             </div>
 
             <div className="flex-1 overflow-y-auto max-h-[50vh] sm:max-h-[400px]">
-              {filteredLocations.map((loc) => {
-                const isSelected = selectedZone.id === loc.id;
+              {filteredZones.map((zone) => {
+                const isSelected = deliveryZone.id === zone.id;
                 return (
-                  <label
-                    key={loc.id}
-                    className={`flex items-start gap-3 p-5 cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50 ${isSelected ? "bg-green-50/30" : ""}`}
+                  <button
+                    type="button"
+                    key={zone.id}
+                    className={`w-full text-left flex items-start gap-3 p-5 border-b border-gray-100 transition-colors hover:bg-gray-50 ${
+                      isSelected ? "bg-green-50/30" : ""
+                    }`}
                     onClick={() => {
-                      setSelectedZone(loc);
-                      setTimeout(() => setIsShippingModalOpen(false), 200);
+                      setDeliveryZone(zone);
+                      setSearchQuery("");
+                      setIsShippingModalOpen(false);
                     }}
                   >
                     <div
-                      className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-green-600" : "border-gray-300"}`}
+                      className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        isSelected ? "border-green-600" : "border-gray-300"
+                      }`}
                     >
                       {isSelected && (
                         <div className="w-2.5 h-2.5 bg-green-600 rounded-full" />
@@ -482,22 +415,22 @@ export default function LagosCheckout(props: CheckoutProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4">
                         <p className="text-[14px] font-bold text-gray-900">
-                          {loc.name}
+                          {zone.name}
                         </p>
                         <p className="text-[14px] font-extrabold text-gray-900 shrink-0">
-                          {fmtNaira(loc.price)}
+                          {fmtNaira(zone.feeKobo)}
                         </p>
                       </div>
                       <p className="text-[12px] text-gray-500 mt-1 leading-snug pr-4">
-                        {loc.note}
+                        {zone.note}
                       </p>
                     </div>
-                  </label>
+                  </button>
                 );
               })}
-              {filteredLocations.length === 0 && (
+              {filteredZones.length === 0 && (
                 <div className="p-8 text-center text-gray-500 text-sm">
-                  No shipping locations found.
+                  No delivery areas found.
                 </div>
               )}
             </div>
@@ -521,7 +454,7 @@ function Section({
 }) {
   return (
     <div className="mb-6 sm:mb-8">
-      <p className="text-[12px] font-extrabold text-white/90 mb-4 flex items-center gap-2.5 uppercase tracking-[0.1em]">
+      <p className="text-[13px] font-extrabold text-white/90 mb-4 flex items-center gap-2.5">
         <span
           className="w-5 h-5 rounded-full text-white text-[10px] font-extrabold flex items-center justify-center shrink-0"
           style={{ background: accent }}
@@ -546,7 +479,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="text-[10px] font-semibold text-white/50 block mb-1.5 uppercase tracking-[0.1em]">
+      <label className="text-[11px] font-semibold text-white/50 block mb-1.5">
         {label}
       </label>
       {children}

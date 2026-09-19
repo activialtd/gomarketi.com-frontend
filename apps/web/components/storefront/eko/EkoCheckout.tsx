@@ -8,8 +8,6 @@ import {
   ShoppingBag,
   Loader2,
   AlertCircle,
-  Search,
-  RefreshCw,
   X as XIcon,
 } from "lucide-react";
 import { PaystackModal } from "@/components/storefront/PaystackModal";
@@ -17,52 +15,9 @@ import {
   useCheckout,
   fmtNaira,
   NIGERIAN_STATES,
-  FREE_SHIPPING_THRESHOLD_KOBO,
+  DELIVERY_ZONES,
   type CheckoutProps,
 } from "../checkout/useCheckout";
-
-const STRATEGIC_LOCATIONS = [
-  {
-    id: "ogba",
-    name: "Ogba Busstop",
-    price: 2500,
-    note: "If your package is big, dispatch company will call You to balance",
-  },
-  {
-    id: "festac",
-    name: "Festac",
-    price: 4000,
-    note: "If package big you be called",
-  },
-  {
-    id: "abeokuta",
-    name: "Abeokuta",
-    price: 3000,
-    note: "If package big, you will be called to balance up",
-  },
-  {
-    id: "ikeja",
-    name: "Ikeja",
-    price: 2500,
-    note: "Standard delivery. Dispatch may call for oversized items.",
-  },
-  {
-    id: "lekki",
-    name: "Lekki / Ajah",
-    price: 3500,
-    note: "Standard delivery. Dispatch may call for oversized items.",
-  },
-  { id: "vi", name: "Victoria Island", price: 3000, note: "Standard delivery" },
-  {
-    id: "yaba",
-    name: "Yaba / Surulere",
-    price: 2000,
-    note: "Standard delivery",
-  },
-  { id: "ikoyi", name: "Ikoyi", price: 3000, note: "Standard delivery" },
-  { id: "magodo", name: "Magodo", price: 2500, note: "Standard delivery" },
-  { id: "gbagada", name: "Gbagada", price: 2000, note: "Standard delivery" },
-];
 
 export default function EkoCheckout(props: CheckoutProps) {
   const {
@@ -73,6 +28,13 @@ export default function EkoCheckout(props: CheckoutProps) {
     },
     lines,
     subtotal,
+    shipping,
+    total,
+    allDigital,
+    deliveryPaidLater,
+    deliveryZone,
+    setDeliveryZone,
+    storeReady,
     isPlacing,
     orderPlaced,
     orderNumber,
@@ -86,7 +48,6 @@ export default function EkoCheckout(props: CheckoutProps) {
 
   const [isShippingModalOpen, setIsShippingModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedZone, setSelectedZone] = useState(STRATEGIC_LOCATIONS[0]);
 
   const shopUrl = "/shop";
   const inputCls = (err?: boolean) =>
@@ -94,21 +55,19 @@ export default function EkoCheckout(props: CheckoutProps) {
       err ? "border-red-300" : "border-neutral-200"
     }`;
 
-  // Override shipping with local selection
-  const currentShipping = selectedZone.price;
-  const currentTotal = subtotal + currentShipping;
-
-  const filteredLocations = STRATEGIC_LOCATIONS.filter((loc) =>
-    loc.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredZones = DELIVERY_ZONES.filter((z) =>
+    z.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  const handlePlaceOrder = (data: any) => {
-    onSubmit({
-      ...data,
-      shippingMethod: selectedZone.name,
-      shippingCost: currentShipping,
-    });
-  };
+  const shippingLabel =
+    shipping === 0
+      ? "Free"
+      : deliveryPaidLater
+        ? `${fmtNaira(shipping)} on delivery`
+        : fmtNaira(shipping);
+
+  const placeDisabled = isPlacing || !storeReady;
+  const submit = handleSubmit(onSubmit);
 
   if (orderPlaced) {
     return (
@@ -158,7 +117,7 @@ export default function EkoCheckout(props: CheckoutProps) {
           href={shopUrl}
           className="text-[var(--store-primary,#1A7A42)] font-bold text-sm"
         >
-          Browse products →
+          Browse products
         </Link>
       </div>
     );
@@ -182,10 +141,7 @@ export default function EkoCheckout(props: CheckoutProps) {
 
       <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_380px]">
         {/* Form */}
-        <form
-          onSubmit={handleSubmit(handlePlaceOrder)}
-          className="flex flex-col gap-7 sm:gap-8"
-        >
+        <form onSubmit={submit} className="flex flex-col gap-7 sm:gap-8">
           <h1 className="text-2xl sm:text-3xl font-black text-neutral-900 tracking-tight sm:mb-2">
             Checkout
           </h1>
@@ -258,30 +214,39 @@ export default function EkoCheckout(props: CheckoutProps) {
             </div>
           </Section>
 
-          <Section step={3} title="Shipping Method">
-            <div
-              onClick={() => setIsShippingModalOpen(true)}
-              className="w-full rounded-[10px] border-[1.5px] border-neutral-200 bg-neutral-50 p-4 cursor-pointer hover:bg-neutral-100 transition-colors flex items-center justify-between shadow-sm"
-            >
-              <div>
-                <p className="text-[13px] font-bold text-neutral-900">
-                  {selectedZone.name}
+          {!allDigital && (
+            <Section step={3} title="Shipping method">
+              <button
+                type="button"
+                onClick={() => setIsShippingModalOpen(true)}
+                className="w-full text-left rounded-[10px] border-[1.5px] border-neutral-200 bg-neutral-50 p-4 hover:bg-neutral-100 transition-colors flex items-center justify-between shadow-sm"
+              >
+                <div>
+                  <p className="text-[13px] font-bold text-neutral-900">
+                    {deliveryZone.name}
+                  </p>
+                  <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-1 pr-2">
+                    {deliveryZone.note}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-[13px] font-extrabold text-neutral-900">
+                    {fmtNaira(deliveryZone.feeKobo)}
+                  </span>
+                  <ChevronLeft className="w-4 h-4 text-neutral-400 rotate-180" />
+                </div>
+              </button>
+              {deliveryPaidLater && (
+                <p className="text-[11px] text-neutral-500">
+                  You pay the delivery fee to the dispatch rider when your order
+                  arrives.
                 </p>
-                <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-1 pr-2">
-                  {selectedZone.note}
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-[13px] font-extrabold text-neutral-900">
-                  {fmtNaira(selectedZone.price)}
-                </span>
-                <ChevronLeft className="w-4 h-4 text-neutral-400 rotate-180" />
-              </div>
-            </div>
-          </Section>
+              )}
+            </Section>
+          )}
 
           <Section
-            step={4}
+            step={allDigital ? 3 : 4}
             title={
               <>
                 Order note{" "}
@@ -299,7 +264,7 @@ export default function EkoCheckout(props: CheckoutProps) {
 
           <button
             type="submit"
-            disabled={isPlacing}
+            disabled={placeDisabled}
             className="lg:hidden w-full h-12 rounded-xl bg-[var(--store-primary,#1A7A42)] text-white text-sm font-extrabold flex items-center justify-center gap-2 disabled:opacity-60 shadow-lg shadow-black/5"
           >
             {isPlacing ? (
@@ -307,9 +272,7 @@ export default function EkoCheckout(props: CheckoutProps) {
             ) : (
               <Lock className="w-4 h-4" />
             )}
-            {isPlacing
-              ? "Placing order…"
-              : `Place order · ${fmtNaira(currentTotal)}`}
+            {isPlacing ? "Placing order…" : `Pay ${fmtNaira(total)}`}
           </button>
         </form>
 
@@ -354,35 +317,21 @@ export default function EkoCheckout(props: CheckoutProps) {
 
             <div className="border-t border-neutral-100 pt-4 flex flex-col gap-2.5">
               <Row label="Subtotal" value={fmtNaira(subtotal)} />
-              <Row
-                label="Shipping"
-                value={
-                  currentShipping === 0 ? "Free" : fmtNaira(currentShipping)
-                }
-              />
-              {currentShipping > 0 && (
-                <p className="text-[10px] text-[var(--store-primary,#1A7A42)] font-semibold">
-                  Add{" "}
-                  {fmtNaira(
-                    Math.max(0, FREE_SHIPPING_THRESHOLD_KOBO - subtotal),
-                  )}{" "}
-                  more for free shipping
-                </p>
-              )}
+              <Row label="Delivery" value={shippingLabel} />
               <div className="flex items-center justify-between pt-3 mt-1 border-t border-neutral-100">
                 <span className="text-sm font-extrabold text-neutral-900">
-                  Total
+                  {deliveryPaidLater ? "Pay now" : "Total"}
                 </span>
                 <span className="text-base font-black text-[var(--store-primary,#1A7A42)]">
-                  {fmtNaira(currentTotal)}
+                  {fmtNaira(total)}
                 </span>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={handleSubmit(handlePlaceOrder)}
-              disabled={isPlacing}
+              onClick={submit}
+              disabled={placeDisabled}
               className="hidden lg:flex mt-6 w-full h-12 rounded-xl bg-[var(--store-primary,#1A7A42)] text-white text-sm font-extrabold items-center justify-center gap-2 disabled:opacity-60 shadow-[0_4px_14px_rgba(26,122,66,0.25)] hover:opacity-90 active:scale-[0.99] transition-all"
             >
               {isPlacing ? (
@@ -390,7 +339,7 @@ export default function EkoCheckout(props: CheckoutProps) {
               ) : (
                 <Lock className="w-4 h-4" />
               )}
-              {isPlacing ? "Placing order…" : "Place order"}
+              {isPlacing ? "Placing order…" : `Pay ${fmtNaira(total)}`}
             </button>
 
             <p className="text-[10px] text-neutral-400 text-center mt-3 flex items-center justify-center gap-1">
@@ -402,7 +351,7 @@ export default function EkoCheckout(props: CheckoutProps) {
 
       {showPaystack && pendingCustomer && (
         <PaystackModal
-          amount={currentTotal}
+          amount={total}
           email={pendingCustomer.email}
           storeName={props.storeName ?? "GoMarketi Store"}
           onSuccess={handlePaystackSuccess}
@@ -410,54 +359,53 @@ export default function EkoCheckout(props: CheckoutProps) {
         />
       )}
 
-      {/* Shipping Location Modal matching "WhatsApp Image 2026-09-08 at 11.34.06.jpeg" */}
       {isShippingModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white text-neutral-900 w-full max-w-[420px] rounded-2xl shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
             <div className="px-5 py-4 flex items-center justify-between border-b border-neutral-100">
-              <h2 className="text-[17px] font-bold">Select Shipping</h2>
-              <div className="flex items-center gap-1">
-                <button className="p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors">
-                  <Search className="w-4 h-4" />
-                </button>
-                <button className="p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors">
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsShippingModalOpen(false)}
-                  className="p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors"
-                >
-                  <XIcon className="w-5 h-5" />
-                </button>
-              </div>
+              <h2 className="text-[17px] font-bold">Select delivery area</h2>
+              <button
+                type="button"
+                onClick={() => setIsShippingModalOpen(false)}
+                aria-label="Close"
+                className="p-2 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-50 rounded-lg transition-colors"
+              >
+                <XIcon className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="p-4 border-b border-neutral-100 bg-neutral-50/50">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search shipping..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full h-11 pl-4 pr-10 rounded-xl border border-neutral-200 bg-white text-[14px] outline-none placeholder:text-neutral-400 focus:border-[var(--store-primary,#1A7A42)] transition-colors"
-                />
-              </div>
+              <input
+                type="text"
+                placeholder="Search areas"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-11 px-4 rounded-xl border border-neutral-200 bg-white text-[14px] outline-none placeholder:text-neutral-400 focus:border-[var(--store-primary,#1A7A42)] transition-colors"
+              />
             </div>
 
             <div className="flex-1 overflow-y-auto max-h-[50vh] sm:max-h-[400px]">
-              {filteredLocations.map((loc) => {
-                const isSelected = selectedZone.id === loc.id;
+              {filteredZones.map((zone) => {
+                const isSelected = deliveryZone.id === zone.id;
                 return (
-                  <label
-                    key={loc.id}
-                    className={`flex items-start gap-3 p-5 cursor-pointer border-b border-neutral-100 transition-colors hover:bg-neutral-50 ${isSelected ? "bg-green-50/20" : ""}`}
+                  <button
+                    type="button"
+                    key={zone.id}
+                    className={`w-full text-left flex items-start gap-3 p-5 border-b border-neutral-100 transition-colors hover:bg-neutral-50 ${
+                      isSelected ? "bg-green-50/20" : ""
+                    }`}
                     onClick={() => {
-                      setSelectedZone(loc);
-                      setTimeout(() => setIsShippingModalOpen(false), 200);
+                      setDeliveryZone(zone);
+                      setSearchQuery("");
+                      setIsShippingModalOpen(false);
                     }}
                   >
                     <div
-                      className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-[var(--store-primary,#1A7A42)]" : "border-neutral-300"}`}
+                      className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                        isSelected
+                          ? "border-[var(--store-primary,#1A7A42)]"
+                          : "border-neutral-300"
+                      }`}
                     >
                       {isSelected && (
                         <div className="w-2.5 h-2.5 bg-[var(--store-primary,#1A7A42)] rounded-full" />
@@ -466,22 +414,22 @@ export default function EkoCheckout(props: CheckoutProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4">
                         <p className="text-[14px] font-bold text-neutral-900">
-                          {loc.name}
+                          {zone.name}
                         </p>
                         <p className="text-[14px] font-extrabold text-neutral-900 shrink-0">
-                          {fmtNaira(loc.price)}
+                          {fmtNaira(zone.feeKobo)}
                         </p>
                       </div>
                       <p className="text-[12px] text-neutral-500 mt-1 leading-snug pr-4">
-                        {loc.note}
+                        {zone.note}
                       </p>
                     </div>
-                  </label>
+                  </button>
                 );
               })}
-              {filteredLocations.length === 0 && (
+              {filteredZones.length === 0 && (
                 <div className="p-8 text-center text-neutral-400 text-sm">
-                  No shipping locations found.
+                  No delivery areas found.
                 </div>
               )}
             </div>
