@@ -10,7 +10,14 @@ import { color, type, space } from "../../theme/tokens";
 
 // Cycle through a few of the brand's own tints so the markets grid reads as
 // lively/varied without needing a category to key off of.
-const PALETTE = ["#EFEFF1", "#E6F0E9", "#F6EEDD", "#EAF3E3", "#E8EEF7", "#F5E9E3"] as const;
+const PALETTE = [
+  "#EFEFF1",
+  "#E6F0E9",
+  "#F6EEDD",
+  "#EAF3E3",
+  "#E8EEF7",
+  "#F5E9E3",
+] as const;
 
 export function MarketBentoCard({
   market,
@@ -32,7 +39,11 @@ export function MarketBentoCard({
     <MotiView
       from={{ opacity: 0, translateY: 16 }}
       animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", duration: 380, delay: Math.min(index, 8) * 60 }}
+      transition={{
+        type: "timing",
+        duration: 380,
+        delay: Math.min(index, 8) * 60,
+      }}
     >
       <Bouncy onPress={onPress} style={[s.card, { height }]} scaleTo={0.96}>
         <LinearGradient
@@ -42,10 +53,17 @@ export function MarketBentoCard({
           style={StyleSheet.absoluteFill}
         />
         <View style={s.iconWrap}>
-          <Ionicons name="storefront-outline" size={big ? 30 : 22} color={color.ink} />
+          <Ionicons
+            name="storefront-outline"
+            size={big ? 30 : 22}
+            color={color.ink}
+          />
         </View>
         <View>
-          <Text style={[type.label, s.name, big && s.nameBig]} numberOfLines={2}>
+          <Text
+            style={[type.label, s.name, big && s.nameBig]}
+            numberOfLines={2}
+          >
             {market.name}
           </Text>
           <Text style={[type.meta, s.city]}>

@@ -174,10 +174,44 @@ export interface StoreResp {
   site_description?: string;
   social_links?: SocialLinks;
   theme_config?: string; // raw JSON string
-  delivery_fee_kobo: number;
-  free_delivery_threshold_kobo: number;
+  /** @deprecated Never returned by the backend — use delivery_options. */
+  delivery_fee_kobo?: number;
+  /** @deprecated Never returned by the backend — use delivery_options. */
+  free_delivery_threshold_kobo?: number;
+  /** Vendor-defined delivery choices. Present on public store reads. */
+  delivery_options?: DeliveryOptionResp[];
   is_active: boolean;
   created_at: string;
+}
+
+// ── Delivery options ───────────────────────────────────────────────────────────
+// Each vendor sets their own delivery titles, notes and prices; these replace
+// the delivery zone list that used to be hardcoded in the checkout.
+
+export interface DeliveryOptionResp {
+  id: string;
+  store_id: string;
+  title: string;
+  description: string;
+  price_kobo: number;
+  position: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface CreateDeliveryOptionReq {
+  title: string;
+  description?: string;
+  price_kobo: number;
+  position?: number;
+}
+
+export interface UpdateDeliveryOptionReq {
+  title?: string;
+  description?: string;
+  price_kobo?: number;
+  position?: number;
+  is_active?: boolean;
 }
 
 export interface SlugCheckResp {
@@ -342,6 +376,13 @@ export interface CreateOrderReq {
   customer_phone?: string;
   delivery_address?: string;
   items: CreateOrderItem[];
+  /**
+   * The delivery option the customer picked. When set, the orders service
+   * reads the price from the vendor's own option row and ignores
+   * delivery_fee_kobo, so the charged fee can't be forged client-side.
+   */
+  delivery_option_id?: string;
+  /** Only honoured for stores that have no delivery options configured. */
   delivery_fee_kobo?: number;
   payment_reference: string;
 }
@@ -695,6 +736,52 @@ export const storefrontApi = {
       `/v1/storefront/public/markets?${qs.toString()}`,
     );
   },
+
+  // Public, no auth — checkout reads the store's delivery choices. The same
+  // list is embedded in the public store payload, so prefer that when the
+  // store has already been fetched.
+  getDeliveryOptions: (slug: string) =>
+    request<DeliveryOptionResp[]>(
+      `/v1/storefront/public/stores/${encodeURIComponent(slug)}/delivery-options`,
+    ),
+
+  // Vendor dashboard — includes options the vendor has disabled.
+  listDeliveryOptions: (storeId: string, token: string) =>
+    request<DeliveryOptionResp[]>(
+      `/v1/storefront/stores/${storeId}/delivery-options`,
+      {},
+      token,
+    ),
+
+  createDeliveryOption: (
+    storeId: string,
+    data: CreateDeliveryOptionReq,
+    token: string,
+  ) =>
+    request<DeliveryOptionResp>(
+      `/v1/storefront/stores/${storeId}/delivery-options`,
+      { method: "POST", body: JSON.stringify(data) },
+      token,
+    ),
+
+  updateDeliveryOption: (
+    storeId: string,
+    optionId: string,
+    data: UpdateDeliveryOptionReq,
+    token: string,
+  ) =>
+    request<DeliveryOptionResp>(
+      `/v1/storefront/stores/${storeId}/delivery-options/${optionId}`,
+      { method: "PATCH", body: JSON.stringify(data) },
+      token,
+    ),
+
+  deleteDeliveryOption: (storeId: string, optionId: string, token: string) =>
+    request<void>(
+      `/v1/storefront/stores/${storeId}/delivery-options/${optionId}`,
+      { method: "DELETE" },
+      token,
+    ),
 
   // Upload store asset (logo or hero image) via multipart form
   uploadStoreAsset: async (

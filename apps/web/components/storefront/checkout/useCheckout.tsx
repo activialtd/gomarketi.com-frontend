@@ -10,6 +10,7 @@ import {
   ApiError,
   ordersApi,
   type CreateOrderReq,
+  type DeliveryOptionResp,
   type OrderResp,
 } from "@gomarket/api-client";
 
@@ -79,17 +80,34 @@ export const FREE_SHIPPING_THRESHOLD_KOBO = 5_000_000;
 export const FLAT_SHIPPING_KOBO = 150_000;
 
 // ── Delivery zones ────────────────────────────────────────────────────────────
-// All fees in kobo (₦1,500 = 150_000).
-// The orders service rejects any delivery fee above maxDeliveryFeeKobo
-// (currently ₦4,000, the Festac fee). Raise that constant in the backend
-// before adding a zone that costs more.
+// Zones now come from the store: each vendor defines their own delivery
+// options (title, note, price) in the dashboard, and the orders service prices
+// the chosen one server-side. DELIVERY_ZONES below is the fallback used only
+// for stores that have not configured any options yet.
 
 export type DeliveryZone = {
   id: string;
   name: string;
   feeKobo: number;
   note: string;
+  /** True when this zone came from the store's own options. */
+  fromStore?: boolean;
 };
+
+// toZones maps the store's delivery options onto the shape the checkout UI
+// already renders, so only the source of the list changes.
+export function toZones(options: DeliveryOptionResp[] | undefined): DeliveryZone[] {
+  if (!options?.length) return DELIVERY_ZONES;
+  return options
+    .filter((o) => o.is_active)
+    .map((o) => ({
+      id: o.id,
+      name: o.title,
+      feeKobo: o.price_kobo,
+      note: o.description,
+      fromStore: true,
+    }));
+}
 
 export const DELIVERY_ZONES: DeliveryZone[] = [
   {
@@ -158,6 +176,8 @@ export type CheckoutProps = {
   deliveryFeeKobo?: number;
   /** Unused while delivery is priced by zone. Kept so callers don't break. */
   freeDeliveryThresholdKobo?: number;
+  /** The store's own delivery options, from the public store payload. */
+  deliveryOptions?: DeliveryOptionResp[];
 };
 
 // ── Pending-order recovery ────────────────────────────────────────────────────
@@ -232,6 +252,7 @@ export function useCheckout({
   storeId,
   storeSlug = "",
   storeName,
+  deliveryOptions,
 }: CheckoutProps) {
   const router = useRouter();
   const { lines, setCustomer, clearCart } = useCart();
@@ -244,12 +265,13 @@ export function useCheckout({
     null,
   );
   const [orderError, setOrderError] = useState("");
+  const deliveryZones = toZones(deliveryOptions);
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZone>(
-    DELIVERY_ZONES[0],
+    deliveryZones[0],
   );
 
   // Zone locked in when the customer pressed Place order
-  const pendingZone = useRef<DeliveryZone>(DELIVERY_ZONES[0]);
+  const pendingZone = useRef<DeliveryZone>(deliveryZones[0]);
 
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
@@ -340,8 +362,14 @@ export function useCheckout({
         quantity: l.quantity,
         price_kobo: unitKobo(l.unitPrice),
       })),
-      // Must equal the delivery part of what Paystack charged.
-      delivery_fee_kobo: CHARGE_DELIVERY_AT_CHECKOUT ? zoneFee : 0,
+      // For store-defined zones the server reads the price from its own
+      // option row; delivery_fee_kobo is only used by stores with no options.
+      delivery_option_id:
+        zone.fromStore && CHARGE_DELIVERY_AT_CHECKOUT && !allDigital
+          ? zone.id
+          : undefined,
+      delivery_fee_kobo:
+        zone.fromStore || !CHARGE_DELIVERY_AT_CHECKOUT ? 0 : zoneFee,
       payment_reference: ref,
     };
 
@@ -381,6 +409,7 @@ export function useCheckout({
     deliveryPaidLater,
     deliveryZone,
     setDeliveryZone,
+    deliveryZones,
     storeReady,
     isPlacing,
     orderPlaced,

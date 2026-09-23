@@ -31,6 +31,7 @@ import {
 } from "@/lib/swr/hooks";
 import {
   storefrontApi,
+  type DeliveryOptionResp,
   type StoreUpdatePayload,
   type SocialLinks,
   type ThemeConfig,
@@ -255,16 +256,18 @@ interface InfoState {
   tagline: string;
   description: string;
   site_description: string;
-  delivery_fee_naira: number;
-  free_delivery_threshold_naira: number;
 }
 
 function InformationTab({
   info,
   setInfo,
+  storeId,
+  accessToken,
 }: {
   info: InfoState;
   setInfo: (patch: Partial<InfoState>) => void;
+  storeId: string | null;
+  accessToken: string | null;
 }) {
   const charLimitTagline = 80;
   const charLimitSiteDesc = 160;
@@ -351,13 +354,117 @@ function InformationTab({
         </div>
       </div>
 
+      <DeliveryOptionsSection storeId={storeId} accessToken={accessToken} />
+    </div>
+  );
+}
+
+
+// ── Delivery options ──────────────────────────────────────────────────────────
+// Each vendor sets their own delivery choices — a title, a note and a price,
+// e.g. "Ogba Bustop / bulk delivery would be called for balance / ₦4,500".
+// These are separate resources, so they save immediately rather than through
+// the page's Save button.
+
+// A filled-in option the vendor can load into the form, so the expected
+// shape — a place, a note about what happens there, a price — is obvious
+// without reading instructions.
+const EXAMPLE_OPTION = {
+  title: "Ogba Bustop",
+  description: "Bulk delivery would be called for balance",
+  naira: 4500,
+};
+
+function DeliveryOptionsSection({
+  storeId,
+  accessToken,
+}: {
+  storeId: string | null;
+  accessToken: string | null;
+}) {
+  const [options, setOptions] = useState<DeliveryOptionResp[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ title: "", description: "", naira: 0 });
+
+  useEffect(() => {
+    if (!storeId || !accessToken) return;
+    let cancelled = false;
+    storefrontApi
+      .listDeliveryOptions(storeId, accessToken)
+      .then((res) => !cancelled && setOptions(res))
+      .catch(() => !cancelled && setError("Could not load delivery options."))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [storeId, accessToken]);
+
+  async function handleAdd() {
+    if (!storeId || !accessToken || !draft.title.trim()) return;
+    setBusyId("new");
+    setError(null);
+    try {
+      const created = await storefrontApi.createDeliveryOption(
+        storeId,
+        {
+          title: draft.title.trim(),
+          description: draft.description.trim(),
+          price_kobo: Math.round(draft.naira * 100),
+        },
+        accessToken,
+      );
+      setOptions((prev) => [...prev, created]);
+      setDraft({ title: "", description: "", naira: 0 });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not add that option.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleToggle(opt: DeliveryOptionResp) {
+    if (!storeId || !accessToken) return;
+    setBusyId(opt.id);
+    try {
+      const updated = await storefrontApi.updateDeliveryOption(
+        storeId,
+        opt.id,
+        { is_active: !opt.is_active },
+        accessToken,
+      );
+      setOptions((prev) => prev.map((o) => (o.id === opt.id ? updated : o)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not update that option.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete(opt: DeliveryOptionResp) {
+    if (!storeId || !accessToken) return;
+    setBusyId(opt.id);
+    try {
+      await storefrontApi.deleteDeliveryOption(storeId, opt.id, accessToken);
+      setOptions((prev) => prev.filter((o) => o.id !== opt.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not remove that option.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <>
       <div>
         <p className="text-[15px] font-extrabold" style={{ color: "#1C1C1C" }}>
-          Delivery
+          Delivery options
         </p>
         <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
-          Charged to customers at checkout on physical orders — GoMarketi's hub
-          handles the actual delivery, so this doesn't come out of your payouts.
+          Customers pick one of these at checkout and are charged that price.
+          Add a note for anything they should know — like being called to
+          balance up on bulky items.
         </p>
       </div>
 
@@ -365,45 +472,169 @@ function InformationTab({
         className="rounded-[14px] border p-5 space-y-4"
         style={{ background: "#fff", borderColor: "#e2e8f0" }}
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <FieldLabel>Delivery fee (₦)</FieldLabel>
-            <StyledInput
-              type="number"
-              min={0}
-              step={50}
-              value={info.delivery_fee_naira}
-              onChange={(e) =>
-                setInfo({ delivery_fee_naira: Math.max(0, Number(e.target.value) || 0) })
-              }
-            />
-            <p className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>
-              Set to 0 to always offer free delivery.
+        {error && (
+          <p className="text-[12px]" style={{ color: "#ef4444" }}>
+            {error}
+          </p>
+        )}
+
+        {loading ? (
+          <p className="text-[12px]" style={{ color: "#94a3b8" }}>
+            Loading delivery options…
+          </p>
+        ) : options.length === 0 ? (
+          <div className="space-y-3">
+            <p className="text-[12px]" style={{ color: "#94a3b8" }}>
+              No delivery options yet — customers can&apos;t choose a delivery
+              at checkout until you add one. Here&apos;s the shape of a good
+              option:
             </p>
+            <div
+              className="rounded-[10px] border border-dashed p-3"
+              style={{ borderColor: "#cbd5e1", background: "#f8fafc" }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-bold" style={{ color: "#64748b" }}>
+                    {EXAMPLE_OPTION.title}
+                  </p>
+                  <p className="text-[11px] mt-0.5" style={{ color: "#94a3b8" }}>
+                    {EXAMPLE_OPTION.description}
+                  </p>
+                </div>
+                <span
+                  className="text-[13px] font-extrabold shrink-0"
+                  style={{ color: "#94a3b8" }}
+                >
+                  ₦{EXAMPLE_OPTION.naira.toLocaleString("en-NG")}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDraft({ ...EXAMPLE_OPTION })}
+                className="mt-3 text-[11px] font-bold underline"
+                style={{ color: "#1A7A42" }}
+              >
+                Use this example
+              </button>
+            </div>
           </div>
-          <div>
-            <FieldLabel>Free delivery above (₦)</FieldLabel>
-            <StyledInput
-              type="number"
-              min={0}
-              step={500}
-              value={info.free_delivery_threshold_naira}
-              onChange={(e) =>
-                setInfo({
-                  free_delivery_threshold_naira: Math.max(0, Number(e.target.value) || 0),
-                })
-              }
-            />
-            <p className="text-[10px] mt-1" style={{ color: "#94a3b8" }}>
-              Set to 0 to disable free delivery by order size.
-            </p>
+        ) : (
+          <div className="space-y-2">
+            {options.map((opt) => (
+              <div
+                key={opt.id}
+                className="flex items-start justify-between gap-4 rounded-[10px] border p-3"
+                style={{
+                  borderColor: "#e2e8f0",
+                  opacity: opt.is_active ? 1 : 0.55,
+                }}
+              >
+                <div className="min-w-0">
+                  <p
+                    className="text-[13px] font-bold truncate"
+                    style={{ color: "#1C1C1C" }}
+                  >
+                    {opt.title}
+                  </p>
+                  {opt.description && (
+                    <p className="text-[11px] mt-0.5" style={{ color: "#6b7280" }}>
+                      {opt.description}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span
+                    className="text-[13px] font-extrabold"
+                    style={{ color: "#1A7A42" }}
+                  >
+                    ₦{(opt.price_kobo / 100).toLocaleString("en-NG")}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={busyId === opt.id}
+                    onClick={() => handleToggle(opt)}
+                    className="text-[11px] font-bold underline disabled:opacity-40"
+                    style={{ color: "#6b7280" }}
+                  >
+                    {opt.is_active ? "Disable" : "Enable"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyId === opt.id}
+                    onClick={() => handleDelete(opt)}
+                    className="text-[11px] font-bold underline disabled:opacity-40"
+                    style={{ color: "#ef4444" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
+        )}
+
+        <div className="pt-1 border-t" style={{ borderColor: "#f1f5f9" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_140px] gap-3 pt-4">
+            <div>
+              <FieldLabel>Title</FieldLabel>
+              <StyledInput
+                value={draft.title}
+                placeholder="Ogba Bustop"
+                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+              />
+            </div>
+            <div>
+              <FieldLabel>Note (optional)</FieldLabel>
+              <StyledInput
+                value={draft.description}
+                placeholder="Bulk delivery would be called for balance"
+                onChange={(e) =>
+                  setDraft({ ...draft, description: e.target.value })
+                }
+              />
+            </div>
+            <div>
+              <FieldLabel>Price (₦)</FieldLabel>
+              <StyledInput
+                type="number"
+                min={0}
+                step={50}
+                value={draft.naira}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    naira: Math.max(0, Number(e.target.value) || 0),
+                  })
+                }
+              />
+            </div>
+          </div>
+          <p className="text-[11px] mt-2" style={{ color: "#94a3b8" }}>
+            Example — <span style={{ color: "#64748b" }}>{EXAMPLE_OPTION.title}</span>
+            {" · "}
+            <span style={{ color: "#64748b" }}>{EXAMPLE_OPTION.description}</span>
+            {" · "}
+            <span style={{ color: "#64748b" }}>
+              ₦{EXAMPLE_OPTION.naira.toLocaleString("en-NG")}
+            </span>
+          </p>
+          <button
+            type="button"
+            disabled={!draft.title.trim() || busyId === "new"}
+            onClick={handleAdd}
+            className="mt-3 h-10 px-4 rounded-[10px] text-[13px] font-bold text-white disabled:opacity-40"
+            style={{ background: "#1A7A42" }}
+          >
+            {busyId === "new" ? "Adding…" : "Add delivery option"}
+          </button>
         </div>
+
         <p className="text-[11px]" style={{ color: "#94a3b8" }}>
           Digital-only orders are always delivery-fee-free.
         </p>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1108,8 +1339,6 @@ export default function Settings() {
     tagline: "",
     description: "",
     site_description: "",
-    delivery_fee_naira: 1500,
-    free_delivery_threshold_naira: 50000,
   });
   const [custom, setCustom] = useState<CustomState>({
     logo_url: "",
@@ -1128,8 +1357,6 @@ export default function Settings() {
       tagline: store.tagline ?? "",
       description: store.description ?? "",
       site_description: store.site_description ?? "",
-      delivery_fee_naira: (store.delivery_fee_kobo ?? 150000) / 100,
-      free_delivery_threshold_naira: (store.free_delivery_threshold_kobo ?? 5000000) / 100,
     });
 
     // Parse theme from JSON string if present
@@ -1178,8 +1405,6 @@ export default function Settings() {
       tagline: info.tagline || undefined,
       description: info.description || undefined,
       site_description: info.site_description || undefined,
-      delivery_fee_kobo: Math.round(info.delivery_fee_naira * 100),
-      free_delivery_threshold_kobo: Math.round(info.free_delivery_threshold_naira * 100),
       // Customization fields
       logo_url: custom.logo_url || undefined,
       hero_image_url: custom.hero_image_url || undefined,
@@ -1364,6 +1589,8 @@ export default function Settings() {
           <InformationTab
             info={info}
             setInfo={(patch) => setInfo((prev) => ({ ...prev, ...patch }))}
+            storeId={store?.id ?? null}
+            accessToken={accessToken}
           />
         )}
         {activeTab === "Customization" && (

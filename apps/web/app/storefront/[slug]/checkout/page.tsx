@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import EkoCheckout from "@/components/storefront/eko/EkoCheckout";
 import LagosCheckout from "@/components/storefront/lagos/LagosCheckout";
 import { STORE_CONFIG } from "@/lib/storeConfig";
+import type { DeliveryOptionResp } from "@gomarket/api-client";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -23,6 +24,7 @@ async function getStoreData(slug: string) {
       theme_config?: string;
       delivery_fee_kobo?: number;
       free_delivery_threshold_kobo?: number;
+      delivery_options?: DeliveryOptionResp[];
     };
   } catch {
     return null;
@@ -44,6 +46,9 @@ export default async function Page({
     storeName: store.name,
     deliveryFeeKobo: store.delivery_fee_kobo ?? 150000,
     freeDeliveryThresholdKobo: store.free_delivery_threshold_kobo ?? 5000000,
+    // The vendor's own delivery choices; falls back to the built-in zone list
+    // when the store has not configured any.
+    deliveryOptions: store.delivery_options,
   };
 
   switch (STORE_CONFIG.template) {

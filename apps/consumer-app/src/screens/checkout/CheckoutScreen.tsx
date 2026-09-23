@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, StyleSheet, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Input } from "../../components/ui/Input";
@@ -13,7 +21,15 @@ import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { groupCartByStore } from "../../lib/checkout-grouping";
-import { createCheckout, ApiError } from "../../lib/api-client";
+import {
+  createCheckout,
+  getDeliveryOptions,
+  ApiError,
+  type DeliveryOption,
+} from "../../lib/api-client";
+
+const fmtKobo = (kobo: number) =>
+  "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
 
 export function CheckoutScreen() {
   const { items, totalUsd, clear } = useCart();
@@ -28,6 +44,48 @@ export function CheckoutScreen() {
   const [paying, setPaying] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
+  const [loadingDelivery, setLoadingDelivery] = useState(true);
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryOption | null>(
+    null,
+  );
+
+  // The basket can span several vendors, each with their own delivery
+  // choices, but the buyer pays for ONE delivery — the hub consolidates the
+  // vendors' parcels into a single trip. So gather every vendor's options and
+  // let the buyer pick one.
+  const storeSlugs = useMemo(() => {
+    const slugs = new Set<string>();
+    for (const line of items) {
+      if (line.product.storeSlug) slugs.add(line.product.storeSlug);
+    }
+    return Array.from(slugs);
+  }, [items]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (storeSlugs.length === 0) {
+      setDeliveryOptions([]);
+      setLoadingDelivery(false);
+      return;
+    }
+    setLoadingDelivery(true);
+    Promise.all(storeSlugs.map((slug) => getDeliveryOptions(slug).catch(() => [])))
+      .then((lists) => {
+        if (cancelled) return;
+        const merged = lists.flat().filter((o) => o.is_active);
+        setDeliveryOptions(merged);
+        setSelectedDelivery(merged[0] ?? null);
+      })
+      .finally(() => !cancelled && setLoadingDelivery(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [storeSlugs.join(",")]);
+
+  const itemsKobo = toNaira(totalUsd) * 100;
+  const deliveryKobo = selectedDelivery?.price_kobo ?? 0;
+  const totalKobo = itemsKobo + deliveryKobo;
 
   // Pre-fill from the buyer's captured location, but never overwrite
   // something they've already typed or edited themselves.
@@ -38,7 +96,12 @@ export function CheckoutScreen() {
   }, [capturedAddress, addressEdited]);
 
   const valid =
-    address.trim().length > 5 && phone.trim().length >= 7 && items.length > 0;
+    address.trim().length > 5 &&
+    phone.trim().length >= 7 &&
+    items.length > 0 &&
+    // A vendor with options configured requires one to be chosen; a basket
+    // with none at all is still checkout-able.
+    (deliveryOptions.length === 0 || selectedDelivery != null);
 
   // Stable for the lifetime of one payment attempt — PaystackSheet stays
   // mounted throughout, and payment idempotency now depends on this
@@ -65,6 +128,7 @@ export function CheckoutScreen() {
         delivery_address: address,
         payment_reference: ref,
         stores: grouped.stores,
+        delivery_option_id: selectedDelivery?.id,
       });
 
       registerOrders(orders);
@@ -116,6 +180,47 @@ export function CheckoutScreen() {
             />
           </View>
 
+          <Text style={[type.section, { marginTop: space.xxl }]}>Delivery</Text>
+          {loadingDelivery ? (
+            <View style={[s.card, { alignItems: "center" }]}>
+              <ActivityIndicator color={color.primary} />
+            </View>
+          ) : deliveryOptions.length === 0 ? (
+            <View style={s.card}>
+              <Text style={type.body}>
+                No delivery options set for these vendors yet — the seller will
+                arrange delivery with you directly.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: space.sm, marginTop: space.lg }}>
+              {deliveryOptions.map((opt) => {
+                const active = selectedDelivery?.id === opt.id;
+                return (
+                  <Pressable
+                    key={opt.id}
+                    onPress={() => setSelectedDelivery(opt)}
+                    style={[s.deliveryRow, active && s.deliveryRowActive]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
+                        {opt.title}
+                      </Text>
+                      {!!opt.description && (
+                        <Text style={type.meta}>{opt.description}</Text>
+                      )}
+                    </View>
+                    <Text style={s.lineVal}>{fmtKobo(opt.price_kobo)}</Text>
+                  </Pressable>
+                );
+              })}
+              <Text style={type.meta}>
+                One delivery fee covers the whole order, however many vendors
+                it comes from.
+              </Text>
+            </View>
+          )}
+
           <Text style={[type.section, { marginTop: space.xxl }]}>
             Order summary
           </Text>
@@ -132,17 +237,25 @@ export function CheckoutScreen() {
                 </Text>
               </View>
             ))}
+            {deliveryKobo > 0 && (
+              <View style={s.line}>
+                <Text style={type.body}>
+                  Delivery{selectedDelivery ? ` — ${selectedDelivery.title}` : ""}
+                </Text>
+                <Text style={s.lineVal}>{fmtKobo(deliveryKobo)}</Text>
+              </View>
+            )}
             <View style={s.rule} />
             <View style={s.line}>
               <Text style={s.total}>Total</Text>
-              <Text style={s.total}>{formatNaira(totalUsd)}</Text>
+              <Text style={s.total}>{fmtKobo(totalKobo)}</Text>
             </View>
           </View>
         </ScrollView>
 
         <View style={s.cta}>
           <Button
-            label={`Pay ${formatNaira(totalUsd)}`}
+            label={`Pay ${fmtKobo(totalKobo)}`}
             disabled={!valid}
             onPress={() => setPaying(true)}
           />
@@ -151,7 +264,7 @@ export function CheckoutScreen() {
         {paying && (
           <PaystackSheet
             email={user?.email ?? "customer@gomarketi.com"}
-            amountKobo={toNaira(totalUsd) * 100}
+            amountKobo={totalKobo}
             reference={reference}
             onSuccess={onPaid}
             onCancel={() => setPaying(false)}
@@ -178,6 +291,17 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   lineVal: { fontFamily: "Jakarta_500", fontSize: 14, color: color.text },
+  deliveryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    padding: space.lg,
+    borderRadius: 16,
+    backgroundColor: color.card,
+    borderWidth: 1,
+    borderColor: color.line,
+  },
+  deliveryRowActive: { borderColor: color.primary, borderWidth: 2 },
   rule: { height: 1, backgroundColor: color.line, marginVertical: space.sm },
   total: { fontFamily: "Jakarta_700", fontSize: 16, color: color.text },
   cta: {

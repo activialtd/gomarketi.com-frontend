@@ -25,9 +25,22 @@ import {
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ORDER_STATUS_CONFIG } from "@gomarket/shared-utils";
-import { useAnalyticsOverview, useOrders, useMyStore, useWallet, useSubscription, useRevenueTrend } from "@/lib/swr/hooks";
 import {
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid,
+  useAnalyticsOverview,
+  useOrders,
+  useMyStore,
+  useWallet,
+  useSubscription,
+  useRevenueTrend,
+} from "@/lib/swr/hooks";
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
 } from "recharts";
 import Link from "next/link";
 import { ROUTES } from "@/lib/config/routes";
@@ -165,8 +178,11 @@ export default function OverviewPage() {
   const [copied, setCopied] = useState(false);
 
   // SWR — all cached, instant on re-visit
-  const { data: analytics, isLoading: loadingAnalytics } = useAnalyticsOverview();
-  const { data: ordersData, isLoading: loadingOrders } = useOrders({ per_page: 5 });
+  const { data: analytics, isLoading: loadingAnalytics } =
+    useAnalyticsOverview();
+  const { data: ordersData, isLoading: loadingOrders } = useOrders({
+    per_page: 5,
+  });
   const { data: store, isLoading: loadingStore } = useMyStore();
   const { data: wallet } = useWallet();
   const { data: subscription } = useSubscription();
@@ -205,7 +221,8 @@ export default function OverviewPage() {
                   className="text-[20px] font-extrabold text-white leading-tight"
                   style={{ letterSpacing: "-0.3px" }}
                 >
-                  {getGreeting()}{store ? `, ${store.name}` : ""} 👋
+                  {getGreeting()}
+                  {store ? `, ${store.name}` : ""} 👋
                 </p>
                 <p
                   className="text-[13px] mt-1.5"
@@ -213,20 +230,6 @@ export default function OverviewPage() {
                 >
                   Here's what's happening with your store today.
                 </p>
-              </div>
-              {/* Verification + Rating cluster */}
-              <div className="flex flex-col items-end gap-2 shrink-0">
-                <div
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold"
-                  style={{
-                    background: "rgba(34,197,94,0.15)",
-                    color: "#86efac",
-                  }}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Verified store
-                </div>
-                {/* Star rating hidden until real consumer ratings are available */}
               </div>
             </div>
           </div>
@@ -251,7 +254,9 @@ export default function OverviewPage() {
                   {store?.name ?? "Your store"}
                 </p>
                 <p className="text-[11px]" style={{ color: "#94a3b8" }}>
-                  {store ? `${store.slug}.${STORE_DOMAIN}` : "Set up your store to get a URL"}
+                  {store
+                    ? `${store.slug}.${STORE_DOMAIN}`
+                    : "Set up your store to get a URL"}
                 </p>
               </div>
             </div>
@@ -271,7 +276,9 @@ export default function OverviewPage() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[12px] font-bold text-white transition-all hover:opacity-90"
                 style={{
                   background: storefrontUrl ? "#1A7A42" : "#cbd5e1",
-                  boxShadow: storefrontUrl ? "0 2px 8px rgba(26,122,66,0.25)" : "none",
+                  boxShadow: storefrontUrl
+                    ? "0 2px 8px rgba(26,122,66,0.25)"
+                    : "none",
                   pointerEvents: storefrontUrl ? "auto" : "none",
                 }}
               >
@@ -515,7 +522,9 @@ export default function OverviewPage() {
                 className="text-[24px] font-extrabold leading-tight"
                 style={{ color: "#1A7A42", letterSpacing: "-0.5px" }}
               >
-                {loading ? "—" : koboToNaira(analytics?.total_revenue_kobo ?? 0)}
+                {loading
+                  ? "—"
+                  : koboToNaira(analytics?.total_revenue_kobo ?? 0)}
               </p>
               <p
                 className="text-[11px] font-semibold uppercase tracking-wide mt-1"
@@ -546,7 +555,10 @@ export default function OverviewPage() {
           {/* Revenue trend area chart */}
           <div className="flex-1 min-h-[160px]">
             {loadingTrend ? (
-              <div className="flex items-center justify-center h-full gap-2" style={{ color: "#94a3b8" }}>
+              <div
+                className="flex items-center justify-center h-full gap-2"
+                style={{ color: "#94a3b8" }}
+              >
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="text-[12px]">Loading trend…</span>
               </div>
@@ -556,14 +568,24 @@ export default function OverviewPage() {
                 style={{ background: "#fafafa", border: "1px dashed #e2e8f0" }}
               >
                 <BarChart3 className="w-5 h-5" style={{ color: "#94a3b8" }} />
-                <p className="text-[12px] font-semibold" style={{ color: "#374151" }}>No revenue yet in the last 30 days</p>
-                <p className="text-[11px]" style={{ color: "#94a3b8" }}>Chart will fill in as orders come through.</p>
+                <p
+                  className="text-[12px] font-semibold"
+                  style={{ color: "#374151" }}
+                >
+                  No revenue yet in the last 30 days
+                </p>
+                <p className="text-[11px]" style={{ color: "#94a3b8" }}>
+                  Chart will fill in as orders come through.
+                </p>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={160}>
                 <AreaChart
                   data={trend.map((p) => ({
-                    date: new Date(p.date).toLocaleDateString("en-NG", { day: "numeric", month: "short" }),
+                    date: new Date(p.date).toLocaleDateString("en-NG", {
+                      day: "numeric",
+                      month: "short",
+                    }),
                     revenue: Math.round(p.revenue_kobo / 100),
                     orders: p.orders,
                   }))}
@@ -571,30 +593,54 @@ export default function OverviewPage() {
                 >
                   <defs>
                     <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#1A7A42" stopOpacity={0.18} />
+                      <stop
+                        offset="5%"
+                        stopColor="#1A7A42"
+                        stopOpacity={0.18}
+                      />
                       <stop offset="95%" stopColor="#1A7A42" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#f1f5f9"
+                    vertical={false}
+                  />
                   <XAxis
                     dataKey="date"
                     tick={{ fontSize: 10, fill: "#94a3b8" }}
-                    axisLine={false} tickLine={false}
+                    axisLine={false}
+                    tickLine={false}
                     interval="preserveStartEnd"
                   />
                   <YAxis
                     tick={{ fontSize: 10, fill: "#94a3b8" }}
-                    axisLine={false} tickLine={false} width={48}
-                    tickFormatter={(v: number) => v >= 1000 ? `₦${(v / 1000).toFixed(0)}k` : `₦${v}`}
+                    axisLine={false}
+                    tickLine={false}
+                    width={48}
+                    tickFormatter={(v: number) =>
+                      v >= 1000 ? `₦${(v / 1000).toFixed(0)}k` : `₦${v}`
+                    }
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 8, border: "1px solid #e2e8f0", fontSize: 12 }}
-                    formatter={(v) => [`₦${Number(v ?? 0).toLocaleString("en-NG")}`, "Revenue"]}
+                    contentStyle={{
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      fontSize: 12,
+                    }}
+                    formatter={(v) => [
+                      `₦${Number(v ?? 0).toLocaleString("en-NG")}`,
+                      "Revenue",
+                    ]}
                   />
                   <Area
-                    type="monotone" dataKey="revenue"
-                    stroke="#1A7A42" strokeWidth={2}
-                    fill="url(#revGrad)" dot={false} activeDot={{ r: 4, fill: "#1A7A42" }}
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#1A7A42"
+                    strokeWidth={2}
+                    fill="url(#revGrad)"
+                    dot={false}
+                    activeDot={{ r: 4, fill: "#1A7A42" }}
                   />
                 </AreaChart>
               </ResponsiveContainer>

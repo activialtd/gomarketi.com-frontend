@@ -1,268 +1,232 @@
-"use client";
+import Link from "next/link";
+import type { Metadata } from "next";
+import { MarketStalls } from "@/components/site/MarketStalls";
+import { AwningEdge, WaitlistForm } from "@/components/site/WaitlistForm";
+import { IconCheck } from "@/components/site/Icons";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import gsap from "gsap";
+export const metadata: Metadata = {
+  title: "GoMarketi | The whole market, without the traffic",
+  description:
+    "Search Nigerian market stalls by voice or text. Vendors bring your items to our hub, we check everything, and deliver it in one trip.",
+};
 
-/* ─── Cartoon SVG shapes ────────────────────────────────────────────────────── */
+const STEPS = [
+  {
+    title: "Ask for it",
+    body: "Type it or say it the way you would to a trader: red ankara, six yards, under fifteen thousand.",
+  },
+  {
+    title: "Stalls confirm",
+    body: "Vendors who have it confirm your order and set it aside for you.",
+  },
+  {
+    title: "Checked at the hub",
+    body: "Every vendor brings your items to our hub, where we check them and pack them together.",
+  },
+  {
+    title: "One delivery",
+    body: "Items from different stalls reach your door in a single trip.",
+  },
+  {
+    title: "You confirm",
+    body: "The vendor is paid only after you tell us it arrived.",
+  },
+];
 
-function Bag() {
+const VENDOR_POINTS = [
+  {
+    title: "Your own storefront",
+    body: "At yourstore.gomarketi.com, with your logo and your colours.",
+  },
+  {
+    title: "Found in market search",
+    body: "Buyers searching for what you sell see your stall.",
+  },
+  {
+    title: "One dashboard for orders",
+    body: "Confirm an order, get it to the hub, and we handle the rest.",
+  },
+  {
+    title: "Paid to your bank",
+    body: "Earnings clear when the buyer confirms and you withdraw straight to your account.",
+  },
+];
+
+const btnPrimary =
+  "inline-flex items-center justify-center rounded-md bg-primary px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+const btnOutline =
+  "inline-flex items-center justify-center rounded-md border-2 border-primary px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+export default function HomePage() {
   return (
-    <svg viewBox="0 0 56 60" fill="none" className="w-full h-full">
-      <rect x="6" y="18" width="44" height="36" rx="8" fill="#1a7a42" opacity="0.9" />
-      <path d="M19 18v-4a9 9 0 0118 0v4" stroke="#1a7a42" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-      <circle cx="22" cy="34" r="2.5" fill="white" opacity="0.7" />
-      <circle cx="34" cy="34" r="2.5" fill="white" opacity="0.7" />
-      <path d="M22 42c2 2.5 10 2.5 12 0" stroke="white" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function Coin() {
-  return (
-    <svg viewBox="0 0 52 52" fill="none" className="w-full h-full">
-      <circle cx="26" cy="26" r="24" fill="#22c55e" />
-      <circle cx="26" cy="26" r="18" fill="#16a34a" />
-      <text x="26" y="32" textAnchor="middle" fill="white" fontSize="18" fontWeight="800">₦</text>
-    </svg>
-  );
-}
-
-function Star() {
-  return (
-    <svg viewBox="0 0 44 44" fill="none" className="w-full h-full">
-      <path d="M22 4l4.5 13H41l-11 8 4.2 13L22 31l-12.2 7 4.2-13L3 17h14.5z" fill="#86efac" />
-    </svg>
-  );
-}
-
-function Sparkle() {
-  return (
-    <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-      <path d="M20 2v36M2 20h36M6 6l28 28M34 6L6 34" stroke="#bbf7d0" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PriceTag() {
-  return (
-    <svg viewBox="0 0 52 52" fill="none" className="w-full h-full">
-      <path d="M4 4h20l24 24-20 20L4 24V4z" fill="#1a7a42" opacity="0.85" />
-      <circle cx="15" cy="15" r="3" fill="white" />
-    </svg>
-  );
-}
-
-/* ─── Floaty wrapper ────────────────────────────────────────────────────────── */
-
-type FloatyProps = { size: string; style: CSSProperties; children: React.ReactNode };
-function Floaty({ size, style, children }: FloatyProps) {
-  return (
-    <span
-      data-float="1"
-      className={`absolute ${size} opacity-0 pointer-events-none`}
-      style={style}
-    >
-      {children}
-    </span>
-  );
-}
-
-/* ─── Page ──────────────────────────────────────────────────────────────────── */
-
-export default function ComingSoon() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const sceneRef = useRef<HTMLDivElement>(null);
-  const headlineRef = useRef<HTMLHeadingElement>(null);
-  const subRef = useRef<HTMLParagraphElement>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
-  const formRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = sceneRef.current;
-    if (!el) return;
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "back.out(1.4)" } });
-
-      tl.fromTo(badgeRef.current, { y: -30, opacity: 0, scale: 0.7 }, { y: 0, opacity: 1, scale: 1, duration: 0.5 })
-        .fromTo(headlineRef.current, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, "-=0.2")
-        .fromTo(subRef.current, { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, "-=0.25")
-        .fromTo(formRef.current, { y: 36, opacity: 0, scale: 0.93 }, { y: 0, opacity: 1, scale: 1, duration: 0.55 }, "-=0.2");
-
-      /* floating cartoon elements */
-      const floaties = el.querySelectorAll<HTMLElement>("[data-float]");
-      floaties.forEach((f, i) => {
-        const amp = 10 + (i % 3) * 7;
-        const dur = 2.6 + i * 0.45;
-
-        gsap.fromTo(
-          f,
-          { opacity: 0, scale: 0, rotation: (i % 2 === 0 ? 15 : -15) },
-          { opacity: 1, scale: 1, rotation: 0, duration: 0.55, ease: "back.out(2.2)", delay: 0.6 + i * 0.12 }
-        );
-        gsap.to(f, { y: -amp, duration: dur, yoyo: true, repeat: -1, ease: "sine.inOut", delay: 0.9 + i * 0.2 });
-        gsap.to(f, {
-          rotation: (i % 2 === 0 ? 1 : -1) * (6 + i * 1.5),
-          duration: dur * 1.3,
-          yoyo: true,
-          repeat: -1,
-          ease: "sine.inOut",
-          delay: 0.7 + i * 0.15,
-        });
-      });
-
-      /* pulse the live dot */
-      gsap.to("[data-pulse]", { scale: 1.7, opacity: 0.45, duration: 0.75, yoyo: true, repeat: -1, ease: "sine.inOut" });
-
-      /* squiggle underline draw */
-      const line = el.querySelector<SVGPathElement>("[data-underline]");
-      if (line) {
-        const len = line.getTotalLength?.() ?? 180;
-        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
-        gsap.to(line, { strokeDashoffset: 0, duration: 0.9, ease: "power2.inOut", delay: 0.6 });
-      }
-    }, el);
-
-    return () => ctx.revert();
-  }, []);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    gsap.to(formRef.current, {
-      scale: 0.95,
-      duration: 0.1,
-      yoyo: true,
-      repeat: 1,
-      ease: "power1.inOut",
-      onComplete: () => setSubmitted(true),
-    });
-  }
-
-  return (
-    <main ref={sceneRef} className="min-h-screen bg-white flex flex-col overflow-hidden">
-
-      {/* ── Background decoration ───────────────────────────────────────────── */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-        <div className="absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full" style={{ background: "radial-gradient(circle, rgba(34,197,94,0.07) 0%, transparent 70%)" }} />
-        <div className="absolute -bottom-24 -left-24 w-[360px] h-[360px] rounded-full" style={{ background: "radial-gradient(circle, rgba(26,122,66,0.06) 0%, transparent 70%)" }} />
-      </div>
-
-      {/* ── Cartoon floaties ────────────────────────────────────────────────── */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 1 }}>
-        <Floaty size="w-14 h-14" style={{ top: "13%", left: "6%" }}><Bag /></Floaty>
-        <Floaty size="w-11 h-11" style={{ top: "21%", right: "8%" }}><Coin /></Floaty>
-        <Floaty size="w-10 h-10" style={{ top: "54%", left: "4%" }}><Star /></Floaty>
-        <Floaty size="w-11 h-11" style={{ top: "63%", right: "6%" }}><PriceTag /></Floaty>
-        <Floaty size="w-9 h-9"  style={{ top: "8%",  right: "22%" }}><Sparkle /></Floaty>
-        <Floaty size="w-8 h-8"  style={{ top: "41%", right: "14%" }}><Coin /></Floaty>
-        <Floaty size="w-12 h-12" style={{ bottom: "16%", left: "10%" }}><Star /></Floaty>
-        <Floaty size="w-10 h-10" style={{ bottom: "13%", right: "9%" }}><Bag /></Floaty>
-        <Floaty size="w-8 h-8"  style={{ top: "36%", left: "17%" }}><Sparkle /></Floaty>
-      </div>
-
-      {/* ── Nav ─────────────────────────────────────────────────────────────── */}
-      <nav className="relative px-6 py-5 flex items-center max-w-5xl mx-auto w-full" style={{ zIndex: 10 }}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#1a7a42] flex items-center justify-center shadow-md">
-            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="white" strokeWidth={2.2}>
-              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M3 6h18" strokeLinecap="round" />
-              <path d="M16 10a4 4 0 01-8 0" strokeLinecap="round" />
-            </svg>
-          </div>
-          <span className="text-[#1c1c1c] font-extrabold text-lg tracking-tight">GoMarketi</span>
-        </div>
-      </nav>
-
-      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="relative flex-1 flex flex-col items-center justify-center px-6 py-20 text-center" style={{ zIndex: 10 }}>
-
-        <div ref={badgeRef} className="inline-flex items-center gap-2 bg-[#f0faf3] text-[#1a7a42] text-xs font-bold px-4 py-2 rounded-full mb-8 border border-[#22c55e]/30 shadow-sm opacity-0">
-          <span data-pulse className="w-2 h-2 rounded-full bg-[#22c55e] inline-block" />
-          Something big is coming to Africa
-        </div>
-
-        <h1 ref={headlineRef} className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-[#1c1c1c] leading-[1.1] tracking-tight max-w-3xl opacity-0">
-          Africa&apos;s{" "}
-          <span className="text-[#1a7a42] relative inline-block">
-            Commerce
-            <svg
-              className="absolute left-0 w-full"
-              style={{ bottom: -4, height: 10 }}
-              viewBox="0 0 300 10"
-              fill="none"
-              preserveAspectRatio="none"
-            >
-              <path
-                data-underline
-                d="M2 7 Q75 2 150 6 Q225 10 298 4"
-                stroke="#22c55e"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                fill="none"
-              />
-            </svg>
-          </span>{" "}
-          Platform
-        </h1>
-
-        <p ref={subRef} className="mt-8 text-lg sm:text-xl text-gray-500 max-w-lg leading-relaxed opacity-0">
-          We&apos;re building the infrastructure that empowers African vendors
-          to sell, grow, and thrive — online and offline.
-        </p>
-
-        <div ref={formRef} className="mt-10 w-full max-w-md opacity-0">
-          {submitted ? (
-            <div className="flex items-center justify-center gap-3 bg-[#f0faf3] border border-[#22c55e]/40 rounded-2xl px-6 py-5 shadow-sm">
-              <div className="w-9 h-9 rounded-full bg-[#1a7a42] flex items-center justify-center flex-shrink-0 shadow">
-                <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="white" strokeWidth={2.5}>
-                  <polyline points="20,6 9,17 4,12" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <p className="text-[#1a7a42] font-bold text-sm">
-                You&apos;re on the list! We&apos;ll reach out when we launch.
-              </p>
+    <>
+      {/* Hero */}
+      <section className="bg-surface">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-6 pt-16 pb-12 md:grid-cols-[1fr_1.05fr] md:pt-24 md:pb-16">
+          <div>
+            <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+              The whole market, without the traffic.
+            </h1>
+            <p className="mt-6 max-w-lg text-lg leading-relaxed text-muted">
+              Search market stalls across Nigeria by voice or text. Vendors
+              bring your items to our hub, we check everything, and deliver it
+              to you in one trip.
+            </p>
+            <div id="waitlist" className="mt-8 max-w-md scroll-mt-28">
+              <WaitlistForm />
             </div>
-          ) : (
-            <>
-              <form
-                onSubmit={handleSubmit}
-                className="flex gap-2 shadow-lg rounded-xl overflow-hidden border border-gray-200"
-                style={{ boxShadow: "0 8px 32px rgba(26,122,66,0.10)" }}
+            <p className="mt-4 text-sm text-muted">
+              Coming to iOS and Android. Selling something?{" "}
+              <Link
+                href="/#vendors"
+                className="font-semibold text-primary underline underline-offset-4"
               >
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  className="flex-1 px-4 py-3.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a7a42]/25 focus:border-[#1a7a42] transition"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-3.5 bg-[#1a7a42] text-white text-sm font-bold hover:bg-[#239452] active:scale-95 transition-all whitespace-nowrap"
-                >
-                  Join Waitlist
-                </button>
-              </form>
-              <p className="mt-3 text-xs text-gray-400">No spam. Only launch news.</p>
-            </>
-          )}
+                Open a store
+              </Link>
+            </p>
+          </div>
+
+          <MarketStalls className="h-auto w-full" />
+        </div>
+      </section>
+      <AwningEdge />
+
+      {/* How it works */}
+      <section id="how-it-works" className="scroll-mt-16">
+        <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
+          <div className="max-w-xl">
+            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+              From stall to doorstep
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-muted">
+              Buy from as many stalls as you like. It still arrives as one
+              order.
+            </p>
+          </div>
+
+          <ol className="mt-14 grid gap-10 md:grid-cols-5 md:gap-6">
+            {STEPS.map((step, i) => {
+              const last = i === STEPS.length - 1;
+              return (
+                <li key={step.title}>
+                  <div className="flex items-center">
+                    <span
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-primary text-sm font-bold ${
+                        last
+                          ? "bg-primary text-white"
+                          : "bg-background text-primary"
+                      }`}
+                    >
+                      {i + 1}
+                    </span>
+                    {!last && (
+                      <span
+                        aria-hidden
+                        className="ml-3 hidden flex-1 border-t-2 border-dashed border-primary/30 md:block"
+                      />
+                    )}
+                  </div>
+                  <h3 className="mt-5 font-bold text-foreground">
+                    {step.title}
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">
+                    {step.body}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      <footer className="relative px-6 py-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 max-w-5xl mx-auto w-full" style={{ zIndex: 10 }}>
-        <p className="text-xs text-gray-400">
-          © {new Date().getFullYear()} GoMarketi. All rights reserved.
-        </p>
-        <a href="mailto:hello@gomarketi.com" className="text-xs text-gray-400 hover:text-[#1a7a42] transition-colors">
-          hello@gomarketi.com
-        </a>
-      </footer>
-    </main>
+      {/* Payment protection */}
+      <section className="bg-primary text-white">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 md:grid-cols-2 md:py-28">
+          <h2 className="text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
+            You pay once. The vendor gets paid when you say it arrived.
+          </h2>
+          <dl className="space-y-8">
+            <div>
+              <dt className="font-bold">Held, not spent</dt>
+              <dd className="mt-2 leading-relaxed text-white/75">
+                Your payment stays with us while your order moves from stall to
+                hub to your door.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-bold">Refunds without chasing anyone</dt>
+              <dd className="mt-2 leading-relaxed text-white/75">
+                If a vendor cancels or never brings your item to the hub, your
+                money goes back automatically.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-bold">A team that steps in</dt>
+              <dd className="mt-2 leading-relaxed text-white/75">
+                Something wrong? Report it before you confirm delivery and we
+                look into it while your payment stays on hold.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      {/* Vendors */}
+      <section id="vendors" className="scroll-mt-16">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 md:grid-cols-2 md:py-28">
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+              Keep your stall. Sell past closing time.
+            </h2>
+            <p className="mt-4 max-w-md text-lg leading-relaxed text-muted">
+              Run the same shop you run today. GoMarketi puts it online, sends
+              buyers your way, and handles delivery from the hub.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              {/* TODO: point this at the vendor signup route */}
+              <Link href="/signup" className={btnPrimary}>
+                Open your store
+              </Link>
+              <Link href="/support#selling" className={btnOutline}>
+                How selling works
+              </Link>
+            </div>
+          </div>
+
+          <ul className="divide-y divide-border border-y border-border">
+            {VENDOR_POINTS.map((point) => (
+              <li key={point.title} className="flex gap-4 py-5">
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface text-primary-soft">
+                  <IconCheck className="h-3.5 w-3.5" />
+                </span>
+                <div>
+                  <h3 className="font-bold text-foreground">{point.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-muted">
+                    {point.body}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Closing */}
+      <section className="border-t border-border bg-surface">
+        <div className="mx-auto flex max-w-6xl flex-col gap-8 px-6 py-16 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+              Be first in when we open.
+            </h2>
+            <p className="mt-2 text-muted">
+              One email when we launch. Nothing else.
+            </p>
+          </div>
+          <div className="w-full md:max-w-md">
+            <WaitlistForm />
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

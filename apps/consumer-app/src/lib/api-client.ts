@@ -1,8 +1,22 @@
 import Constants from "expo-constants";
 import * as SecureStore from "expo-secure-store";
 
-const API_URL = (Constants.expoConfig?.extra?.apiUrl as string) ??
-  "https://api-staging.gomarketi.com";
+// Resolution order, most explicit first:
+//   EXPO_PUBLIC_API_URL  — .env.local, survives manifest caching
+//   extra.apiUrl         — app.json, baked into the manifest
+//   staging              — last resort
+//
+// The middle one comes from a cached manifest in Expo Go, so it can silently
+// go missing after a config change and fall through to staging. The log below
+// makes whichever won visible on boot.
+const API_URL =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (Constants.expoConfig?.extra?.apiUrl as string) ??
+  "";
+
+if (__DEV__) {
+  console.log(`[api] talking to ${API_URL}`);
+}
 
 const ACCESS_TOKEN_KEY = "gomarketi_access_token";
 const REFRESH_TOKEN_KEY = "gomarketi_refresh_token";
@@ -55,7 +69,11 @@ export type AuthResp = {
 export class ApiError extends Error {
   status: number;
   fields?: { field: string; message: string }[];
-  constructor(status: number, message: string, fields?: { field: string; message: string }[]) {
+  constructor(
+    status: number,
+    message: string,
+    fields?: { field: string; message: string }[],
+  ) {
     super(message);
     this.status = status;
     this.fields = fields;
@@ -100,7 +118,11 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
   const data = text ? JSON.parse(text) : {};
 
   if (!res.ok) {
-    throw new ApiError(res.status, data.error ?? "something went wrong", data.fields);
+    throw new ApiError(
+      res.status,
+      data.error ?? "something went wrong",
+      data.fields,
+    );
   }
   return data as T;
 }
@@ -115,7 +137,9 @@ async function doRefresh(): Promise<AuthResp | null> {
       const refreshToken = await getRefreshToken();
       if (!refreshToken) return null;
       try {
-        const resp = await request<AuthResp>("/v1/auth/token/refresh", { refresh_token: refreshToken });
+        const resp = await request<AuthResp>("/v1/auth/token/refresh", {
+          refresh_token: refreshToken,
+        });
         await storeTokens(resp);
         return resp;
       } catch {
@@ -164,7 +188,11 @@ export async function authorizedRequest<T>(
   const text = await res.text();
   const data = text ? JSON.parse(text) : {};
   if (!res.ok) {
-    throw new ApiError(res.status, data.error ?? "something went wrong", data.fields);
+    throw new ApiError(
+      res.status,
+      data.error ?? "something went wrong",
+      data.fields,
+    );
   }
   return data as T;
 }
@@ -189,23 +217,36 @@ export async function register(input: {
   return resp;
 }
 
-export async function login(email: string, password: string): Promise<AuthResp> {
+export async function login(
+  email: string,
+  password: string,
+): Promise<AuthResp> {
   const resp = await request<AuthResp>("/v1/auth/login", { email, password });
   await storeTokens(resp);
   return resp;
 }
 
-export async function requestOtp(email: string): Promise<{ session_token: string; expires_in: number }> {
+export async function requestOtp(
+  email: string,
+): Promise<{ session_token: string; expires_in: number }> {
   return request("/v1/auth/otp/request", { email });
 }
 
-export async function verifyOtp(sessionToken: string, otp: string): Promise<AuthResp> {
-  const resp = await request<AuthResp>("/v1/auth/otp/verify", { session_token: sessionToken, otp });
+export async function verifyOtp(
+  sessionToken: string,
+  otp: string,
+): Promise<AuthResp> {
+  const resp = await request<AuthResp>("/v1/auth/otp/verify", {
+    session_token: sessionToken,
+    otp,
+  });
   await storeTokens(resp);
   return resp;
 }
 
-export async function forgotPassword(email: string): Promise<{ session_token: string; expires_in: number }> {
+export async function forgotPassword(
+  email: string,
+): Promise<{ session_token: string; expires_in: number }> {
   return request("/v1/auth/password/forgot", { email });
 }
 
@@ -223,7 +264,9 @@ export async function resetPassword(input: {
 }
 
 export async function googleAuth(idToken: string): Promise<AuthResp> {
-  const resp = await request<AuthResp>("/v1/auth/oauth/google", { id_token: idToken });
+  const resp = await request<AuthResp>("/v1/auth/oauth/google", {
+    id_token: idToken,
+  });
   await storeTokens(resp);
   return resp;
 }
@@ -247,7 +290,10 @@ export async function appleAuth(input: {
 export async function logout(): Promise<void> {
   const refreshToken = await getRefreshToken();
   try {
-    await request("/v1/auth/logout", refreshToken ? { refresh_token: refreshToken } : undefined);
+    await request(
+      "/v1/auth/logout",
+      refreshToken ? { refresh_token: refreshToken } : undefined,
+    );
   } finally {
     await clearTokens();
   }
@@ -268,10 +314,15 @@ export async function restoreSession(): Promise<UserDTO | null> {
 
 // ── Store / product search (public, unauthenticated) ────────────────────────
 
-async function getPublic<T>(path: string, params: Record<string, string | number | undefined>): Promise<T> {
+async function getPublic<T>(
+  path: string,
+  params: Record<string, string | number | undefined>,
+): Promise<T> {
   const qs = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== "")
-    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .map(
+      ([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`,
+    )
     .join("&");
   const res = await fetch(`${API_URL}${path}${qs ? `?${qs}` : ""}`, {
     headers: { "X-Client-Platform": "mobile" },
@@ -339,19 +390,16 @@ export async function searchStores(params: {
     matched_store_id?: string;
     matched_market_id?: string;
     remaining_query: string;
-  }>(
-    "/v1/storefront/public/stores/search",
-    {
-      q: params.q,
-      category: params.category,
-      lat: params.lat,
-      lng: params.lng,
-      radius_km: params.radiusKm,
-      market_id: params.marketId,
-      limit: params.limit,
-      offset: params.offset,
-    },
-  );
+  }>("/v1/storefront/public/stores/search", {
+    q: params.q,
+    category: params.category,
+    lat: params.lat,
+    lng: params.lng,
+    radius_km: params.radiusKm,
+    market_id: params.marketId,
+    limit: params.limit,
+    offset: params.offset,
+  });
   return {
     stores: resp.stores,
     hasMore: resp.has_more,
@@ -371,7 +419,9 @@ export type Market = {
 
 // getMarkets lists major markets, e.g. for the consumer-app "Popular
 // Markets" browse tab.
-export async function getMarkets(params: { state?: string; city?: string } = {}): Promise<Market[]> {
+export async function getMarkets(
+  params: { state?: string; city?: string } = {},
+): Promise<Market[]> {
   return getPublic<Market[]>("/v1/storefront/public/markets", {
     state: params.state,
     city: params.city,
@@ -403,10 +453,16 @@ export async function getStoreProducts(
   page = 1,
   perPage = 10,
 ): Promise<ProductPage> {
-  const resp = await getPublic<{ products: CatalogueProduct[]; total: number; page: number; per_page: number }>(
-    "/v1/catalogue/public/products",
-    { store_id: storeId, page, per_page: perPage },
-  );
+  const resp = await getPublic<{
+    products: CatalogueProduct[];
+    total: number;
+    page: number;
+    per_page: number;
+  }>("/v1/catalogue/public/products", {
+    store_id: storeId,
+    page,
+    per_page: perPage,
+  });
   return {
     products: resp.products,
     hasMore: resp.page * resp.per_page < resp.total,
@@ -424,13 +480,88 @@ export async function searchProducts(
   perPage = 24,
 ): Promise<ProductPage> {
   if (storeIds.length === 0) return { products: [], hasMore: false };
-  const resp = await getPublic<{ products: CatalogueProduct[]; total: number; page: number; per_page: number }>(
-    "/v1/catalogue/public/products/search",
-    { store_ids: storeIds.join(","), q, page, per_page: perPage },
-  );
+  const resp = await getPublic<{
+    products: CatalogueProduct[];
+    total: number;
+    page: number;
+    per_page: number;
+  }>("/v1/catalogue/public/products/search", {
+    store_ids: storeIds.join(","),
+    q,
+    page,
+    per_page: perPage,
+  });
   return {
     products: resp.products,
     hasMore: resp.page * resp.per_page < resp.total,
+  };
+}
+
+// ── Unified search ──────────────────────────────────────────────────────────
+// One query, both kinds of result. The backend does the matching (trigram +
+// full-text), so a misspelling like "jollof ric" still finds Jollof Rice and
+// the caller does not have to resolve a store scope first.
+
+export type VendorResult = {
+  id: string;
+  name: string;
+  slug: string;
+  category: string;
+  tagline?: string;
+  logo_url?: string;
+  city?: string;
+  state?: string;
+  market_id?: string;
+  market_name?: string;
+  product_count: number;
+};
+
+export type SearchAllResult = {
+  query: string;
+  products: CatalogueProduct[];
+  productsHasMore: boolean;
+  vendors: VendorResult[];
+  vendorsHasMore: boolean;
+  /** Same category or tag as the top matches — the "you might also like" rail. */
+  relatedProducts: CatalogueProduct[];
+  /** Query completions from product names and tags. */
+  suggestions: string[];
+};
+
+// searchAll returns products and vendors for one query. `type` narrows it to
+// a single section — "vendors" is the explicit vendor search.
+export async function searchAll(params: {
+  q?: string;
+  type?: "all" | "products" | "vendors";
+  categoryId?: string;
+  storeIds?: string[];
+  limit?: number;
+  offset?: number;
+}): Promise<SearchAllResult> {
+  const resp = await getPublic<{
+    query: string;
+    products: CatalogueProduct[];
+    products_has_more: boolean;
+    vendors: VendorResult[];
+    vendors_has_more: boolean;
+    related_products: CatalogueProduct[];
+    suggestions: string[];
+  }>("/v1/catalogue/public/search", {
+    q: params.q,
+    type: params.type,
+    category_id: params.categoryId,
+    store_ids: params.storeIds?.length ? params.storeIds.join(",") : undefined,
+    limit: params.limit,
+    offset: params.offset,
+  });
+  return {
+    query: resp.query,
+    products: resp.products ?? [],
+    productsHasMore: resp.products_has_more,
+    vendors: resp.vendors ?? [],
+    vendorsHasMore: resp.vendors_has_more,
+    relatedProducts: resp.related_products ?? [],
+    suggestions: resp.suggestions ?? [],
   };
 }
 
@@ -455,7 +586,8 @@ export type CheckoutStoreOrder = {
 // services/orders/internal/dto/orders.go) — a vendor delivers to the
 // GoMarketi hub (at_hub), GoMarketi dispatches the consolidated batch
 // (shipped), the buyer confirms receipt (delivered).
-export type OrderStatus = "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+export type OrderStatus =
+  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 export type EscrowStatus = "held" | "released" | "reversed";
 // A dispute is orthogonal to status — "reported" means the buyer says this
 // specific order never arrived, even though it was checked in and
@@ -486,10 +618,46 @@ export type OrderResp = {
   updated_at: string;
 };
 
+// DeliveryOption is one of a vendor's own delivery choices — a title, a note
+// and a price the vendor set in their dashboard.
+export type DeliveryOption = {
+  id: string;
+  store_id: string;
+  title: string;
+  description: string;
+  price_kobo: number;
+  position: number;
+  is_active: boolean;
+};
+
+// getDeliveryOptions returns a store's delivery choices. Public, no auth.
+export async function getDeliveryOptions(
+  slug: string,
+): Promise<DeliveryOption[]> {
+  return getPublic<DeliveryOption[]>(
+    `/v1/storefront/public/stores/${encodeURIComponent(slug)}/delivery-options`,
+    {},
+  );
+}
+
+export type CheckoutResult = {
+  checkout_id: string;
+  orders: OrderResp[];
+  items_kobo: number;
+  delivery_fee_kobo: number;
+  delivery_option_title?: string;
+  total_kobo: number;
+};
+
 // createCheckout creates one order per vendor store from a single payment —
 // POST /v1/orders/public/checkout, no auth (same public model as login/register
 // above: no vendor session exists at checkout time, only the buyer's details
 // and a verified Paystack reference).
+//
+// Delivery is charged ONCE for the whole basket however many vendors are in
+// it, because the hub sends one consolidated delivery. delivery_option_id may
+// name an option belonging to any store in the basket; the backend reads the
+// price from that row, so the fee cannot be set by the client.
 export async function createCheckout(input: {
   customer_name: string;
   customer_email: string;
@@ -497,8 +665,10 @@ export async function createCheckout(input: {
   delivery_address?: string;
   payment_reference: string;
   stores: CheckoutStoreOrder[];
-}): Promise<{ orders: OrderResp[] }> {
-  return request<{ orders: OrderResp[] }>("/v1/orders/public/checkout", input);
+  delivery_option_id?: string;
+  delivery_fee_kobo?: number;
+}): Promise<CheckoutResult> {
+  return request<CheckoutResult>("/v1/orders/public/checkout", input);
 }
 
 // getMyOrders returns every order the authenticated buyer has ever placed —
@@ -516,8 +686,13 @@ export async function getMyOrder(orderId: string): Promise<OrderResp> {
 // vendor's held escrow. Public/email-gated on the backend (see
 // services/orders/internal/service/orders.go's ConfirmDelivery), matching
 // the existing public-checkout trust model rather than needing a buyer JWT.
-export async function confirmDelivery(orderId: string, email: string): Promise<OrderResp> {
-  return request<OrderResp>(`/v1/orders/public/${orderId}/confirm-delivery`, { email });
+export async function confirmDelivery(
+  orderId: string,
+  email: string,
+): Promise<OrderResp> {
+  return request<OrderResp>(`/v1/orders/public/${orderId}/confirm-delivery`, {
+    email,
+  });
 }
 
 // reportMissing flags one order within a batch as never having arrived,
@@ -526,6 +701,13 @@ export async function confirmDelivery(orderId: string, email: string): Promise<O
 // trust model (see services/orders/internal/service/orders.go's
 // ReportMissing). Does not change order status — a parallel dispute flag
 // admin resolves separately.
-export async function reportMissing(orderId: string, email: string, reason?: string): Promise<OrderResp> {
-  return request<OrderResp>(`/v1/orders/public/${orderId}/report-missing`, { email, reason });
+export async function reportMissing(
+  orderId: string,
+  email: string,
+  reason?: string,
+): Promise<OrderResp> {
+  return request<OrderResp>(`/v1/orders/public/${orderId}/report-missing`, {
+    email,
+    reason,
+  });
 }

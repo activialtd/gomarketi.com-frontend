@@ -17,7 +17,10 @@ interface Props {
 
 interface PresignResp {
   upload_url: string;
-  public_url: string;
+  /** Known up front for R2; empty for Cloudinary, which returns it instead. */
+  public_url?: string;
+  provider?: "cloudinary" | "r2";
+  fields?: Record<string, string>;
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -65,24 +68,55 @@ export function FileUpload({
         throw new Error(body.error ?? "Could not get upload URL");
       }
 
-      const { upload_url, public_url } = (await presignRes.json()) as PresignResp;
+      const { upload_url, public_url, provider, fields } =
+        (await presignRes.json()) as PresignResp;
 
-      // 2. Upload directly to R2 via XHR so we can track progress
-      await new Promise<void>((resolve, reject) => {
+      // 2. Upload straight to storage. The two providers differ: R2 takes a
+      //    plain PUT and the public URL is known up front, while Cloudinary
+      //    takes a signed multipart POST and returns the URL in its response.
+      const isCloudinary = provider === "cloudinary";
+
+      const secureUrl = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open("PUT", upload_url);
-        xhr.setRequestHeader("Content-Type", file.type);
+        xhr.open(isCloudinary ? "POST" : "PUT", upload_url);
+        if (!isCloudinary) xhr.setRequestHeader("Content-Type", file.type);
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
         };
-        xhr.onload = () => (xhr.status === 200 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`)));
+        xhr.onload = () => {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject(new Error(`Upload failed: ${xhr.status}`));
+            return;
+          }
+          if (!isCloudinary) {
+            public_url
+              ? resolve(public_url)
+              : reject(new Error("Upload succeeded but returned no URL"));
+            return;
+          }
+          try {
+            const body = JSON.parse(xhr.responseText) as { secure_url?: string; url?: string };
+            const url = body.secure_url ?? body.url;
+            url ? resolve(url) : reject(new Error("Upload succeeded but returned no URL"));
+          } catch {
+            reject(new Error("Could not read upload response"));
+          }
+        };
         xhr.onerror = () => reject(new Error("Network error during upload"));
-        xhr.send(file);
+
+        if (isCloudinary) {
+          const form = new FormData();
+          Object.entries(fields ?? {}).forEach(([k, v]) => form.append(k, v));
+          form.append("file", file);
+          xhr.send(form);
+        } else {
+          xhr.send(file);
+        }
       });
 
       setProgress(null);
       setDone(true);
-      onChange(public_url);
+      onChange(secureUrl);
       setTimeout(() => setDone(false), 3000);
     } catch (e: unknown) {
       setProgress(null);
