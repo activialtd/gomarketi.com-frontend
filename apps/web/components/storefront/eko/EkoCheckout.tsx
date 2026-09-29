@@ -34,6 +34,7 @@ export default function EkoCheckout(props: CheckoutProps) {
     deliveryZone,
     setDeliveryZone,
     deliveryZones,
+    deliveryUnavailable,
     storeReady,
     isPlacing,
     orderPlaced,
@@ -223,15 +224,16 @@ export default function EkoCheckout(props: CheckoutProps) {
               >
                 <div>
                   <p className="text-[13px] font-bold text-neutral-900">
-                    {deliveryZone.name}
+                    {deliveryZone?.name ?? "No delivery set"}
                   </p>
                   <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-1 pr-2">
-                    {deliveryZone.note}
+                    {deliveryZone?.note ??
+                      "This vendor has not set a delivery fee yet — contact the store."}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="text-[13px] font-extrabold text-neutral-900">
-                    {fmtNaira(deliveryZone.feeKobo)}
+                    {deliveryZone ? fmtNaira(deliveryZone.feeKobo) : "—"}
                   </span>
                   <ChevronLeft className="w-4 h-4 text-neutral-400 rotate-180" />
                 </div>
@@ -386,7 +388,7 @@ export default function EkoCheckout(props: CheckoutProps) {
 
             <div className="flex-1 overflow-y-auto max-h-[50vh] sm:max-h-[400px]">
               {filteredZones.map((zone) => {
-                const isSelected = deliveryZone.id === zone.id;
+                const isSelected = deliveryZone?.id === zone.id;
                 return (
                   <button
                     type="button"
