@@ -99,9 +99,9 @@ export function CheckoutScreen() {
     address.trim().length > 5 &&
     phone.trim().length >= 7 &&
     items.length > 0 &&
-    // A vendor with options configured requires one to be chosen; a basket
-    // with none at all is still checkout-able.
-    (deliveryOptions.length === 0 || selectedDelivery != null);
+    // Every basket needs a delivery choice: the orders service refuses an
+    // order whose store has set none, so there is nothing to fall back to.
+    selectedDelivery != null;
 
   // Stable for the lifetime of one payment attempt — PaystackSheet stays
   // mounted throughout, and payment idempotency now depends on this
@@ -188,8 +188,8 @@ export function CheckoutScreen() {
           ) : deliveryOptions.length === 0 ? (
             <View style={s.card}>
               <Text style={type.body}>
-                No delivery options set for these vendors yet — the seller will
-                arrange delivery with you directly.
+                This vendor has not set a delivery fee yet, so the order
+                cannot be placed. Contact the store and ask them to add one.
               </Text>
             </View>
           ) : (

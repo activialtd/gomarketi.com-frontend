@@ -97,7 +97,10 @@ export type DeliveryZone = {
 // toZones maps the store's delivery options onto the shape the checkout UI
 // already renders, so only the source of the list changes.
 export function toZones(options: DeliveryOptionResp[] | undefined): DeliveryZone[] {
-  if (!options?.length) return DELIVERY_ZONES;
+  // No fallback: the orders service refuses an order whose store has set no
+  // delivery options, so offering a made-up zone here would only fail after
+  // the customer has paid.
+  if (!options?.length) return [];
   return options
     .filter((o) => o.is_active)
     .map((o) => ({
@@ -266,12 +269,15 @@ export function useCheckout({
   );
   const [orderError, setOrderError] = useState("");
   const deliveryZones = toZones(deliveryOptions);
-  const [deliveryZone, setDeliveryZone] = useState<DeliveryZone>(
+  // True when this store has not set up delivery at all — checkout is blocked
+  // rather than priced with a number nobody chose.
+  const deliveryUnavailable = deliveryZones.length === 0;
+  const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | undefined>(
     deliveryZones[0],
   );
 
   // Zone locked in when the customer pressed Place order
-  const pendingZone = useRef<DeliveryZone>(deliveryZones[0]);
+  const pendingZone = useRef<DeliveryZone | undefined>(deliveryZones[0]);
 
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
@@ -288,7 +294,7 @@ export function useCheckout({
   );
 
   const allDigital = lines.length > 0 && lines.every((l) => l.isDigital);
-  const shipping = allDigital ? 0 : deliveryZone.feeKobo;
+  const shipping = allDigital ? 0 : (deliveryZone?.feeKobo ?? 0);
   const chargedShipping = CHARGE_DELIVERY_AT_CHECKOUT ? shipping : 0;
   const deliveryPaidLater = !CHARGE_DELIVERY_AT_CHECKOUT && shipping > 0;
   const total = subtotal + chargedShipping; // pass exactly this (kobo) to Paystack
@@ -332,13 +338,13 @@ export function useCheckout({
     // No delivery or note field on the order yet, so the vendor sees the
     // chosen zone and note inside the delivery address.
     const zone = pendingZone.current;
-    const zoneFee = allDigital ? 0 : zone.feeKobo;
+    const zoneFee = allDigital || !zone ? 0 : zone.feeKobo;
     const addressParts = [
       `${pendingCustomer.address}, ${pendingCustomer.city}, ${pendingCustomer.state}`,
     ];
     if (!allDigital) {
       addressParts.push(
-        `Delivery: ${zone.name} (${fmtNaira(zone.feeKobo)}${
+        `Delivery: ${zone?.name ?? "not set"} (${fmtNaira(zoneFee)}${
           CHARGE_DELIVERY_AT_CHECKOUT ? ", paid" : ", pay on delivery"
         })`,
       );
@@ -365,11 +371,10 @@ export function useCheckout({
       // For store-defined zones the server reads the price from its own
       // option row; delivery_fee_kobo is only used by stores with no options.
       delivery_option_id:
-        zone.fromStore && CHARGE_DELIVERY_AT_CHECKOUT && !allDigital
+        zone?.fromStore && CHARGE_DELIVERY_AT_CHECKOUT && !allDigital
           ? zone.id
           : undefined,
-      delivery_fee_kobo:
-        zone.fromStore || !CHARGE_DELIVERY_AT_CHECKOUT ? 0 : zoneFee,
+      delivery_fee_kobo: 0,
       payment_reference: ref,
     };
 
@@ -410,6 +415,7 @@ export function useCheckout({
     deliveryZone,
     setDeliveryZone,
     deliveryZones,
+    deliveryUnavailable,
     storeReady,
     isPlacing,
     orderPlaced,

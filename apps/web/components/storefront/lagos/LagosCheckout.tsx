@@ -34,6 +34,7 @@ export default function LagosCheckout(props: CheckoutProps) {
     deliveryZone,
     setDeliveryZone,
     deliveryZones,
+    deliveryUnavailable,
     storeReady,
     isPlacing,
     orderPlaced,
@@ -232,15 +233,16 @@ export default function LagosCheckout(props: CheckoutProps) {
                 >
                   <div>
                     <p className="text-[13px] font-semibold text-white">
-                      {deliveryZone.name}
+                      {deliveryZone?.name ?? "No delivery set"}
                     </p>
                     <p className="text-[11px] text-white/60 mt-0.5 line-clamp-1">
-                      {deliveryZone.note}
+                      {deliveryZone?.note ??
+                        "This vendor has not set a delivery fee yet — contact the store."}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-[13px] font-bold text-white">
-                      {fmtNaira(deliveryZone.feeKobo)}
+                      {deliveryZone ? fmtNaira(deliveryZone.feeKobo) : "—"}
                     </span>
                     <ChevronLeft className="w-4 h-4 text-white/40 rotate-180" />
                   </div>
@@ -389,7 +391,7 @@ export default function LagosCheckout(props: CheckoutProps) {
 
             <div className="flex-1 overflow-y-auto max-h-[50vh] sm:max-h-[400px]">
               {filteredZones.map((zone) => {
-                const isSelected = deliveryZone.id === zone.id;
+                const isSelected = deliveryZone?.id === zone.id;
                 return (
                   <button
                     type="button"

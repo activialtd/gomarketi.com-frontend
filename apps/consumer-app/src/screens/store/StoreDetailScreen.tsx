@@ -175,7 +175,13 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
                 color={color.textMuted}
               />
               <Text style={type.meta}>
-                {[store.address, store.city].filter(Boolean).join(", ")}
+                {/* The address a vendor types usually already ends with the
+                    city, so only add it when it is genuinely missing. */}
+                {store.address &&
+                store.city &&
+                store.address.toLowerCase().includes(store.city.toLowerCase())
+                  ? store.address
+                  : [store.address, store.city].filter(Boolean).join(", ")}
               </Text>
             </View>
           )}
