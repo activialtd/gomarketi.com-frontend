@@ -3,8 +3,6 @@ import { Montserrat, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cartContext";
 import { ErrorReporter } from "@/components/ErrorReporter";
-import { Footer } from "@/components/site/common/Footer";
-import { Navbar } from "@/components/site/common/Navbar";
 
 // Montserrat is the brand's secondary typeface and carries display headings;
 // the primary face (Blatant) is not licensed for web use here.
@@ -45,9 +43,10 @@ export default function RootLayout({
     <html lang="en" className={`${jakarta.variable} ${montserrat.variable} h-full antialiased`}>
       <body className="min-h-full font-[family-name:var(--font-jakarta)]">
         <ErrorReporter />
-        <Navbar />
+        {/* Nothing visual belongs here: this layout wraps the storefront tree
+            too, and a vendor's store must render only their own chrome. The
+            marketing navbar and footer live in app/(site)/layout.tsx. */}
         <CartProvider>{children}</CartProvider>
-        <Footer />
       </body>
     </html>
   );
