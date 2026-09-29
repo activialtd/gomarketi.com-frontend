@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   ActivityIndicator,
+  Image,
   StyleSheet,
   Pressable,
   Modal,
@@ -145,7 +146,15 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
         contentContainerStyle={s.scroll}
       >
         <View style={[s.banner, { backgroundColor: tint[meta.tint] }]}>
-          <Ionicons name={meta.icon} size={40} color={color.ink} />
+          {store.hero_image_url || store.logo_url ? (
+            <Image
+              source={{ uri: store.hero_image_url || store.logo_url }}
+              style={s.bannerImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <Ionicons name={meta.icon} size={40} color={color.ink} />
+          )}
         </View>
 
         <View style={s.headerBlock}>
@@ -192,52 +201,52 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
             {isFiltering && <View style={s.filterDot} />}
           </Pressable>
         </View>
+        <View style={s.coverflowWrap}>
+          {loading ? (
+            <CoverflowSkeleton />
+          ) : filteredProducts.length === 0 ? (
+            <View style={s.empty}>
+              <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
+                {isFiltering ? "No matches found" : "No products yet"}
+              </Text>
+              <Text
+                style={[
+                  type.body,
+                  {
+                    marginTop: 4,
+                    textAlign: "center",
+                    paddingHorizontal: space.lg,
+                  },
+                ]}
+              >
+                {isFiltering
+                  ? "Try adjusting your filters or loading more products."
+                  : "Check back soon."}
+              </Text>
+              {isFiltering && hasMore && (
+                <Pressable style={s.loadMoreBtn} onPress={loadMore}>
+                  <Text style={s.loadMoreBtnText}>Load More Products</Text>
+                </Pressable>
+              )}
+            </View>
+          ) : (
+            <>
+              <ProductCoverflow
+                products={filteredProducts}
+                onAdd={(p) => add(p)}
+                onOpen={(p) => push("product", { productId: p.id, product: p })}
+                onEndReached={hasMore && !isFiltering ? loadMore : undefined}
+              />
+              {loadingMore && (
+                <View style={s.loadingMore}>
+                  <ActivityIndicator color={color.primary} size="small" />
+                </View>
+              )}
+            </>
+          )}
+        </View>
       </ScrollView>
 
-      <View style={s.coverflowWrap}>
-        {loading ? (
-          <CoverflowSkeleton />
-        ) : filteredProducts.length === 0 ? (
-          <View style={s.empty}>
-            <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
-              {isFiltering ? "No matches found" : "No products yet"}
-            </Text>
-            <Text
-              style={[
-                type.body,
-                {
-                  marginTop: 4,
-                  textAlign: "center",
-                  paddingHorizontal: space.lg,
-                },
-              ]}
-            >
-              {isFiltering
-                ? "Try adjusting your filters or loading more products."
-                : "Check back soon."}
-            </Text>
-            {isFiltering && hasMore && (
-              <Pressable style={s.loadMoreBtn} onPress={loadMore}>
-                <Text style={s.loadMoreBtnText}>Load More Products</Text>
-              </Pressable>
-            )}
-          </View>
-        ) : (
-          <>
-            <ProductCoverflow
-              products={filteredProducts}
-              onAdd={(p) => add(p)}
-              onOpen={(p) => push("product", { productId: p.id, product: p })}
-              onEndReached={hasMore && !isFiltering ? loadMore : undefined}
-            />
-            {loadingMore && (
-              <View style={s.loadingMore}>
-                <ActivityIndicator color={color.primary} size="small" />
-              </View>
-            )}
-          </>
-        )}
-      </View>
 
       <Modal
         visible={isFilterModalOpen}
@@ -355,8 +364,10 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: color.canvas },
   scroll: { paddingHorizontal: space.gutter, paddingBottom: space.md },
+  bannerImage: { width: "100%", height: "100%", borderRadius: 24 },
   banner: {
     height: 120,
+    overflow: "hidden",
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",

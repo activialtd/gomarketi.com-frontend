@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { MotiView } from "moti";
@@ -39,7 +39,17 @@ export function StoreBentoCard({
           style={StyleSheet.absoluteFill}
         />
         <View style={s.iconWrap}>
-          <Ionicons name={meta.icon} size={big ? 30 : 22} color={color.ink} />
+          {store.logo_url ? (
+            <Image
+              source={{ uri: store.logo_url }}
+              style={s.logo}
+              resizeMode="cover"
+              // A broken or slow logo must never blank the card, so the
+              // category icon stays underneath as the fallback.
+            />
+          ) : (
+            <Ionicons name={meta.icon} size={big ? 30 : 22} color={color.ink} />
+          )}
         </View>
 
         <View style={s.body}>
@@ -78,6 +88,7 @@ const s = StyleSheet.create({
     padding: space.md,
     justifyContent: "space-between",
   },
+  logo: { width: "100%", height: "100%", borderRadius: 14 },
   iconWrap: {
     width: 44,
     height: 44,

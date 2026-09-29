@@ -93,7 +93,9 @@ export function ProductRowMenu({
   const [busy, setBusy] = useState<"duplicate" | "delete" | null>(null);
   const [error, setError] = useState("");
 
-  const previewUrl = storeSlug ? `http://${storeSlug}.${STORE_DOMAIN}/products/${product.id}` : null;
+  const previewUrl = storeSlug
+    ? `http://${storeSlug}.${STORE_DOMAIN}/products/${product.id}`
+    : null;
 
   function close() {
     setOpen(false);
@@ -195,7 +197,10 @@ export function ProductRowMenu({
                   }}
                   aria-disabled={!previewUrl}
                   className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] font-medium text-left transition-colors hover:bg-[#F0FAF3]"
-                  style={{ color: previewUrl ? "#374151" : "#cbd5e1", cursor: previewUrl ? "pointer" : "not-allowed" }}
+                  style={{
+                    color: previewUrl ? "#374151" : "#cbd5e1",
+                    cursor: previewUrl ? "pointer" : "not-allowed",
+                  }}
                 >
                   <Eye className="w-3.5 h-3.5" />
                   Preview
@@ -208,7 +213,10 @@ export function ProductRowMenu({
                   <Copy className="w-3.5 h-3.5" />
                   Duplicate
                 </button>
-                <div className="h-px mx-2 my-1" style={{ background: "#f1f5f9" }} />
+                <div
+                  className="h-px mx-2 my-1"
+                  style={{ background: "#f1f5f9" }}
+                />
                 <button
                   onClick={() => setConfirmingDelete(true)}
                   className="w-full flex items-center gap-2.5 px-3.5 py-2 text-[12px] font-medium text-left transition-colors hover:bg-red-50"
@@ -218,15 +226,22 @@ export function ProductRowMenu({
                   Delete
                 </button>
                 {error && (
-                  <p className="px-3.5 pt-1.5 text-[10px] flex items-center gap-1" style={{ color: "#dc2626" }}>
+                  <p
+                    className="px-3.5 pt-1.5 text-[10px] flex items-center gap-1"
+                    style={{ color: "#dc2626" }}
+                  >
                     <AlertCircle className="w-3 h-3 shrink-0" /> {error}
                   </p>
                 )}
               </>
             ) : (
               <div className="px-3.5 py-3 space-y-2.5">
-                <p className="text-[11px] leading-snug" style={{ color: "#374151" }}>
-                  Delete <strong>{product.name}</strong>? This can&apos;t be undone.
+                <p
+                  className="text-[11px] leading-snug"
+                  style={{ color: "#374151" }}
+                >
+                  Delete <strong>{product.name}</strong>? This can&apos;t be
+                  undone.
                 </p>
                 <div className="flex gap-2">
                   <button
@@ -363,7 +378,11 @@ export function ProductCard({
           >
             {product.name}
           </p>
-          <ProductRowMenu product={product} storeSlug={storeSlug} onChanged={onChanged} />
+          <ProductRowMenu
+            product={product}
+            storeSlug={storeSlug}
+            onChanged={onChanged}
+          />
         </div>
         <p className="text-[11px] mb-2" style={{ color: "#6b7280" }}>
           {product.category}
@@ -549,7 +568,11 @@ export function ProductRow({
 
       {/* Actions */}
       <div className="flex items-center justify-end">
-        <ProductRowMenu product={product} storeSlug={storeSlug} onChanged={onChanged} />
+        <ProductRowMenu
+          product={product}
+          storeSlug={storeSlug}
+          onChanged={onChanged}
+        />
       </div>
     </div>
   );
@@ -593,7 +616,8 @@ export function EmptyProducts() {
           <Download className="w-4 h-4" />
           Import Products
         </button>
-        <button
+        <Link
+          href={ROUTES.MERCHANT.PRODUCTS_NEW}
           className="flex items-center gap-2 px-6 h-10 rounded-[10px] text-white text-[13px] font-bold transition-all active:scale-[0.98]"
           style={{
             background: "#1A7A42",
@@ -604,7 +628,7 @@ export function EmptyProducts() {
         >
           <Plus className="w-4 h-4" />
           Add New Product
-        </button>
+        </Link>
       </div>
     </div>
   );
@@ -623,7 +647,10 @@ export function CollectionsTab({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 gap-2" style={{ color: "#94a3b8" }}>
+      <div
+        className="flex items-center justify-center py-20 gap-2"
+        style={{ color: "#94a3b8" }}
+      >
         <Loader2 className="w-5 h-5 animate-spin" />
         <span className="text-[13px]">Loading collections…</span>
       </div>

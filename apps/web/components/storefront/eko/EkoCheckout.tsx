@@ -15,7 +15,6 @@ import {
   useCheckout,
   fmtNaira,
   NIGERIAN_STATES,
-  DELIVERY_ZONES,
   type CheckoutProps,
 } from "../checkout/useCheckout";
 
@@ -34,6 +33,7 @@ export default function EkoCheckout(props: CheckoutProps) {
     deliveryPaidLater,
     deliveryZone,
     setDeliveryZone,
+    deliveryZones,
     storeReady,
     isPlacing,
     orderPlaced,
@@ -55,7 +55,7 @@ export default function EkoCheckout(props: CheckoutProps) {
       err ? "border-red-300" : "border-neutral-200"
     }`;
 
-  const filteredZones = DELIVERY_ZONES.filter((z) =>
+  const filteredZones = deliveryZones.filter((z) =>
     z.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 

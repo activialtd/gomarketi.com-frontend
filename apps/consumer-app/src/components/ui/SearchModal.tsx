@@ -7,6 +7,7 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Image,
   Animated,
   Dimensions,
   Easing,
@@ -60,15 +61,16 @@ export function SearchModal({
 
   const {
     gridProducts,
+    vendors,
+    relatedProducts,
+    suggestions,
     loading,
     loadingMore,
     hasMore,
     loadMore,
     carouselItems,
     showCarousel,
-    matchType,
-    matchedStore,
-    matchedMarketName,
+    vendorToStore,
   } = useProductSearch(query, { lat, lng });
 
   // The sheet rises by the keyboard's own height as it appears, so the
@@ -102,14 +104,8 @@ export function SearchModal({
     ],
   };
 
-  const heading =
-    matchType === "vendor" && matchedStore
-      ? `Products at ${matchedStore.name}`
-      : matchType === "market" && matchedMarketName
-        ? `Products in ${matchedMarketName}`
-        : query
-          ? `Products for "${query}"`
-          : "Products near you";
+  const heading = query ? `Products for "${query}"` : "Products near you";
+  const nothingMatched = gridProducts.length === 0 && vendors.length === 0;
 
   return (
     <Modal
@@ -160,18 +156,85 @@ export function SearchModal({
               <View style={s.empty}>
                 <ActivityIndicator color={color.primary} />
               </View>
-            ) : gridProducts.length === 0 ? (
+            ) : nothingMatched ? (
               <View style={s.empty}>
                 <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
                   Nothing matched
                 </Text>
                 <Text style={[type.body, { marginTop: 4 }]}>
-                  Try a different word.
+                  {suggestions.length > 0
+                    ? "Did you mean:"
+                    : "Try a different word."}
                 </Text>
+                <View style={s.chipRow}>
+                  {suggestions.map((sg) => (
+                    <Pressable
+                      key={sg}
+                      onPress={() => setQuery(sg)}
+                      style={s.chip}
+                    >
+                      <Text style={s.chipText}>{sg}</Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             ) : (
               <>
-                {showCarousel && (
+                {vendors.length > 0 && (
+                  <View style={s.vendorWrap}>
+                    <Text style={type.meta}>
+                      {vendors.length === 1 ? "Vendor" : "Vendors"}
+                    </Text>
+                    {vendors.slice(0, 5).map((v) => (
+                      <Pressable
+                        key={v.id}
+                        onPress={() => onOpenStore(vendorToStore(v))}
+                        style={s.vendorRow}
+                      >
+                        <View style={s.vendorAvatar}>
+                          {v.logo_url ? (
+                            <Image
+                              source={{ uri: v.logo_url }}
+                              style={s.vendorLogo}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <Ionicons
+                              name="storefront-outline"
+                              size={18}
+                              color={color.primary}
+                            />
+                          )}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text
+                            numberOfLines={1}
+                            style={[type.label, { fontFamily: "Jakarta_600" }]}
+                          >
+                            {v.name}
+                          </Text>
+                          <Text numberOfLines={1} style={type.meta}>
+                            {[
+                              v.market_name ?? v.city,
+                              `${v.product_count} ${
+                                v.product_count === 1 ? "product" : "products"
+                              }`,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={16}
+                          color={color.textFaint}
+                        />
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+
+                {gridProducts.length > 0 && showCarousel && (
                   <View style={s.carouselWrap}>
                     <Text style={type.meta}>Also sold by</Text>
                     <View style={s.carouselBleed}>
@@ -191,6 +254,21 @@ export function SearchModal({
                   onEndReached={hasMore ? loadMore : undefined}
                   loadingMore={loadingMore}
                 />
+
+                {relatedProducts.length > 0 && (
+                  <>
+                    <Text style={[type.section, s.section]}>
+                      You might also like
+                    </Text>
+                    <ProductGrid
+                      products={relatedProducts}
+                      onAdd={(p) => add(p)}
+                      onOpen={(p) =>
+                        push("product", { productId: p.id, product: p })
+                      }
+                    />
+                  </>
+                )}
               </>
             )}
           </ScrollView>
@@ -260,4 +338,44 @@ const s = StyleSheet.create({
   carouselBleed: { marginHorizontal: -space.gutter },
 
   empty: { alignItems: "center", paddingTop: 40 },
+
+  vendorWrap: { marginBottom: space.lg, gap: space.sm },
+  vendorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: 16,
+    backgroundColor: color.card,
+    borderWidth: 1,
+    borderColor: color.line,
+  },
+  vendorLogo: { width: "100%", height: "100%", borderRadius: 18 },
+  vendorAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: color.canvas,
+  },
+
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: space.sm,
+    marginTop: space.md,
+  },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    backgroundColor: color.card,
+    borderWidth: 1,
+    borderColor: color.line,
+  },
+  chipText: { fontFamily: "Jakarta_500", fontSize: 13, color: color.text },
 });

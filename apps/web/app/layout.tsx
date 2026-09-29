@@ -1,8 +1,19 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Montserrat, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { CartProvider } from "@/lib/cartContext";
 import { ErrorReporter } from "@/components/ErrorReporter";
+import { Footer } from "@/components/site/common/Footer";
+import { Navbar } from "@/components/site/common/Navbar";
+
+// Montserrat is the brand's secondary typeface and carries display headings;
+// the primary face (Blatant) is not licensed for web use here.
+const montserrat = Montserrat({
+  variable: "--font-montserrat",
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800", "900"],
+  display: "swap",
+});
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -12,12 +23,13 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "GoMarketi — Africa's Commerce Platform",
+  title: "GoMarket — Shop your local market without the trip",
   description:
-    "GoMarketi is building the infrastructure for African commerce. Launching soon.",
+    "Order from the traders you already buy from. Vendors bring your items to our hub, we check them, and one delivery brings everything to your door.",
   openGraph: {
-    title: "GoMarketi — Africa's Commerce Platform",
-    description: "We're launching soon. Join the waitlist.",
+    title: "GoMarket — Shop your local market without the trip",
+    description:
+      "Order from real market traders. One delivery brings everything to your door.",
     url: "https://gomarketi.com",
     siteName: "GoMarketi",
     type: "website",
@@ -30,10 +42,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${jakarta.variable} h-full antialiased`}>
+    <html lang="en" className={`${jakarta.variable} ${montserrat.variable} h-full antialiased`}>
       <body className="min-h-full font-[family-name:var(--font-jakarta)]">
         <ErrorReporter />
+        <Navbar />
         <CartProvider>{children}</CartProvider>
+        <Footer />
       </body>
     </html>
   );

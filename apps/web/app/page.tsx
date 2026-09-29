@@ -1,268 +1,259 @@
-"use client";
+import Link from "next/link";
+import type { Metadata } from "next";
+import { Hero } from "@/components/site/Hero";
+import { Reveal } from "@/components/site/anim/Reveal";
+import { Mark } from "@/components/site/brand/Mark";
+import { MarketMarquee } from "@/components/site/MarketMarquee";
+import { btnGhostLight, btnLime } from "@/components/site/ui";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
-import gsap from "gsap";
+export const metadata: Metadata = {
+  title: "GoMarket — Shop your local market without the trip",
+  description:
+    "Order from the traders you already buy from. Vendors bring your items to our hub, we check them, and one delivery brings everything to your door.",
+};
 
-/* ─── Cartoon SVG shapes ────────────────────────────────────────────────────── */
+const STEPS = [
+  {
+    title: "Find the stall",
+    body: "Search the way you would ask a trader — red ankara, six yards, under fifteen thousand. Results come from real stalls in markets you know.",
+  },
+  {
+    title: "The vendor confirms",
+    body: "Traders who have the item confirm your order and set it aside. You see who you are buying from before you pay.",
+  },
+  {
+    title: "Checked at our hub",
+    body: "Every vendor brings your items to the GoMarket hub, where we check each one against your order and pack them together.",
+  },
+  {
+    title: "One delivery",
+    body: "Items from three different stalls arrive at your door in a single trip, at a delivery price the vendor set upfront.",
+  },
+  {
+    title: "You confirm, then they are paid",
+    body: "A trader's earnings are released once you confirm the order arrived. Until then, the money stays with us.",
+  },
+];
 
-function Bag() {
+const VENDOR_POINTS = [
+  {
+    title: "A storefront of your own",
+    body: "Your stall online at your own address, carrying your name, your logo and your colours.",
+  },
+  {
+    title: "Found by people searching",
+    body: "Buyers looking for what you sell find your stall, whether or not they know your shop by name.",
+  },
+  {
+    title: "Orders in one place",
+    body: "Confirm an order, bring it to the hub, and the delivery is handled for you.",
+  },
+  {
+    title: "Paid into your account",
+    body: "Set your own delivery prices, watch your balance, and withdraw straight to your bank.",
+  },
+];
+
+export default function HomePage() {
   return (
-    <svg viewBox="0 0 56 60" fill="none" className="w-full h-full">
-      <rect x="6" y="18" width="44" height="36" rx="8" fill="#1a7a42" opacity="0.9" />
-      <path d="M19 18v-4a9 9 0 0118 0v4" stroke="#1a7a42" strokeWidth="3.5" strokeLinecap="round" fill="none" />
-      <circle cx="22" cy="34" r="2.5" fill="white" opacity="0.7" />
-      <circle cx="34" cy="34" r="2.5" fill="white" opacity="0.7" />
-      <path d="M22 42c2 2.5 10 2.5 12 0" stroke="white" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
+    <>
+      <Reveal />
+      <Hero />
 
-function Coin() {
-  return (
-    <svg viewBox="0 0 52 52" fill="none" className="w-full h-full">
-      <circle cx="26" cy="26" r="24" fill="#22c55e" />
-      <circle cx="26" cy="26" r="18" fill="#16a34a" />
-      <text x="26" y="32" textAnchor="middle" fill="white" fontSize="18" fontWeight="800">₦</text>
-    </svg>
-  );
-}
+      {/* 2 — The idea behind it */}
+      <section className="bg-background py-24 md:py-32">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="grid gap-16 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+            <div data-reveal="left">
+              <p className="text-[12px] font-bold tracking-[0.16em] text-primary-soft uppercase">
+                The idea
+              </p>
+              <h2 className="mt-5 font-[family-name:var(--font-display)] text-[clamp(2rem,4.5vw,3.4rem)] leading-[1.02] font-extrabold tracking-[-0.02em] text-foreground">
+                A market day should not cost you a day.
+              </h2>
+            </div>
 
-function Star() {
-  return (
-    <svg viewBox="0 0 44 44" fill="none" className="w-full h-full">
-      <path d="M22 4l4.5 13H41l-11 8 4.2 13L22 31l-12.2 7 4.2-13L3 17h14.5z" fill="#86efac" />
-    </svg>
-  );
-}
-
-function Sparkle() {
-  return (
-    <svg viewBox="0 0 40 40" fill="none" className="w-full h-full">
-      <path d="M20 2v36M2 20h36M6 6l28 28M34 6L6 34" stroke="#bbf7d0" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function PriceTag() {
-  return (
-    <svg viewBox="0 0 52 52" fill="none" className="w-full h-full">
-      <path d="M4 4h20l24 24-20 20L4 24V4z" fill="#1a7a42" opacity="0.85" />
-      <circle cx="15" cy="15" r="3" fill="white" />
-    </svg>
-  );
-}
-
-/* ─── Floaty wrapper ────────────────────────────────────────────────────────── */
-
-type FloatyProps = { size: string; style: CSSProperties; children: React.ReactNode };
-function Floaty({ size, style, children }: FloatyProps) {
-  return (
-    <span
-      data-float="1"
-      className={`absolute ${size} opacity-0 pointer-events-none`}
-      style={style}
-    >
-      {children}
-    </span>
-  );
-}
-
-/* ─── Page ──────────────────────────────────────────────────────────────────── */
-
-export default function ComingSoon() {
-  const [email, setEmail] = useState("");
-  const [submitted, setSubmitted] = useState(false);
-
-  const sceneRef = useRef<HTMLDivElement>(null);
-  const headlineRef = useRef<HTMLHeadingElement>(null);
-  const subRef = useRef<HTMLParagraphElement>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
-  const formRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = sceneRef.current;
-    if (!el) return;
-
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "back.out(1.4)" } });
-
-      tl.fromTo(badgeRef.current, { y: -30, opacity: 0, scale: 0.7 }, { y: 0, opacity: 1, scale: 1, duration: 0.5 })
-        .fromTo(headlineRef.current, { y: 50, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: "power3.out" }, "-=0.2")
-        .fromTo(subRef.current, { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, "-=0.25")
-        .fromTo(formRef.current, { y: 36, opacity: 0, scale: 0.93 }, { y: 0, opacity: 1, scale: 1, duration: 0.55 }, "-=0.2");
-
-      /* floating cartoon elements */
-      const floaties = el.querySelectorAll<HTMLElement>("[data-float]");
-      floaties.forEach((f, i) => {
-        const amp = 10 + (i % 3) * 7;
-        const dur = 2.6 + i * 0.45;
-
-        gsap.fromTo(
-          f,
-          { opacity: 0, scale: 0, rotation: (i % 2 === 0 ? 15 : -15) },
-          { opacity: 1, scale: 1, rotation: 0, duration: 0.55, ease: "back.out(2.2)", delay: 0.6 + i * 0.12 }
-        );
-        gsap.to(f, { y: -amp, duration: dur, yoyo: true, repeat: -1, ease: "sine.inOut", delay: 0.9 + i * 0.2 });
-        gsap.to(f, {
-          rotation: (i % 2 === 0 ? 1 : -1) * (6 + i * 1.5),
-          duration: dur * 1.3,
-          yoyo: true,
-          repeat: -1,
-          ease: "sine.inOut",
-          delay: 0.7 + i * 0.15,
-        });
-      });
-
-      /* pulse the live dot */
-      gsap.to("[data-pulse]", { scale: 1.7, opacity: 0.45, duration: 0.75, yoyo: true, repeat: -1, ease: "sine.inOut" });
-
-      /* squiggle underline draw */
-      const line = el.querySelector<SVGPathElement>("[data-underline]");
-      if (line) {
-        const len = line.getTotalLength?.() ?? 180;
-        gsap.set(line, { strokeDasharray: len, strokeDashoffset: len });
-        gsap.to(line, { strokeDashoffset: 0, duration: 0.9, ease: "power2.inOut", delay: 0.6 });
-      }
-    }, el);
-
-    return () => ctx.revert();
-  }, []);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email) return;
-    gsap.to(formRef.current, {
-      scale: 0.95,
-      duration: 0.1,
-      yoyo: true,
-      repeat: 1,
-      ease: "power1.inOut",
-      onComplete: () => setSubmitted(true),
-    });
-  }
-
-  return (
-    <main ref={sceneRef} className="min-h-screen bg-white flex flex-col overflow-hidden">
-
-      {/* ── Background decoration ───────────────────────────────────────────── */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 0 }}>
-        <div className="absolute -top-32 -right-32 w-[480px] h-[480px] rounded-full" style={{ background: "radial-gradient(circle, rgba(34,197,94,0.07) 0%, transparent 70%)" }} />
-        <div className="absolute -bottom-24 -left-24 w-[360px] h-[360px] rounded-full" style={{ background: "radial-gradient(circle, rgba(26,122,66,0.06) 0%, transparent 70%)" }} />
-      </div>
-
-      {/* ── Cartoon floaties ────────────────────────────────────────────────── */}
-      <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden" style={{ zIndex: 1 }}>
-        <Floaty size="w-14 h-14" style={{ top: "13%", left: "6%" }}><Bag /></Floaty>
-        <Floaty size="w-11 h-11" style={{ top: "21%", right: "8%" }}><Coin /></Floaty>
-        <Floaty size="w-10 h-10" style={{ top: "54%", left: "4%" }}><Star /></Floaty>
-        <Floaty size="w-11 h-11" style={{ top: "63%", right: "6%" }}><PriceTag /></Floaty>
-        <Floaty size="w-9 h-9"  style={{ top: "8%",  right: "22%" }}><Sparkle /></Floaty>
-        <Floaty size="w-8 h-8"  style={{ top: "41%", right: "14%" }}><Coin /></Floaty>
-        <Floaty size="w-12 h-12" style={{ bottom: "16%", left: "10%" }}><Star /></Floaty>
-        <Floaty size="w-10 h-10" style={{ bottom: "13%", right: "9%" }}><Bag /></Floaty>
-        <Floaty size="w-8 h-8"  style={{ top: "36%", left: "17%" }}><Sparkle /></Floaty>
-      </div>
-
-      {/* ── Nav ─────────────────────────────────────────────────────────────── */}
-      <nav className="relative px-6 py-5 flex items-center max-w-5xl mx-auto w-full" style={{ zIndex: 10 }}>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#1a7a42] flex items-center justify-center shadow-md">
-            <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="white" strokeWidth={2.2}>
-              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M3 6h18" strokeLinecap="round" />
-              <path d="M16 10a4 4 0 01-8 0" strokeLinecap="round" />
-            </svg>
-          </div>
-          <span className="text-[#1c1c1c] font-extrabold text-lg tracking-tight">GoMarketi</span>
-        </div>
-      </nav>
-
-      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <section className="relative flex-1 flex flex-col items-center justify-center px-6 py-20 text-center" style={{ zIndex: 10 }}>
-
-        <div ref={badgeRef} className="inline-flex items-center gap-2 bg-[#f0faf3] text-[#1a7a42] text-xs font-bold px-4 py-2 rounded-full mb-8 border border-[#22c55e]/30 shadow-sm opacity-0">
-          <span data-pulse className="w-2 h-2 rounded-full bg-[#22c55e] inline-block" />
-          Something big is coming to Africa
-        </div>
-
-        <h1 ref={headlineRef} className="text-5xl sm:text-6xl md:text-7xl font-extrabold text-[#1c1c1c] leading-[1.1] tracking-tight max-w-3xl opacity-0">
-          Africa&apos;s{" "}
-          <span className="text-[#1a7a42] relative inline-block">
-            Commerce
-            <svg
-              className="absolute left-0 w-full"
-              style={{ bottom: -4, height: 10 }}
-              viewBox="0 0 300 10"
-              fill="none"
-              preserveAspectRatio="none"
-            >
-              <path
-                data-underline
-                d="M2 7 Q75 2 150 6 Q225 10 298 4"
-                stroke="#22c55e"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                fill="none"
-              />
-            </svg>
-          </span>{" "}
-          Platform
-        </h1>
-
-        <p ref={subRef} className="mt-8 text-lg sm:text-xl text-gray-500 max-w-lg leading-relaxed opacity-0">
-          We&apos;re building the infrastructure that empowers African vendors
-          to sell, grow, and thrive — online and offline.
-        </p>
-
-        <div ref={formRef} className="mt-10 w-full max-w-md opacity-0">
-          {submitted ? (
-            <div className="flex items-center justify-center gap-3 bg-[#f0faf3] border border-[#22c55e]/40 rounded-2xl px-6 py-5 shadow-sm">
-              <div className="w-9 h-9 rounded-full bg-[#1a7a42] flex items-center justify-center flex-shrink-0 shadow">
-                <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="white" strokeWidth={2.5}>
-                  <polyline points="20,6 9,17 4,12" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-              <p className="text-[#1a7a42] font-bold text-sm">
-                You&apos;re on the list! We&apos;ll reach out when we launch.
+            <div className="space-y-7" data-reveal="lines">
+              <p className="text-xl leading-relaxed text-foreground">
+                Buying from the market means the traffic there, the walk between
+                stalls, the haggling, and the traffic back — for a basket of
+                things you buy every week.
+              </p>
+              <p className="text-lg leading-relaxed text-muted">
+                GoMarket keeps the part that works. The same traders, the same
+                prices you would negotiate at the stall, the same choice across
+                a whole market. What it removes is the journey: you shop the
+                stalls from your phone, and we bring the market to you.
+              </p>
+              <p className="text-lg leading-relaxed text-muted">
+                This is not a supermarket with a delivery service attached. Every
+                item comes from a named trader with a stall you could walk to,
+                which is exactly why people trust what they buy there.
               </p>
             </div>
-          ) : (
-            <>
-              <form
-                onSubmit={handleSubmit}
-                className="flex gap-2 shadow-lg rounded-xl overflow-hidden border border-gray-200"
-                style={{ boxShadow: "0 8px 32px rgba(26,122,66,0.10)" }}
+          </div>
+
+          {/* Three contrasts, stated plainly. */}
+          <div className="mt-20 grid gap-px overflow-hidden rounded-3xl bg-border md:grid-cols-3">
+            {[
+              {
+                before: "A morning in traffic",
+                after: "A few minutes on your phone",
+              },
+              {
+                before: "Five stalls, five trips",
+                after: "Five stalls, one delivery",
+              },
+              {
+                before: "Hoping it is what you asked for",
+                after: "Checked at our hub before it ships",
+              },
+            ].map((row, i) => (
+              <div
+                key={row.before}
+                className="bg-background p-8"
+                data-reveal="up"
+                data-reveal-delay={i * 0.08}
               >
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  className="flex-1 px-4 py-3.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#1a7a42]/25 focus:border-[#1a7a42] transition"
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-3.5 bg-[#1a7a42] text-white text-sm font-bold hover:bg-[#239452] active:scale-95 transition-all whitespace-nowrap"
-                >
-                  Join Waitlist
-                </button>
-              </form>
-              <p className="mt-3 text-xs text-gray-400">No spam. Only launch news.</p>
-            </>
-          )}
+                <p className="text-sm text-muted line-through decoration-muted/40">
+                  {row.before}
+                </p>
+                <p className="mt-3 font-[family-name:var(--font-display)] text-xl leading-snug font-bold text-foreground">
+                  {row.after}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── Footer ───────────────────────────────────────────────────────────── */}
-      <footer className="relative px-6 py-6 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 max-w-5xl mx-auto w-full" style={{ zIndex: 10 }}>
-        <p className="text-xs text-gray-400">
-          © {new Date().getFullYear()} GoMarketi. All rights reserved.
-        </p>
-        <a href="mailto:hello@gomarketi.com" className="text-xs text-gray-400 hover:text-[#1a7a42] transition-colors">
-          hello@gomarketi.com
-        </a>
-      </footer>
-    </main>
+      {/* 3 — How it works */}
+      <section id="how-it-works" className="bg-surface py-24 md:py-32">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="max-w-2xl" data-reveal="up">
+            <p className="text-[12px] font-bold tracking-[0.16em] text-primary-soft uppercase">
+              How it works
+            </p>
+            <h2 className="mt-5 font-[family-name:var(--font-display)] text-[clamp(2rem,4.5vw,3.4rem)] leading-[1.02] font-extrabold tracking-[-0.02em] text-foreground">
+              From your basket to your door.
+            </h2>
+          </div>
+
+          <ol className="mt-16 space-y-px overflow-hidden rounded-3xl bg-border">
+            {STEPS.map((step, i) => (
+              <li
+                key={step.title}
+                className="group grid gap-4 bg-surface p-8 transition-colors hover:bg-background md:grid-cols-[auto_1fr_1.4fr] md:items-baseline md:gap-10 md:p-10"
+                data-reveal="up"
+                data-reveal-delay={i * 0.06}
+              >
+                <span className="font-[family-name:var(--font-display)] text-3xl font-extrabold text-primary-accent tabular-nums">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="font-[family-name:var(--font-display)] text-xl font-bold text-foreground md:text-2xl">
+                  {step.title}
+                </h3>
+                <p className="leading-relaxed text-muted">{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* 4 — For vendors */}
+      <section id="vendors" className="relative overflow-hidden bg-ink py-24 md:py-32">
+        <Mark
+          className="pointer-events-none absolute -bottom-24 -left-20 w-[380px] text-lime/[0.06] md:w-[520px]"
+          data-parallax="-40"
+        />
+
+        <div className="relative mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="grid gap-16 lg:grid-cols-[1fr_1fr] lg:items-center">
+            <div data-reveal="left">
+              <p className="text-[12px] font-bold tracking-[0.16em] text-lime uppercase">
+                For traders
+              </p>
+              <h2 className="mt-5 font-[family-name:var(--font-display)] text-[clamp(2rem,4.5vw,3.4rem)] leading-[1.02] font-extrabold tracking-[-0.02em] text-white">
+                Your stall, open to the whole city.
+              </h2>
+              <p className="mt-7 max-w-lg text-lg leading-relaxed text-white/70">
+                The trader with the best fabric in Balogun should not lose a sale
+                because a buyer could not face the drive. GoMarket puts your
+                stall in front of people who are already looking for what you
+                sell, and handles everything after the sale.
+              </p>
+              <div className="mt-10 flex flex-wrap gap-4">
+                <Link href="/vendors" className={btnLime}>
+                  Open a store
+                </Link>
+                <Link href="/vendors#requirements" className={btnGhostLight}>
+                  What you need
+                </Link>
+              </div>
+            </div>
+
+            <div className="grid gap-px overflow-hidden rounded-3xl bg-white/10 sm:grid-cols-2">
+              {VENDOR_POINTS.map((point, i) => (
+                <div
+                  key={point.title}
+                  className="bg-ink p-7"
+                  data-reveal="up"
+                  data-reveal-delay={i * 0.07}
+                >
+                  <h3 className="font-[family-name:var(--font-display)] text-lg font-bold text-lime">
+                    {point.title}
+                  </h3>
+                  <p className="mt-3 text-sm leading-relaxed text-white/60">
+                    {point.body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5 — Markets and the app */}
+      <section id="get-the-app" className="bg-background py-24 md:py-32">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
+          <div className="max-w-2xl" data-reveal="up">
+            <p className="text-[12px] font-bold tracking-[0.16em] text-primary-soft uppercase">
+              Where we are
+            </p>
+            <h2 className="mt-5 font-[family-name:var(--font-display)] text-[clamp(2rem,4.5vw,3.4rem)] leading-[1.02] font-extrabold tracking-[-0.02em] text-foreground">
+              The markets already on GoMarket.
+            </h2>
+          </div>
+        </div>
+
+        <div className="mt-14">
+          <MarketMarquee />
+        </div>
+
+        <div className="mx-auto mt-20 max-w-7xl px-5 sm:px-8">
+          <div
+            className="relative overflow-hidden rounded-[2rem] bg-primary px-8 py-16 text-center md:px-16 md:py-20"
+            data-reveal="scale"
+          >
+            <Mark className="pointer-events-none absolute -top-10 -right-10 w-64 text-white/[0.06]" />
+            <h2 className="relative mx-auto max-w-3xl font-[family-name:var(--font-display)] text-[clamp(1.9rem,4vw,3rem)] leading-[1.05] font-extrabold tracking-[-0.02em] text-white">
+              Shop your market this week without leaving the house.
+            </h2>
+            <p className="relative mx-auto mt-6 max-w-xl text-lg text-white/70">
+              The app is where you browse stalls, place an order and track it to
+              your door. Traders start on the web dashboard.
+            </p>
+            <div className="relative mt-10 flex flex-wrap justify-center gap-4">
+              <Link href="/contact" className={btnLime}>
+                Get the app
+              </Link>
+              <Link href="/vendors" className={btnGhostLight}>
+                Sell on GoMarket
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
   );
 }

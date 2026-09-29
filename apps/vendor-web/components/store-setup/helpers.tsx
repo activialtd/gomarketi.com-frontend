@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
-async function uploadLogoToR2(file: File, accessToken: string): Promise<string> {
+async function uploadLogo(file: File, accessToken: string): Promise<string> {
   const presignRes = await fetch(`${API_BASE}/v1/storefront/uploads/presign`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
@@ -13,12 +13,37 @@ async function uploadLogoToR2(file: File, accessToken: string): Promise<string> 
     const body = await presignRes.json().catch(() => ({})) as { error?: string };
     throw new Error(body.error ?? "Could not get upload URL");
   }
-  const { upload_url, public_url } = await presignRes.json() as { upload_url: string; public_url: string };
+  const { upload_url, public_url, provider, fields } = await presignRes.json() as {
+    upload_url: string;
+    public_url?: string;
+    provider?: "cloudinary" | "r2";
+    fields?: Record<string, string>;
+  };
 
-  const putRes = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-  if (!putRes.ok) throw new Error("Upload failed");
+  // R2 takes a plain PUT with a URL known up front; Cloudinary takes a signed
+  // multipart POST and returns the delivery URL in its response.
+  if (provider !== "cloudinary") {
+    const putRes = await fetch(upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!putRes.ok) throw new Error("Upload failed");
+    if (!public_url) throw new Error("Upload succeeded but returned no URL");
+    return public_url;
+  }
 
-  return public_url;
+  const form = new FormData();
+  Object.entries(fields ?? {}).forEach(([k, v]) => form.append(k, v));
+  form.append("file", file);
+
+  const uploadRes = await fetch(upload_url, { method: "POST", body: form });
+  if (!uploadRes.ok) throw new Error("Upload failed");
+
+  const body = await uploadRes.json() as { secure_url?: string; url?: string };
+  const url = body.secure_url ?? body.url;
+  if (!url) throw new Error("Upload succeeded but returned no URL");
+  return url;
 }
 
 export function Section({
@@ -137,7 +162,7 @@ export function LogoUpload({
     setUploading(true);
     setError("");
     try {
-      const url = await uploadLogoToR2(file, accessToken);
+      const url = await uploadLogo(file, accessToken);
       onSet(url);
     } catch {
       setError("Upload failed. Please try again.");

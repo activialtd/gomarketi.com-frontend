@@ -1,18 +1,29 @@
 @import "tailwindcss";
 
 /* ─── design tokens ─── */
+/* Brand palette comes from the GoMarket logo guidelines: deep green #0B4B1F,
+   bright green #A9E746, white. Everything else is a neutral derived to sit
+   with them. */
 @theme {
   --color-background: #ffffff;
-  --color-foreground: #1c1c1c;
-  --color-muted: #6e766f;
-  --color-surface: #f0faf3;
-  --color-border: #e4e8e5;
+  --color-foreground: #14231a;
+  --color-muted: #5c6a60;
+  --color-surface: #f4f7f1;
+  --color-border: #e2e8de;
 
-  --color-primary: #0a2e1a;
-  --color-primary-soft: #239452;
-  --color-primary-accent: #22c55e;
+  --color-primary: #0b4b1f;
+  --color-primary-soft: #1a7a42;
+  --color-primary-accent: #a9e746;
+
+  /* Deep canvas used by the hero and footer. */
+  --color-ink: #063014;
+  --color-lime: #a9e746;
+  --color-lime-soft: #d6f29a;
 
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  /* Montserrat is the brand's secondary face; Blatant, the primary, is not a
+     web font we can serve, so display type uses Montserrat's heavier weights. */
+  --font-display: var(--font-montserrat), var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 }
 
 /* ─── legacy storefront tokens (kept for existing components) ─── */
@@ -97,5 +108,40 @@
   .checkout-summary-panel {
     position: sticky;
     top: 80px;
+  }
+}
+
+
+/* ─── marketing site ─── */
+
+/* GSAP reveals start hidden and are animated in. Without JS (or with reduced
+   motion) they must still be visible, so the hidden state is only applied
+   once the client marks the document ready for animation. */
+html.gsap-ready [data-reveal] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.gsap-ready [data-reveal] {
+    opacity: 1;
+  }
+}
+
+/* Continuous marquee of market names. Duration is set per instance so rows
+   can run at different speeds. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  animation: marquee var(--marquee-duration, 40s) linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
   }
 }
