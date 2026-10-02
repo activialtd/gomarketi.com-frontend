@@ -178,7 +178,11 @@ export interface StoreResp {
   delivery_fee_kobo?: number;
   /** @deprecated Never returned by the backend — use delivery_options. */
   free_delivery_threshold_kobo?: number;
-  /** Vendor-defined delivery choices. Present on public store reads. */
+  /**
+   * @deprecated Not returned by any store endpoint — the public store payload
+   * has no such field. Fetch GET /v1/storefront/public/stores/:slug/delivery-options
+   * instead; reading this here yields undefined and reads as "no delivery set".
+   */
   delivery_options?: DeliveryOptionResp[];
   is_active: boolean;
   created_at: string;

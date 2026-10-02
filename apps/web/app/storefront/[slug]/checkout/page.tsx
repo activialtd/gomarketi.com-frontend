@@ -24,10 +24,31 @@ async function getStoreData(slug: string) {
       theme_config?: string;
       delivery_fee_kobo?: number;
       free_delivery_threshold_kobo?: number;
-      delivery_options?: DeliveryOptionResp[];
     };
   } catch {
     return null;
+  }
+}
+
+// Delivery options come from their own endpoint — the store payload does not
+// carry them, which is why reading store.delivery_options silently produced
+// "this vendor has not set a delivery fee" on stores that had set several.
+// no-store so a vendor's edit shows at the next checkout load, not an hour on.
+async function getDeliveryOptions(slug: string): Promise<DeliveryOptionResp[]> {
+  try {
+    const res = await fetch(
+      `${API_URL}/v1/storefront/public/stores/${slug}/delivery-options`,
+      { cache: "no-store" },
+    );
+    if (!res.ok) return [];
+    const data = (await res.json()) as
+      | DeliveryOptionResp[]
+      | { delivery_options?: DeliveryOptionResp[] };
+    // The endpoint returns a bare array; tolerate a wrapped shape too so a
+    // later envelope change cannot empty the checkout without failing a build.
+    return Array.isArray(data) ? data : data.delivery_options ?? [];
+  } catch {
+    return [];
   }
 }
 
@@ -37,7 +58,10 @@ export default async function Page({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const store = await getStoreData(slug);
+  const [store, deliveryOptions] = await Promise.all([
+    getStoreData(slug),
+    getDeliveryOptions(slug),
+  ]);
   if (!store) notFound();
 
   const props = {
@@ -46,9 +70,10 @@ export default async function Page({
     storeName: store.name,
     deliveryFeeKobo: store.delivery_fee_kobo ?? 150000,
     freeDeliveryThresholdKobo: store.free_delivery_threshold_kobo ?? 5000000,
-    // The vendor's own delivery choices; falls back to the built-in zone list
-    // when the store has not configured any.
-    deliveryOptions: store.delivery_options,
+    // The vendor's own delivery choices. An empty list is meaningful: the
+    // checkout blocks rather than inventing a price the orders service would
+    // then reject.
+    deliveryOptions,
   };
 
   switch (STORE_CONFIG.template) {
