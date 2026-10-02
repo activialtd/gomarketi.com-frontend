@@ -142,15 +142,17 @@ export function UpdateOrderModal({
   onClose: () => void;
   onUpdated: (updated: OrderResp) => void;
 }) {
-  // Orders this vendor delivers end at "shipped"; orders GoMarketi delivers
-  // end at "at_hub". Either way the vendor's last move is made from a
-  // pending or confirmed order, so the picker closes after that.
-  const editable = order.status === "pending" || order.status === "confirmed";
+  // A vendor-delivered order stays editable until they dispatch it. A shared
+  // basket stops being theirs the moment they confirm — GoMarketi moves it
+  // from there — so the picker closes at that point.
+  const editable =
+    order.status === "pending" ||
+    (order.status === "confirmed" && order.fulfilment === "vendor");
   const settable = vendorSettableStatuses(order.fulfilment);
-  // The step after "confirmed" differs by who delivers: dispatch it yourself,
-  // or hand it to the hub.
+  // On an order the vendor delivers, confirming is followed by dispatching it.
+  // On a shared basket, confirming is the whole of their involvement.
   const nextStep: VendorSettableOrderStatus =
-    order.fulfilment === "gomarketi" ? "at_hub" : "shipped";
+    order.fulfilment === "gomarketi" ? "confirmed" : "shipped";
   // Preselect the next step rather than the current one — moving the order
   // forward is why the dialog is open.
   const [status, setStatus] = useState<VendorSettableOrderStatus>(
@@ -217,10 +219,10 @@ export function UpdateOrderModal({
           {!editable ? (
             <div className="space-y-3">
               <p className="text-[12.5px] leading-relaxed" style={{ color: "#374151" }}>
-                {order.status === "shipped"
-                  ? "This order is on its way. The customer confirms delivery from their tracking page, which is also what releases your payment."
-                  : order.status === "at_hub"
-                    ? "Your part is with GoMarketi. We dispatch the basket once every vendor has brought theirs in."
+                {order.status === "confirmed" || order.status === "at_hub"
+                  ? "GoMarketi is handling this delivery. Your payment is released once the customer confirms they have it."
+                  : order.status === "shipped"
+                    ? "This order is on its way. The customer confirms delivery from their tracking page, which is also what releases your payment."
                     : "This order is closed — there are no further actions for you here."}
               </p>
               <div className="flex items-center gap-2 px-3 py-2 rounded-[8px]" style={{ background: "#fafafa" }}>
@@ -237,8 +239,8 @@ export function UpdateOrderModal({
               </label>
               <p className="text-[11.5px] leading-relaxed" style={{ color: "#6b7280" }}>
                 {order.fulfilment === "gomarketi"
-                  ? "This customer also bought from other vendors, so GoMarketi delivers the whole basket. Bring your part to the hub and mark it received there — we handle dispatch from that point."
-                  : "You deliver this order yourself. Mark it dispatched once it is actually on its way; the customer confirms delivery at the end, which is what releases your payment."}
+                  ? "This customer also bought from other vendors, so GoMarketi delivers the whole basket. Confirm the order and get it ready — we take it from there, and your payment is released once the customer has it."
+                  : "You deliver this order yourself and keep the delivery fee on top of the items. Mark it dispatched once it is actually on its way; the customer confirms delivery at the end, which is what releases your payment."}
                 {" "}The customer sees each step on their tracking page and gets an email.
               </p>
               <div className="grid grid-cols-2 gap-2">

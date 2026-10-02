@@ -296,10 +296,10 @@ export function vendorSettableStatuses(
   fulfilment: Fulfilment,
 ): VendorSettableOrderStatus[] {
   return fulfilment === "gomarketi"
-    // GoMarketi consolidates and dispatches the basket, so the vendor's last
-    // step is handing their part to the hub.
-    ? ["confirmed", "at_hub", "cancelled"]
-    // The vendor delivers this one themselves — no hub step exists.
+    // The vendor accepts the order and GoMarketi moves it from there, so
+    // at_hub and shipped are the platform's to set, not theirs.
+    ? ["confirmed", "cancelled"]
+    // The vendor runs this one end to end, so they mark dispatch themselves.
     : ["confirmed", "shipped", "cancelled"];
 }
 
