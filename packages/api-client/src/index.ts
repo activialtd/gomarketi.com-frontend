@@ -274,16 +274,17 @@ export interface OrderItem {
   price_kobo: number;
 }
 
-// at_hub/shipped/delivered are hub-and-spoke states a vendor can only ever
-// read, never set — see VendorSettableOrderStatus below for what a vendor's
-// own PATCH /v1/orders/:id/status call may actually request.
 export type OrderStatus =
   "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 
-// The backend restricts a vendor's own status PATCH to these two values —
-// at_hub/shipped/delivered are exclusively admin-hub-intake/dispatch/buyer-
-// confirmation controlled under the consolidation-hub fulfillment model.
-export type VendorSettableOrderStatus = "confirmed" | "cancelled";
+// What a vendor's own PATCH /v1/orders/:id/status may request. Mirrors the
+// backend's validate:"oneof=..." tag on UpdateOrderStatusReq — widen both
+// together or the UI offers a status the API rejects.
+//
+// "delivered" is absent on purpose: it releases escrow immediately, so it
+// stays with the buyer's confirm-delivery call or the auto-release sweep.
+export type VendorSettableOrderStatus =
+  "confirmed" | "at_hub" | "shipped" | "cancelled";
 
 export interface OrderResp {
   id: string;

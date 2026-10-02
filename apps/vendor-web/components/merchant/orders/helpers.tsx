@@ -56,7 +56,14 @@ export const STATUS_CFG: Record<
 // VendorSettableOrderStatus in @gomarket/api-client). Once confirmed, the
 // vendor's job is to physically bring the item to the GoMarketi hub; every
 // status after that is read-only from here.
-const VENDOR_SETTABLE: VendorSettableOrderStatus[] = ["confirmed", "cancelled"];
+// Ordered as the parcel actually moves, so the picker reads as a progression
+// rather than a menu. Cancel sits last, away from the forward path.
+const VENDOR_SETTABLE: VendorSettableOrderStatus[] = [
+  "confirmed",
+  "at_hub",
+  "shipped",
+  "cancelled",
+];
 
 function StatusBadge({ status }: { status: ApiOrderStatus }) {
   const cfg = STATUS_CFG[status];
@@ -142,13 +149,23 @@ export function UpdateOrderModal({
   onClose: () => void;
   onUpdated: (updated: OrderResp) => void;
 }) {
-  // Once an order leaves "confirmed" (checked in at the hub, dispatched,
-  // delivered, or already cancelled), the vendor has no more legitimate
-  // actions on it — status from here on is admin-hub/buyer-confirmation
-  // controlled. Only pending/confirmed orders get the editable picker.
-  const editable = order.status === "pending" || order.status === "confirmed";
+  // The vendor drives the parcel as far as dispatch. Once it is shipped the
+  // next move is the buyer's (confirm delivery) or the auto-release sweep's,
+  // so the picker closes rather than offering a status they should not set.
+  const editable =
+    order.status === "pending" ||
+    order.status === "confirmed" ||
+    order.status === "at_hub";
+  // Preselect the next step rather than the current one — the reason the
+  // dialog is open is to move the order forward.
   const [status, setStatus] = useState<VendorSettableOrderStatus>(
-    order.status === "cancelled" ? "cancelled" : "confirmed",
+    order.status === "cancelled"
+      ? "cancelled"
+      : order.status === "at_hub"
+        ? "shipped"
+        : order.status === "confirmed"
+          ? "at_hub"
+          : "confirmed",
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -207,8 +224,9 @@ export function UpdateOrderModal({
           {!editable ? (
             <div className="space-y-3">
               <p className="text-[12.5px] leading-relaxed" style={{ color: "#374151" }}>
-                This order is past your control — its status is now tracked by GoMarketi's hub team
-                {order.status !== "cancelled" && order.status !== "delivered" ? " and the customer" : ""}.
+                {order.status === "shipped"
+                  ? "This order is on its way. The customer confirms delivery from their tracking page, which is also what releases your payment."
+                  : "This order is closed — there are no further actions for you here."}
               </p>
               <div className="flex items-center gap-2 px-3 py-2 rounded-[8px]" style={{ background: "#fafafa" }}>
                 <StatusBadge status={order.status} />
@@ -223,8 +241,9 @@ export function UpdateOrderModal({
                 Order status
               </label>
               <p className="text-[11.5px] leading-relaxed" style={{ color: "#6b7280" }}>
-                Confirming means you'll bring this item to the GoMarketi hub for dispatch — hub
-                intake, shipping, and delivery are tracked from there, not here.
+                Move the order along as it happens — the customer sees each step on their
+                tracking page and gets an email. Mark it dispatched only once it has actually
+                left, and the customer confirms delivery themselves at the end.
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {VENDOR_SETTABLE.map((val) => {
