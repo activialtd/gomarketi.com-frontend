@@ -3,6 +3,7 @@ import {
   type OrderStatus as ApiOrderStatus,
   type VendorSettableOrderStatus,
   ordersApi,
+  vendorSettableStatuses,
 } from "@gomarket/api-client";
 import { fmtNaira } from "@gomarket/shared-utils";
 import { useAuthStore } from "@/store/useAuthStore";
@@ -51,19 +52,11 @@ export const STATUS_CFG: Record<
   },
 };
 
-// A vendor can only ever set these two — at_hub/shipped/delivered are
-// admin-hub-intake/dispatch/buyer-confirmation controlled (see
-// VendorSettableOrderStatus in @gomarket/api-client). Once confirmed, the
-// vendor's job is to physically bring the item to the GoMarketi hub; every
-// status after that is read-only from here.
-// Ordered as the parcel actually moves, so the picker reads as a progression
-// rather than a menu. Cancel sits last, away from the forward path.
-const VENDOR_SETTABLE: VendorSettableOrderStatus[] = [
-  "confirmed",
-  "at_hub",
-  "shipped",
-  "cancelled",
-];
+// What a vendor may set depends on who delivers the order — see
+// vendorSettableStatuses in @gomarket/api-client, which mirrors the
+// backend's rule. "delivered" is in neither list: it releases escrow, so the
+// buyer sets it by confirming receipt.
+
 
 function StatusBadge({ status }: { status: ApiOrderStatus }) {
   const cfg = STATUS_CFG[status];
@@ -149,23 +142,23 @@ export function UpdateOrderModal({
   onClose: () => void;
   onUpdated: (updated: OrderResp) => void;
 }) {
-  // The vendor drives the parcel as far as dispatch. Once it is shipped the
-  // next move is the buyer's (confirm delivery) or the auto-release sweep's,
-  // so the picker closes rather than offering a status they should not set.
-  const editable =
-    order.status === "pending" ||
-    order.status === "confirmed" ||
-    order.status === "at_hub";
-  // Preselect the next step rather than the current one — the reason the
-  // dialog is open is to move the order forward.
+  // Orders this vendor delivers end at "shipped"; orders GoMarketi delivers
+  // end at "at_hub". Either way the vendor's last move is made from a
+  // pending or confirmed order, so the picker closes after that.
+  const editable = order.status === "pending" || order.status === "confirmed";
+  const settable = vendorSettableStatuses(order.fulfilment);
+  // The step after "confirmed" differs by who delivers: dispatch it yourself,
+  // or hand it to the hub.
+  const nextStep: VendorSettableOrderStatus =
+    order.fulfilment === "gomarketi" ? "at_hub" : "shipped";
+  // Preselect the next step rather than the current one — moving the order
+  // forward is why the dialog is open.
   const [status, setStatus] = useState<VendorSettableOrderStatus>(
     order.status === "cancelled"
       ? "cancelled"
-      : order.status === "at_hub"
-        ? "shipped"
-        : order.status === "confirmed"
-          ? "at_hub"
-          : "confirmed",
+      : order.status === "confirmed"
+        ? nextStep
+        : "confirmed",
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -226,7 +219,9 @@ export function UpdateOrderModal({
               <p className="text-[12.5px] leading-relaxed" style={{ color: "#374151" }}>
                 {order.status === "shipped"
                   ? "This order is on its way. The customer confirms delivery from their tracking page, which is also what releases your payment."
-                  : "This order is closed — there are no further actions for you here."}
+                  : order.status === "at_hub"
+                    ? "Your part is with GoMarketi. We dispatch the basket once every vendor has brought theirs in."
+                    : "This order is closed — there are no further actions for you here."}
               </p>
               <div className="flex items-center gap-2 px-3 py-2 rounded-[8px]" style={{ background: "#fafafa" }}>
                 <StatusBadge status={order.status} />
@@ -241,12 +236,13 @@ export function UpdateOrderModal({
                 Order status
               </label>
               <p className="text-[11.5px] leading-relaxed" style={{ color: "#6b7280" }}>
-                Move the order along as it happens — the customer sees each step on their
-                tracking page and gets an email. Mark it dispatched only once it has actually
-                left, and the customer confirms delivery themselves at the end.
+                {order.fulfilment === "gomarketi"
+                  ? "This customer also bought from other vendors, so GoMarketi delivers the whole basket. Bring your part to the hub and mark it received there — we handle dispatch from that point."
+                  : "You deliver this order yourself. Mark it dispatched once it is actually on its way; the customer confirms delivery at the end, which is what releases your payment."}
+                {" "}The customer sees each step on their tracking page and gets an email.
               </p>
               <div className="grid grid-cols-2 gap-2">
-                {VENDOR_SETTABLE.map((val) => {
+                {settable.map((val) => {
                   const cfg = STATUS_CFG[val];
                   return (
                     <button
