@@ -260,33 +260,6 @@ export default function OverviewPage() {
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span
-                className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full"
-                style={{ background: "#F0FAF3", color: "#1A7A42" }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                Active
-              </span>
-              <a
-                href={storefrontUrl ?? "#"}
-                target={storefrontUrl ? "_blank" : undefined}
-                rel="noopener noreferrer"
-                aria-disabled={!storefrontUrl}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] text-[12px] font-bold text-white transition-all hover:opacity-90"
-                style={{
-                  background: storefrontUrl ? "#1A7A42" : "#cbd5e1",
-                  boxShadow: storefrontUrl
-                    ? "0 2px 8px rgba(26,122,66,0.25)"
-                    : "none",
-                  pointerEvents: storefrontUrl ? "auto" : "none",
-                }}
-              >
-                <Globe className="w-3.5 h-3.5" />
-                View store
-                <ArrowUpRight className="w-3 h-3 opacity-70" />
-              </a>
-            </div>
           </div>
 
           {/* Quick actions */}
