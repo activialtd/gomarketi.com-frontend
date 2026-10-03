@@ -274,20 +274,40 @@ export interface OrderItem {
   price_kobo: number;
 }
 
-// at_hub/shipped/delivered are hub-and-spoke states a vendor can only ever
-// read, never set — see VendorSettableOrderStatus below for what a vendor's
-// own PATCH /v1/orders/:id/status call may actually request.
 export type OrderStatus =
   "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
 
-// The backend restricts a vendor's own status PATCH to these two values —
-// at_hub/shipped/delivered are exclusively admin-hub-intake/dispatch/buyer-
-// confirmation controlled under the consolidation-hub fulfillment model.
-export type VendorSettableOrderStatus = "confirmed" | "cancelled";
+// Who physically delivers an order. A basket spanning several vendors becomes
+// several orders sharing one payment reference and goes through GoMarketi's
+// consolidation hub; an order alone on its reference is that vendor's own
+// delivery, end to end.
+export type Fulfilment = "vendor" | "gomarketi";
+
+export type VendorSettableOrderStatus =
+  "confirmed" | "at_hub" | "shipped" | "cancelled";
+
+// What a vendor may set, which depends on who delivers. Mirrors vendorMaySet
+// in services/orders/internal/service/orders.go — change both together or the
+// UI offers a status the API refuses.
+//
+// "delivered" appears in neither: it releases escrow on the spot, so it stays
+// with the buyer's confirm-delivery call or the auto-release sweep.
+export function vendorSettableStatuses(
+  fulfilment: Fulfilment,
+): VendorSettableOrderStatus[] {
+  return fulfilment === "gomarketi"
+    // The vendor accepts the order and GoMarketi moves it from there, so
+    // at_hub and shipped are the platform's to set, not theirs.
+    ? ["confirmed", "cancelled"]
+    // The vendor runs this one end to end, so they mark dispatch themselves.
+    : ["confirmed", "shipped", "cancelled"];
+}
 
 export interface OrderResp {
   id: string;
   store_id: string;
+  /** Who delivers this order — decides which statuses the vendor may set. */
+  fulfilment: Fulfilment;
   customer_id: string;
   customer_name: string;
   customer_email: string;
