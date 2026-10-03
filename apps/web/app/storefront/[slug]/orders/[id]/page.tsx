@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ClipboardCheck, PackageCheck, Truck, BadgeCheck,
   XCircle, RotateCcw, ChevronLeft, ExternalLink,
+  CheckCircle2, AlertTriangle, Loader2,
 } from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
@@ -30,6 +31,8 @@ interface OrderData {
   delivery_address: string;
   items: OrderItem[];
   store_slug?: string;
+  delivery_confirmed_at?: string | null;
+  dispute_status?: string | null;
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -82,6 +85,184 @@ function timeAgo(iso: string) {
   const h = Math.floor(m / 60);
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
+}
+
+// ── Delivery confirmation ─────────────────────────────────────────────────────
+
+/**
+ * The buyer's "yes, this arrived" control.
+ *
+ * It is the only thing that releases the vendor's money on time: a sale is
+ * credited as `pending` and only turns spendable when this is pressed, or
+ * when the seven-day auto-release sweep gives up waiting. The mobile app has
+ * had this since launch; the web page that every order email links to did
+ * not, so web buyers had no way to finish an order at all.
+ *
+ * Only offered while the order is `shipped` — the API refuses anything
+ * earlier, and offering a button that always errors is worse than no button.
+ */
+function DeliveryConfirmation({
+  order,
+  email,
+  onChanged,
+}: {
+  order: OrderData;
+  email: string;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState<"confirm" | "report" | null>(null);
+  const [error, setError] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reason, setReason] = useState("");
+
+  const confirmed = Boolean(order.delivery_confirmed_at) || order.status === "delivered";
+  const reported = order.dispute_status === "reported";
+  const refunded = order.dispute_status === "refunded";
+
+  async function send(path: "confirm-delivery" | "report-missing") {
+    setBusy(path === "confirm-delivery" ? "confirm" : "report");
+    setError("");
+    try {
+      const res = await fetch(`${API_URL}/v1/orders/public/${order.id}/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          path === "confirm-delivery"
+            ? { email }
+            : { email, reason: reason.trim() || undefined },
+        ),
+      });
+      if (!res.ok) {
+        // The API explains itself well here ("hasn't been dispatched"), so
+        // show its message rather than a generic failure.
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error || "Something went wrong — please try again.");
+        return;
+      }
+      setReportOpen(false);
+      onChanged();
+    } catch {
+      setError("Couldn't reach the server — check your connection and try again.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (refunded) {
+    return (
+      <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "16px", padding: "18px 20px", marginBottom: "16px", display: "flex", gap: "14px", alignItems: "flex-start" }}>
+        <CheckCircle2 style={{ width: "22px", height: "22px", color: "#15803d", flexShrink: 0, marginTop: "1px" }} />
+        <div>
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#14532d" }}>This order was refunded</p>
+          <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#166534", lineHeight: 1.6 }}>The money is on its way back to you.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (reported) {
+    return (
+      <div style={{ background: "#fffbeb", border: "1.5px solid #fde68a", borderRadius: "16px", padding: "18px 20px", marginBottom: "16px", display: "flex", gap: "14px", alignItems: "flex-start" }}>
+        <AlertTriangle style={{ width: "22px", height: "22px", color: "#b45309", flexShrink: 0, marginTop: "1px" }} />
+        <div>
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#78350f" }}>You reported this order as not received</p>
+          <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#92400e", lineHeight: 1.6 }}>
+            We are looking into it and the vendor&apos;s payment is on hold until it is resolved. We will email you.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (confirmed) {
+    return (
+      <div style={{ background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "16px", padding: "18px 20px", marginBottom: "16px", display: "flex", gap: "14px", alignItems: "flex-start" }}>
+        <CheckCircle2 style={{ width: "22px", height: "22px", color: "#15803d", flexShrink: 0, marginTop: "1px" }} />
+        <div>
+          <p style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#14532d" }}>Thanks — you confirmed this order arrived</p>
+          <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#166534", lineHeight: 1.6 }}>The vendor has been paid. Enjoy your purchase.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (order.status !== "shipped") return null;
+
+  return (
+    <div style={{ background: "#fff", border: "1.5px solid #bbf7d0", borderRadius: "16px", padding: "20px", marginBottom: "16px", boxShadow: "0 4px 24px rgba(26,122,66,0.06)" }}>
+      <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#1C1C1C" }}>Has your order arrived?</p>
+      <p style={{ margin: "5px 0 16px", fontSize: "13px", color: "#6b7280", lineHeight: 1.6 }}>
+        Confirming releases payment to the vendor, so please only do it once you have the items.
+      </p>
+
+      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+        <button
+          onClick={() => void send("confirm-delivery")}
+          disabled={busy !== null}
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px",
+            flex: "1 1 200px", minHeight: "46px", padding: "0 18px",
+            borderRadius: "10px", border: "none", background: "#1A7A42", color: "#fff",
+            fontSize: "14px", fontWeight: 800, cursor: busy ? "not-allowed" : "pointer",
+            opacity: busy ? 0.65 : 1,
+          }}
+        >
+          {busy === "confirm"
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <CheckCircle2 style={{ width: "16px", height: "16px" }} />}
+          Yes, I&apos;ve received it
+        </button>
+
+        <button
+          onClick={() => { setReportOpen((v) => !v); setError(""); }}
+          disabled={busy !== null}
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px",
+            flex: "1 1 180px", minHeight: "46px", padding: "0 18px",
+            borderRadius: "10px", background: "#fff", color: "#b45309",
+            border: "1.5px solid #fde68a", fontSize: "14px", fontWeight: 700,
+            cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.65 : 1,
+          }}
+        >
+          <AlertTriangle style={{ width: "16px", height: "16px" }} />
+          It hasn&apos;t arrived
+        </button>
+      </div>
+
+      {reportOpen && (
+        <div style={{ marginTop: "14px" }}>
+          <label htmlFor="gm-report-reason" style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#6b7280", marginBottom: "6px" }}>
+            What happened? (optional)
+          </label>
+          <textarea
+            id="gm-report-reason"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            placeholder="e.g. the rider never came, or only part of the order arrived"
+            style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "10px", border: "1.5px solid #e2e8f0", fontSize: "13px", fontFamily: "inherit", resize: "vertical", color: "#1C1C1C" }}
+          />
+          <button
+            onClick={() => void send("report-missing")}
+            disabled={busy !== null}
+            style={{
+              marginTop: "10px", display: "inline-flex", alignItems: "center", gap: "8px",
+              minHeight: "42px", padding: "0 18px", borderRadius: "10px", border: "none",
+              background: "#b45309", color: "#fff", fontSize: "13px", fontWeight: 800,
+              cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.65 : 1,
+            }}
+          >
+            {busy === "report" && <Loader2 className="w-4 h-4 animate-spin" />}
+            Report this order
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p style={{ margin: "12px 0 0", fontSize: "12.5px", color: "#dc2626", fontWeight: 600, lineHeight: 1.5 }}>{error}</p>
+      )}
+    </div>
+  );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -260,6 +441,9 @@ export default function OrderTrackingPage({
 
         {/* Status message */}
         <StatusMessage status={order.status} />
+
+        {/* The buyer's half of the handover — see DeliveryConfirmation. */}
+        <DeliveryConfirmation order={order} email={email} onChanged={() => void fetchOrder()} />
 
         {/* Items */}
         <div style={{ background: "#fff", borderRadius: "16px", border: "1.5px solid #f1f5f9", overflow: "hidden", marginBottom: "16px" }}>
