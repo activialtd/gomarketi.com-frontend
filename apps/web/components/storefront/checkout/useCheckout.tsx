@@ -263,7 +263,7 @@ export function useCheckout({
   deliveryOptions,
 }: CheckoutProps) {
   const router = useRouter();
-  const { lines, setCustomer, clearCart } = useCart();
+  const { lines, customer, setCustomer, clearCart } = useCart();
 
   const [isPlacing, setIsPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
@@ -275,20 +275,60 @@ export function useCheckout({
     null,
   );
   const [orderError, setOrderError] = useState("");
+  const allDigitalLines = lines.length > 0 && lines.every((l) => l.isDigital);
   const deliveryZones = toZones(deliveryOptions);
   // True when this store has not set up delivery at all — checkout is blocked
   // rather than priced with a number nobody chose.
   const deliveryUnavailable = deliveryZones.length === 0;
+  // Nothing is preselected on purpose. Defaulting to the first option meant a
+  // customer could pay for a zone they never looked at — and the vendor's
+  // cheapest option is rarely the right one for a given address.
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | undefined>(
-    deliveryZones[0],
+    undefined,
   );
 
   // Zone locked in when the customer pressed Place order
-  const pendingZone = useRef<DeliveryZone | undefined>(deliveryZones[0]);
+  const pendingZone = useRef<DeliveryZone | undefined>(undefined);
+  // A physical order needs a chosen zone before payment: the server prices
+  // delivery from the option id, so paying without one fails after the charge.
+  const deliveryMissing = !allDigitalLines && !deliveryUnavailable && !deliveryZone;
 
+
+  // The cart store already persists the customer across visits; the form just
+  // never read it, so returning buyers retyped their name, email, phone and
+  // address every time.
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+      state: "",
+      note: "",
+    },
   });
+
+  // defaultValues alone is not enough: the persisted store rehydrates after
+  // the first render, so at useForm time `customer` is still null. Fill the
+  // form once it arrives — and only while untouched, so this can never
+  // overwrite something the buyer is in the middle of typing.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !customer || form.formState.isDirty) return;
+    prefilled.current = true;
+    form.reset({
+      fullName: customer.fullName ?? "",
+      email: customer.email ?? "",
+      phone: customer.phone ?? "",
+      address: customer.address ?? "",
+      city: customer.city ?? "",
+      state: customer.state ?? "",
+      // The note belongs to one order, not to the buyer, so it starts empty.
+      note: "",
+    });
+  }, [customer, form]);
 
   const storeReady = storeId != null;
 
@@ -300,7 +340,7 @@ export function useCheckout({
     0,
   );
 
-  const allDigital = lines.length > 0 && lines.every((l) => l.isDigital);
+  const allDigital = allDigitalLines;
   const shipping = allDigital ? 0 : (deliveryZone?.feeKobo ?? 0);
   const chargedShipping = CHARGE_DELIVERY_AT_CHECKOUT ? shipping : 0;
   const deliveryPaidLater = !CHARGE_DELIVERY_AT_CHECKOUT && shipping > 0;
@@ -463,6 +503,7 @@ export function useCheckout({
     setDeliveryZone,
     deliveryZones,
     deliveryUnavailable,
+    deliveryMissing,
     storeReady,
     isPlacing,
     orderPlaced,
