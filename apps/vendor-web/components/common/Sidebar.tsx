@@ -3,9 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Settings, ChevronDown, Store, HelpCircle, LogOut, ShieldCheck } from "lucide-react";
+import { Settings, ChevronDown, HelpCircle, LogOut, ShieldCheck } from "lucide-react";
 import { ROUTES } from "@/lib/config/routes";
-import { cn } from "@gomarket/ui";
+import { cn, Mark } from "@gomarket/ui";
 import { NAV, NavItem } from "@/lib/config/sidebar";
 import { useAuthStore, type StaffRole } from "@/store/useAuthStore";
 
@@ -86,9 +86,12 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
             className="w-8 h-8 rounded-[9px] flex items-center justify-center shrink-0"
             style={{ background: staffRole ? "rgba(124,58,237,0.3)" : "rgba(255,255,255,0.12)" }}
           >
+            {/* Staff keep the shield, which says whose session this is. A vendor
+                gets the GoMarket symbol — monochrome, because the brand orange
+                disappears against this sidebar. */}
             {staffRole
               ? <ShieldCheck className="w-[17px] h-[17px]" style={{ color: "#c4b5fd" }} />
-              : <Store className="w-[17px] h-[17px]" style={{ color: "#fff" }} />}
+              : <Mark className="h-[18px] w-auto text-white" title="GoMarket" monochrome />}
           </div>
           <div>
             <p className="text-[15px] font-extrabold tracking-tight text-white leading-none">

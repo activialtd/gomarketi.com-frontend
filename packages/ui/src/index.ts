@@ -8,3 +8,4 @@ export * from "./skeleton";
 export * from "./chart";
 export * from "./calendar";
 export * from "./popover";
+export * from "./mark";

@@ -21,6 +21,10 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
+  // Without this, Next emits relative og:image URLs and most scrapers (Slack,
+  // WhatsApp, X) drop the preview entirely. It is also what makes the
+  // convention-based app/opengraph-image.png and app/twitter-image.png resolve.
+  metadataBase: new URL("https://gomarketi.com"),
   title: "GoMarket — Shop your local market without the trip",
   description:
     "Order from the traders you already buy from. Vendors bring your items to our hub, we check them, and one delivery brings everything to your door.",
