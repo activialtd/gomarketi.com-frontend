@@ -236,7 +236,7 @@ export function HomeScreen() {
           >
             <View style={s.top}>
               <Animated.Text style={[s.display, riseIn(14)]}>
-                GOMARKETI
+                GOMARKET
               </Animated.Text>
               <Animated.Text style={[s.subDisplay, riseIn(20)]}>
                 Instantly access inventory from every major market in the city.

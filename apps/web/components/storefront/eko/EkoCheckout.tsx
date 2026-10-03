@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { StateSelect } from "../checkout/StateSelect";
 import Link from "next/link";
 import {
   ChevronLeft,
@@ -23,6 +24,9 @@ export default function EkoCheckout(props: CheckoutProps) {
     form: {
       register,
       handleSubmit,
+      watch,
+      setValue,
+      trigger,
       formState: { errors },
     },
     lines,
@@ -35,12 +39,14 @@ export default function EkoCheckout(props: CheckoutProps) {
     setDeliveryZone,
     deliveryZones,
     deliveryUnavailable,
+    deliveryMissing,
     storeReady,
     isPlacing,
     orderPlaced,
     orderNumber,
     orderError,
     showPaystack,
+    paymentRef,
     pendingCustomer,
     setShowPaystack,
     onSubmit,
@@ -67,7 +73,10 @@ export default function EkoCheckout(props: CheckoutProps) {
         ? `${fmtNaira(shipping)} on delivery`
         : fmtNaira(shipping);
 
-  const placeDisabled = isPlacing || !storeReady;
+  // Nothing is preselected for delivery any more, so paying before choosing
+  // is now possible — and would be charged, then refused by the server when
+  // it tries to price a delivery option that was never picked.
+  const placeDisabled = isPlacing || !storeReady || deliveryMissing;
   const submit = handleSubmit(onSubmit);
 
   if (orderPlaced) {
@@ -200,20 +209,16 @@ export default function EkoCheckout(props: CheckoutProps) {
                 />
               </Field>
               <Field label="State" error={errors.state?.message}>
-                <select
+                <StateSelect
                   className={inputCls(!!errors.state)}
-                  defaultValue=""
-                  {...register("state")}
-                >
-                  <option value="" disabled>
-                    Select state
-                  </option>
-                  {NIGERIAN_STATES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  value={watch("state") ?? ""}
+                  options={NIGERIAN_STATES}
+                  onChange={(v) =>
+                    setValue("state", v, { shouldValidate: true, shouldDirty: true })
+                  }
+                  onBlur={() => void trigger("state")}
+                  error={!!errors.state}
+                />
               </Field>
             </div>
           </Section>
@@ -227,11 +232,13 @@ export default function EkoCheckout(props: CheckoutProps) {
               >
                 <div>
                   <p className="text-[13px] font-bold text-neutral-900">
-                    {deliveryZone?.name ?? "No delivery set"}
+                    {deliveryZone?.name ?? (deliveryUnavailable ? "No delivery set" : "Choose a delivery option")}
                   </p>
                   <p className="text-[11px] text-neutral-500 mt-0.5 line-clamp-1 pr-2">
                     {deliveryZone?.note ??
-                      "This vendor has not set a delivery fee yet — contact the store."}
+                      (deliveryUnavailable
+                        ? "This vendor has not set a delivery fee yet — contact the store."
+                        : "Tap to pick where we are delivering to.")}
                   </p>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
@@ -359,6 +366,7 @@ export default function EkoCheckout(props: CheckoutProps) {
           amount={total}
           email={pendingCustomer.email}
           storeName={props.storeName ?? "GoMarketi Store"}
+          reference={paymentRef}
           onSuccess={handlePaystackSuccess}
           onClose={() => setShowPaystack(false)}
         />

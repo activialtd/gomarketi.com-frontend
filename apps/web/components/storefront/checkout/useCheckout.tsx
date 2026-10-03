@@ -183,6 +183,11 @@ export type CheckoutProps = {
   deliveryOptions?: DeliveryOptionResp[];
 };
 
+/** Mirrors the format PaystackModal used to generate internally. */
+function newPaymentRef(): string {
+  return `GMK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 // ── Pending-order recovery ────────────────────────────────────────────────────
 // TODO(backend): temporary pay-then-create flow. Replace with server-side
 // checkout init (order created before payment) + webhook verify.
@@ -258,30 +263,72 @@ export function useCheckout({
   deliveryOptions,
 }: CheckoutProps) {
   const router = useRouter();
-  const { lines, setCustomer, clearCart } = useCart();
+  const { lines, customer, setCustomer, clearCart } = useCart();
 
   const [isPlacing, setIsPlacing] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [showPaystack, setShowPaystack] = useState(false);
+  // Generated up front so the intent and the charge share one reference.
+  const pendingRef = useRef<string>("");
   const [pendingCustomer, setPendingCustomer] = useState<CustomerInfo | null>(
     null,
   );
   const [orderError, setOrderError] = useState("");
+  const allDigitalLines = lines.length > 0 && lines.every((l) => l.isDigital);
   const deliveryZones = toZones(deliveryOptions);
   // True when this store has not set up delivery at all — checkout is blocked
   // rather than priced with a number nobody chose.
   const deliveryUnavailable = deliveryZones.length === 0;
+  // Nothing is preselected on purpose. Defaulting to the first option meant a
+  // customer could pay for a zone they never looked at — and the vendor's
+  // cheapest option is rarely the right one for a given address.
   const [deliveryZone, setDeliveryZone] = useState<DeliveryZone | undefined>(
-    deliveryZones[0],
+    undefined,
   );
 
   // Zone locked in when the customer pressed Place order
-  const pendingZone = useRef<DeliveryZone | undefined>(deliveryZones[0]);
+  const pendingZone = useRef<DeliveryZone | undefined>(undefined);
+  // A physical order needs a chosen zone before payment: the server prices
+  // delivery from the option id, so paying without one fails after the charge.
+  const deliveryMissing = !allDigitalLines && !deliveryUnavailable && !deliveryZone;
 
+
+  // The cart store already persists the customer across visits; the form just
+  // never read it, so returning buyers retyped their name, email, phone and
+  // address every time.
   const form = useForm<CheckoutValues>({
     resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      phone: "",
+      address: "",
+      city: "",
+      state: "",
+      note: "",
+    },
   });
+
+  // defaultValues alone is not enough: the persisted store rehydrates after
+  // the first render, so at useForm time `customer` is still null. Fill the
+  // form once it arrives — and only while untouched, so this can never
+  // overwrite something the buyer is in the middle of typing.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (prefilled.current || !customer || form.formState.isDirty) return;
+    prefilled.current = true;
+    form.reset({
+      fullName: customer.fullName ?? "",
+      email: customer.email ?? "",
+      phone: customer.phone ?? "",
+      address: customer.address ?? "",
+      city: customer.city ?? "",
+      state: customer.state ?? "",
+      // The note belongs to one order, not to the buyer, so it starts empty.
+      note: "",
+    });
+  }, [customer, form]);
 
   const storeReady = storeId != null;
 
@@ -293,7 +340,7 @@ export function useCheckout({
     0,
   );
 
-  const allDigital = lines.length > 0 && lines.every((l) => l.isDigital);
+  const allDigital = allDigitalLines;
   const shipping = allDigital ? 0 : (deliveryZone?.feeKobo ?? 0);
   const chargedShipping = CHARGE_DELIVERY_AT_CHECKOUT ? shipping : 0;
   const deliveryPaidLater = !CHARGE_DELIVERY_AT_CHECKOUT && shipping > 0;
@@ -323,21 +370,43 @@ export function useCheckout({
     setCustomer(customerInfo);
     setPendingCustomer(customerInfo);
     pendingZone.current = deliveryZone;
+
+    // Tell the server what this payment is for, before the payment exists.
+    //
+    // Everything after the charge — saving the order — depends on this
+    // browser surviving the next few seconds. It often does not: a dropped
+    // connection at the wrong moment used to mean money taken and no order,
+    // recoverable only if that same buyer reopened this same checkout. With
+    // the intent recorded, Paystack's webhook (and the server's sweep) can
+    // finish the job without them.
+    //
+    // Deliberately not awaited and never blocking: if recording fails the
+    // buyer should still be able to pay, and the old localStorage path still
+    // covers the common case.
+    const ref = newPaymentRef();
+    pendingRef.current = ref;
+    const intent = buildPayload(customerInfo, deliveryZone, ref);
+    if (intent) {
+      void ordersApi
+        .recordCheckoutIntent({ kind: "order", payment_reference: ref, payload: intent })
+        .catch((err) => console.error("could not record checkout intent", err));
+    }
+
     setShowPaystack(true);
   }
 
-  async function handlePaystackSuccess(ref: string) {
-    setShowPaystack(false);
-    if (!storeId || !pendingCustomer) {
-      setOrderError(
-        `Payment received but checkout details were lost. Contact the store with reference ${ref}.`,
-      );
-      return;
-    }
+  // Built in one place so the same order can be described to the server
+  // before payment (as an intent) and sent after it, without the two drifting.
+  function buildPayload(
+    customerInfo: CustomerInfo,
+    zone: DeliveryZone | undefined,
+    ref: string,
+  ): CreateOrderReq | null {
+    if (!storeId) return null;
+    const pendingCustomer = customerInfo;
 
     // No delivery or note field on the order yet, so the vendor sees the
     // chosen zone and note inside the delivery address.
-    const zone = pendingZone.current;
     const zoneFee = allDigital || !zone ? 0 : zone.feeKobo;
     const addressParts = [
       `${pendingCustomer.address}, ${pendingCustomer.city}, ${pendingCustomer.state}`,
@@ -377,6 +446,24 @@ export function useCheckout({
       delivery_fee_kobo: 0,
       payment_reference: ref,
     };
+    return payload;
+  }
+
+  async function handlePaystackSuccess(ref: string) {
+    setShowPaystack(false);
+    if (!storeId || !pendingCustomer) {
+      setOrderError(
+        `Payment received but checkout details were lost. Contact the store with reference ${ref}.`,
+      );
+      return;
+    }
+    const payload = buildPayload(pendingCustomer, pendingZone.current, ref);
+    if (!payload) {
+      setOrderError(
+        `Payment received but checkout details were lost. Contact the store with reference ${ref}.`,
+      );
+      return;
+    }
 
     // Save before the network call so a paid order is never lost.
     writePending(payload);
@@ -416,11 +503,13 @@ export function useCheckout({
     setDeliveryZone,
     deliveryZones,
     deliveryUnavailable,
+    deliveryMissing,
     storeReady,
     isPlacing,
     orderPlaced,
     orderNumber,
     showPaystack,
+    paymentRef: pendingRef.current,
     pendingCustomer,
     orderError,
     setShowPaystack,

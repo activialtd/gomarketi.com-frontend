@@ -13,6 +13,12 @@ interface Props {
   // below when a vendor hasn't configured their own — same pattern Checkout.tsx
   // already uses for Flutterwave's public_key.
   publicKey?: string;
+  /**
+   * The reference to charge against. Passed in so the checkout intent
+   * recorded before payment and the charge itself agree; generated here only
+   * for callers that do not supply one.
+   */
+  reference?: string;
   onSuccess: (ref: string) => void;
   onClose: () => void;
 }
@@ -62,7 +68,7 @@ function loadPaystackScript(): Promise<void> {
 // own iframe (opened by openIframe()) handles all card entry — this
 // component never sees card details, matching the mobile app's
 // PaystackSheet.tsx pattern.
-export function PaystackModal({ amount, email, storeName, publicKey, onSuccess, onClose }: Props) {
+export function PaystackModal({ amount, email, storeName, publicKey, reference, onSuccess, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const key = publicKey || DEFAULT_PAYSTACK_PUBLIC_KEY;
 
@@ -93,7 +99,11 @@ export function PaystackModal({ amount, email, storeName, publicKey, onSuccess, 
     loadPaystackScript()
       .then(() => {
         if (cancelled || !window.PaystackPop) return;
-        const ref = `GMK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        // The caller generates this now, so the checkout intent recorded
+        // before payment and the charge itself share one reference. Falls
+        // back to generating one for any caller that does not pass it.
+        const ref =
+          reference || `GMK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         window.PaystackPop.setup({
           key,
           email,
