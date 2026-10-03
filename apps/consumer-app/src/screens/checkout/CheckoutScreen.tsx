@@ -2,23 +2,25 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   StyleSheet,
   TextInput,
   Pressable,
   ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { PaystackSheet } from "../../components/PaystackSheet";
-import { useCart, formatNaira, toNaira } from "../../lib/cart-context";
+import { useCart, formatNaira, toNaira, type CartLine } from "../../lib/cart-context";
 import { useOrders } from "../../lib/orders-context";
 import { useAuth } from "../../lib/auth-context";
 import { useLocation } from "../../hooks/useLocation";
 import { useNav } from "../../navigation/nav-context";
-import { color, type, space } from "../../theme/tokens";
+import { color, type, space, tint } from "../../theme/tokens";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { groupCartByStore } from "../../lib/checkout-grouping";
 import {
@@ -30,6 +32,54 @@ import {
 
 const fmtKobo = (kobo: number) =>
   "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
+
+/**
+ * One line of the order summary, led by the product's picture.
+ *
+ * The summary was text-only, so a buyer confirming a ₦300,000 order saw
+ * nothing but a name — the one place a wrong item is cheapest to catch. Falls
+ * back to the product's icon the same way ProductCard does, since a catalogue
+ * product with no image, or a URL that 404s, is ordinary rather than
+ * exceptional.
+ */
+function SummaryLine({
+  line,
+  priceLabel,
+}: {
+  line: CartLine;
+  priceLabel: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const cover = line.product.images?.[0];
+  const showImage = !!cover && !imgFailed;
+  const qualifier = [line.variant, line.size].filter(Boolean).join(", ");
+
+  return (
+    <View style={s.itemRow}>
+      <View style={[s.thumb, { backgroundColor: tint[line.product.tint] }]}>
+        {showImage ? (
+          <Image
+            source={{ uri: cover }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            onError={() => setImgFailed(true)}
+          />
+        ) : (
+          <Ionicons name={line.product.icon} size={18} color={color.ink} />
+        )}
+      </View>
+
+      <View style={s.itemText}>
+        <Text numberOfLines={2} style={type.body}>
+          {line.qty} × {line.product.name}
+          {qualifier ? ` (${qualifier})` : ""}
+        </Text>
+      </View>
+
+      <Text style={s.lineVal}>{priceLabel}</Text>
+    </View>
+  );
+}
 
 export function CheckoutScreen() {
   const { items, totalUsd, clear } = useCart();
@@ -226,16 +276,11 @@ export function CheckoutScreen() {
           </Text>
           <View style={s.card}>
             {items.map((line) => (
-              <View key={line.key} style={s.line}>
-                <Text style={type.body}>
-                  {line.qty} × {line.product.name}
-                  {(line.variant || line.size) &&
-                    ` (${[line.variant, line.size].filter(Boolean).join(", ")})`}
-                </Text>
-                <Text style={s.lineVal}>
-                  {formatNaira(line.product.price * line.qty)}
-                </Text>
-              </View>
+              <SummaryLine
+                key={line.key}
+                line={line}
+                priceLabel={formatNaira(line.product.price * line.qty)}
+              />
             ))}
             {deliveryKobo > 0 && (
               <View style={s.line}>
@@ -290,6 +335,23 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 8,
   },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    marginBottom: space.md,
+  },
+  thumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  // Takes the slack so the price stays hard against the right edge however
+  // long the product name runs.
+  itemText: { flex: 1 },
   lineVal: { fontFamily: "Jakarta_500", fontSize: 14, color: color.text },
   deliveryRow: {
     flexDirection: "row",
