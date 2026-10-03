@@ -41,6 +41,7 @@ export default function EkoCheckout(props: CheckoutProps) {
     orderNumber,
     orderError,
     showPaystack,
+    paymentRef,
     pendingCustomer,
     setShowPaystack,
     onSubmit,
@@ -359,6 +360,7 @@ export default function EkoCheckout(props: CheckoutProps) {
           amount={total}
           email={pendingCustomer.email}
           storeName={props.storeName ?? "GoMarketi Store"}
+          reference={paymentRef}
           onSuccess={handlePaystackSuccess}
           onClose={() => setShowPaystack(false)}
         />

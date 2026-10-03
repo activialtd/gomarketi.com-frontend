@@ -1001,6 +1001,26 @@ export const ordersApi = {
       body: JSON.stringify(data),
     }),
 
+  /**
+   * Record what a buyer is about to pay for, before they pay.
+   *
+   * Checkout charges first and saves the order second, so a connection that
+   * drops in between takes the money and leaves no order. With the intent
+   * stored, Paystack's charge.success webhook — and the server's sweep behind
+   * it — can create the order without the browser ever coming back.
+   *
+   * Best-effort by design: never block or fail a payment on this.
+   */
+  recordCheckoutIntent: (data: {
+    kind: "order" | "checkout";
+    payment_reference: string;
+    payload: unknown;
+  }) =>
+    request<{ recorded: boolean }>("/v1/orders/public/checkout-intent", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   listAbandonedCarts: (
     params: { page?: number; per_page?: number },
     token: string,
