@@ -39,6 +39,7 @@ import {
 } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
+import { ROUTES } from "@/lib/config/routes";
 
 // ── Token helper ──────────────────────────────────────────────────────────────
 
@@ -276,6 +277,15 @@ export const invalidate = {
 
 // ── WebSocket real-time events ──────────────────────────────────────────────
 
+/** Vendor-facing wording for the statuses that arrive over the socket. */
+const ORDER_STATUS_TITLES: Record<string, string> = {
+  confirmed: "Order confirmed",
+  at_hub: "Order received at the GoMarketi hub",
+  shipped: "Order dispatched",
+  delivered: "Order delivered — payment released",
+  cancelled: "Order cancelled",
+};
+
 // The backend only ever implemented GET /v1/orders/ws (gorilla/websocket) —
 // there is no SSE endpoint, so this must speak WebSocket, not EventSource.
 const WS_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080").replace(/^http/, "ws");
@@ -358,24 +368,51 @@ export function useOrderEvents() {
       }
       if (msg.id) lastIdRef.current = msg.id;
 
+      const notify = useNotificationStore.getState().push;
+
       switch (msg.type) {
         case "order_created": {
           invalidate.orders();
           invalidate.wallet();
           invalidate.analytics();
           const data = msg.data as { total_kobo?: number } | undefined;
-          useNotificationStore.getState().push({
+          notify({
+            kind: "order",
             title: "New order received",
             body: typeof data?.total_kobo === "number" ? koboToNaira(data.total_kobo) : undefined,
+            href: ROUTES.MERCHANT.ORDERS,
           });
           break;
         }
-        case "order_updated":
+        case "order_updated": {
           invalidate.orders();
           invalidate.analytics();
+          const data = msg.data as { status?: string; order_id?: string } | undefined;
+          // Recorded but not toasted: most status changes are the vendor's own
+          // click coming back to them, and a toast for your own action is noise.
+          // The two the vendor did not cause are worth interrupting for.
+          const status = data?.status;
+          if (status) {
+            const loud = status === "delivered" || status === "cancelled";
+            notify({
+              kind: status === "cancelled" ? "system" : "success",
+              title: ORDER_STATUS_TITLES[status] ?? "Order updated",
+              body: data?.order_id ? `Order #${data.order_id.slice(0, 8).toUpperCase()}` : undefined,
+              href: ROUTES.MERCHANT.ORDERS,
+              silent: !loud,
+            });
+          }
           break;
+        }
         case "wallet_updated":
           invalidate.wallet();
+          notify({
+            kind: "wallet",
+            title: "Wallet updated",
+            body: "Your available balance has changed.",
+            href: ROUTES.MERCHANT.WALLET,
+            silent: true,
+          });
           break;
       }
     };

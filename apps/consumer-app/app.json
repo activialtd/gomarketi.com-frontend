@@ -14,7 +14,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE"
+        "backgroundColor": "#F0FAF3",
+        "foregroundImage": "./assets/adaptive-icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
@@ -49,6 +50,15 @@
           "microphonePermission": "GoMarketi uses your microphone for voice search."
         }
       ]
-    ]
+    ],
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F0FAF3"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
   }
 }
