@@ -146,7 +146,10 @@ export default function LagosCheckout(props: CheckoutProps) {
 
         <div className="grid gap-8 lg:gap-10 lg:grid-cols-[1fr_400px]">
           {/* Form */}
-          <form onSubmit={submit} className="flex flex-col gap-8">
+          {/* min-w-0: a grid child defaults to min-width:auto, so anything inside
+              that will not shrink below its content width widens the whole column
+              and pushes the page into a horizontal scroll on phones. */}
+          <form onSubmit={submit} className="flex min-w-0 flex-col gap-8">
             <div className="flex flex-col sm:flex-row sm:items-baseline gap-2 sm:gap-3">
               <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
                 Checkout
@@ -276,7 +279,7 @@ export default function LagosCheckout(props: CheckoutProps) {
           </form>
 
           {/* Summary */}
-          <aside className="w-full">
+          <aside className="w-full min-w-0">
             <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 sm:p-6 lg:sticky lg:top-6">
               <div className="flex items-center justify-between mb-5">
                 <p className="text-[13px] font-extrabold">Order summary</p>
