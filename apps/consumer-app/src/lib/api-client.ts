@@ -649,26 +649,43 @@ export type CheckoutResult = {
   total_kobo: number;
 };
 
-// createCheckout creates one order per vendor store from a single payment —
-// POST /v1/orders/public/checkout, no auth (same public model as login/register
-// above: no vendor session exists at checkout time, only the buyer's details
-// and a verified Paystack reference).
+// placeCheckout creates one order per vendor store — BEFORE payment.
+//
+// POST /v1/orders/public/checkout, no auth (the same public model as
+// login/register above: no vendor session exists at checkout time, only the
+// buyer's details). The orders come back awaiting payment, sharing one
+// payment_reference minted by the server; charge that reference, then call
+// confirmPayment.
+//
+// Checkout used to charge first and create after, which meant a dropped
+// connection in between took the money and left no order behind.
 //
 // Delivery is charged ONCE for the whole basket however many vendors are in
 // it, because the hub sends one consolidated delivery. delivery_option_id may
 // name an option belonging to any store in the basket; the backend reads the
 // price from that row, so the fee cannot be set by the client.
-export async function createCheckout(input: {
+export async function placeCheckout(input: {
   customer_name: string;
   customer_email: string;
   customer_phone?: string;
   delivery_address?: string;
-  payment_reference: string;
+  payment_reference?: string;
   stores: CheckoutStoreOrder[];
   delivery_option_id?: string;
   delivery_fee_kobo?: number;
 }): Promise<CheckoutResult> {
   return request<CheckoutResult>("/v1/orders/public/checkout", input);
+}
+
+// confirmPayment verifies the charge and turns the awaiting orders on that
+// reference into real ones. Idempotent — Paystack's webhook calls the same
+// thing server-side moments later, so a failure here is not lost money.
+export async function confirmPayment(
+  paymentReference: string,
+): Promise<{ orders: OrderResp[] }> {
+  return request<{ orders: OrderResp[] }>("/v1/orders/public/confirm-payment", {
+    payment_reference: paymentReference,
+  });
 }
 
 // getMyOrders returns every order the authenticated buyer has ever placed —

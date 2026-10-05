@@ -258,7 +258,7 @@ export default function CheckoutPage({
     if (!storeId) { setOrderError("Something went wrong. Please refresh and try again."); return; }
     setIsPlacing(true);
     try {
-      const order = await ordersApi.createOrder({
+      const order = await ordersApi.placeOrder({
         store_id: storeId,
         store_slug: storeSlug || undefined,
         store_name: storeName || undefined,
@@ -277,7 +277,11 @@ export default function CheckoutPage({
         payment_reference: ref,
         payment_method: gateway === "pos" || gateway === "manual" ? gateway : "online",
         payment_gateway: gateway,
-      } as Parameters<typeof ordersApi.createOrder>[0]);
+      } as Parameters<typeof ordersApi.placeOrder>[0]);
+      // POS and transfer are paid before we ever hear about them, so the
+      // order is placed and confirmed back to back rather than waiting on a
+      // card popup in between.
+      await ordersApi.confirmPayment(order.payment_reference ?? ref);
       setOrderNumber(`#${order.id.slice(0, 8).toUpperCase()}`);
       setPlacedOrderId(order.id);
       setPlacedEmail(customer.email);

@@ -308,6 +308,11 @@ export interface OrderResp {
   store_id: string;
   /** Who delivers this order — decides which statuses the vendor may set. */
   fulfilment: Fulfilment;
+  /**
+   * The reference to charge against. Minted server-side when the order is
+   * placed, so the order and its payment cannot disagree.
+   */
+  payment_reference?: string;
   customer_id: string;
   customer_name: string;
   customer_email: string;
@@ -995,30 +1000,31 @@ export const ordersApi = {
     ),
 
   // No auth — called directly from the storefront checkout after payment succeeds.
-  createOrder: (data: CreateOrderReq) =>
+  /**
+   * First half of checkout: create the order BEFORE taking payment.
+   *
+   * Returns the order with the payment_reference to charge against. Checkout
+   * used to run the other way round — charge, then save — so any interruption
+   * between the two took money and left no order behind.
+   */
+  placeOrder: (data: CreateOrderReq) =>
     request<OrderResp>("/v1/orders/public", {
       method: "POST",
       body: JSON.stringify(data),
     }),
 
   /**
-   * Record what a buyer is about to pay for, before they pay.
+   * Second half: verify the charge and turn the awaiting orders on that
+   * reference into real ones.
    *
-   * Checkout charges first and saves the order second, so a connection that
-   * drops in between takes the money and leaves no order. With the intent
-   * stored, Paystack's charge.success webhook — and the server's sweep behind
-   * it — can create the order without the browser ever coming back.
-   *
-   * Best-effort by design: never block or fail a payment on this.
+   * Idempotent — Paystack's webhook calls the same thing moments later, so
+   * whichever arrives second is a no-op. That is what makes a dropped
+   * connection here survivable.
    */
-  recordCheckoutIntent: (data: {
-    kind: "order" | "checkout";
-    payment_reference: string;
-    payload: unknown;
-  }) =>
-    request<{ recorded: boolean }>("/v1/orders/public/checkout-intent", {
+  confirmPayment: (paymentReference: string) =>
+    request<{ orders: OrderResp[] }>("/v1/orders/public/confirm-payment", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ payment_reference: paymentReference }),
     }),
 
   listAbandonedCarts: (
