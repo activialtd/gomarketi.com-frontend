@@ -328,9 +328,19 @@ export function CheckoutScreen() {
         </ScrollView>
 
         <View style={s.cta}>
+          {/* checkoutError was set in three places and rendered in none, so a
+              failure — most often a cart item saved before stores were tracked
+              — left the buyer pressing Pay with nothing happening at all. */}
+          {checkoutError && (
+            <View style={s.errorBox}>
+              <Ionicons name="alert-circle" size={16} color={color.danger} />
+              <Text style={s.errorText}>{checkoutError}</Text>
+            </View>
+          )}
           <Button
-            label={`Pay ${fmtKobo(totalKobo)}`}
+            label={checkingOut ? "Starting your order…" : `Pay ${fmtKobo(totalKobo)}`}
             disabled={!valid}
+            loading={checkingOut}
             onPress={() => void startPayment()}
           />
         </View>
@@ -463,6 +473,22 @@ const s = StyleSheet.create({
   deliveryRowActive: { borderColor: color.primary, borderWidth: 2 },
   rule: { height: 1, backgroundColor: color.line, marginVertical: space.sm },
   total: { fontFamily: "Jakarta_700", fontSize: 16, color: color.text },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: space.sm,
+    padding: space.md,
+    borderRadius: 12,
+    backgroundColor: "#FDECEC",
+    marginBottom: space.md,
+  },
+  errorText: {
+    flex: 1,
+    fontFamily: "Jakarta_500",
+    fontSize: 13,
+    lineHeight: 19,
+    color: "#8E1F1F",
+  },
   cta: {
     paddingHorizontal: space.gutter,
     paddingVertical: space.md,
