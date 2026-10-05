@@ -43,28 +43,28 @@ const STEPS = [
     label: "Order placed",
     sub: "We've received your order",
     icon: ClipboardCheck,
-    color: "#6366f1",
+    color: "var(--store-primary, #046244)",
   },
   {
     key: "confirmed",
     label: "Confirmed",
     sub: "Store confirmed your order",
     icon: PackageCheck,
-    color: "#0891b2",
+    color: "var(--store-primary, #046244)",
   },
   {
     key: "shipped",
     label: "On its way",
     sub: "Your order is in transit",
     icon: Truck,
-    color: "#f59e0b",
+    color: "var(--store-primary, #046244)",
   },
   {
     key: "delivered",
     label: "Delivered",
     sub: "Enjoy your purchase!",
     icon: BadgeCheck,
-    color: "#1A7A42",
+    color: "var(--store-primary, #046244)",
   },
 ] as const;
 
@@ -279,9 +279,17 @@ export default function OrderTrackingPage({
   const email = sp.email ?? "";
 
   const [order, setOrder] = useState<OrderData | null>(null);
+  // True for the first few minutes after the order exists. Derived from the
+  // order rather than a query param, so it survives a refresh and expires on
+  // its own instead of greeting someone who reopens the link next week.
   const [notFound, setNotFound] = useState(false);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  const justPlaced =
+    !!order &&
+    order.status !== "cancelled" &&
+    Date.now() - new Date(order.created_at).getTime() < 10 * 60_000;
 
   async function fetchOrder() {
     if (!email) { setLoading(false); return; }
@@ -350,6 +358,23 @@ export default function OrderTrackingPage({
           <ChevronLeft className="w-4 h-4" /> Back to store
         </Link>
 
+        {/* Placed just now — the checkout redirects straight here, so this is
+            the confirmation screen. Shown for the first few minutes only;
+            after that the page is about tracking, not about having ordered. */}
+        {justPlaced && (
+          <div style={{ display: "flex", gap: "14px", alignItems: "flex-start", background: "#f0fdf4", border: "1.5px solid #bbf7d0", borderRadius: "14px", padding: "16px 18px", marginBottom: "24px" }}>
+            <CheckCircle2 style={{ width: "20px", height: "20px", color: "#15803d", flexShrink: 0, marginTop: "1px" }} />
+            <div>
+              <p style={{ margin: 0, fontSize: "14.5px", fontWeight: 700, color: "#14532d" }}>
+                Order placed — payment received
+              </p>
+              <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#166534", lineHeight: 1.6 }}>
+                {order.store_slug ? "The store" : "The seller"} has been notified, and a receipt is on its way to {order.customer_email}.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "28px" }}>
           <div>
@@ -380,7 +405,7 @@ export default function OrderTrackingPage({
                   position: "absolute", left: 0, top: 0, height: "100%",
                   width: `${progressPct}%`,
                   borderRadius: "999px",
-                  background: "linear-gradient(90deg, #1A7A42, #4ade80)",
+                  background: "var(--store-primary, #046244)",
                   transition: "width 1s cubic-bezier(.4,0,.2,1)",
                 }}
               />
@@ -396,12 +421,6 @@ export default function OrderTrackingPage({
                   <div key={step.key} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
                     {/* Circle */}
                     <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      {active && (
-                        <div
-                          className="gm-pulse"
-                          style={{ position: "absolute", width: "52px", height: "52px", borderRadius: "50%", background: step.color + "22" }}
-                        />
-                      )}
                       <div style={{
                         width: "44px", height: "44px", borderRadius: "50%", position: "relative", zIndex: 1,
                         display: "flex", alignItems: "center", justifyContent: "center",
@@ -525,22 +544,22 @@ function StatusMessage({ status }: { status: string }) {
   const msgs: Record<string, { title: string; body: string; bg: string; border: string; text: string }> = {
     pending: {
       title: "Waiting for store confirmation",
-      body: "Your order has been placed successfully. The store will confirm it shortly. You'll receive an email when it's confirmed.",
-      bg: "#eef2ff", border: "#c7d2fe", text: "#4338ca",
+      body: "The store will confirm it shortly, and you will get an email when they do.",
+      bg: "#fafafa", border: "#ececec", text: "#404040",
     },
     confirmed: {
       title: "Order confirmed — being prepared",
       body: "The store has confirmed your order and is preparing it for shipment. We'll notify you as soon as it's on the way.",
-      bg: "#ecfeff", border: "#a5f3fc", text: "#0e7490",
+      bg: "#fafafa", border: "#ececec", text: "#404040",
     },
     shipped: {
-      title: "Your order is on the way!",
-      body: "Your order has been handed to the delivery partner. The store will share tracking details with you directly.",
-      bg: "#fffbeb", border: "#fde68a", text: "#92400e",
+      title: "Your order is on its way",
+      body: "Once it reaches you, confirm receipt below — that is what releases payment to the seller.",
+      bg: "#fafafa", border: "#ececec", text: "#404040",
     },
     delivered: {
-      title: "Order delivered — enjoy!",
-      body: "Your order has been marked as delivered. We hope you love what you got! Contact the store if you have any questions.",
+      title: "Order delivered",
+      body: "If anything is wrong with it, reply to your order email and we will sort it out.",
       bg: "#f0fdf4", border: "#bbf7d0", text: "#166534",
     },
     cancelled: {
@@ -562,7 +581,7 @@ function StatusMessage({ status }: { status: string }) {
 function LoadingSkeleton() {
   return (
     <div style={{ maxWidth: "700px", margin: "0 auto", padding: "32px 20px" }}>
-      <style>{`@keyframes gm-shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}.gm-sh{background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%);background-size:400px;animation:gm-shimmer 1.2s infinite}`}</style>
+      <style>{`.gm-sh{background:#f1f5f9}`}</style>
       {[80, 200, 120, 60].map((h, i) => (
         <div key={i} className="gm-sh" style={{ height: h, borderRadius: "14px", marginBottom: "16px" }} />
       ))}
