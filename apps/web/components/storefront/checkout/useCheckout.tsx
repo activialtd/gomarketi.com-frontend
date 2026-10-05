@@ -183,42 +183,6 @@ export type CheckoutProps = {
   deliveryOptions?: DeliveryOptionResp[];
 };
 
-/** Mirrors the format PaystackModal used to generate internally. */
-function newPaymentRef(): string {
-  return `GMK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-// ── Pending-order recovery ────────────────────────────────────────────────────
-// TODO(backend): temporary pay-then-create flow. Replace with server-side
-// checkout init (order created before payment) + webhook verify.
-
-const PENDING_KEY = "gm_pending_order";
-
-function readPending(): CreateOrderReq | null {
-  try {
-    const raw = localStorage.getItem(PENDING_KEY);
-    return raw ? (JSON.parse(raw) as CreateOrderReq) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writePending(payload: CreateOrderReq) {
-  try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
-  } catch {
-    // storage unavailable; in-session retries still work
-  }
-}
-
-function clearPending() {
-  try {
-    localStorage.removeItem(PENDING_KEY);
-  } catch {
-    // ignore
-  }
-}
-
 function describeError(err: unknown): string {
   if (err instanceof ApiError) {
     const fieldMsgs = err.fields?.map((f) => `${f.field}: ${f.message}`);
@@ -229,30 +193,6 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : "network error";
 }
 
-// Retries transient failures (network / 5xx). A 4xx means the payload is
-// wrong, so retrying won't help, except 409, which may mean an earlier
-// attempt already saved the order.
-async function submitOrder(payload: CreateOrderReq): Promise<OrderResp> {
-  let lastErr: unknown;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      return await ordersApi.createOrder(payload);
-    } catch (err) {
-      lastErr = err;
-      console.error(`createOrder attempt ${attempt + 1} failed`, err);
-      if (
-        err instanceof ApiError &&
-        err.status >= 400 &&
-        err.status < 500 &&
-        err.status !== 409
-      ) {
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
-    }
-  }
-  throw lastErr;
-}
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -269,8 +209,10 @@ export function useCheckout({
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderNumber, setOrderNumber] = useState("");
   const [showPaystack, setShowPaystack] = useState(false);
-  // Generated up front so the intent and the charge share one reference.
+  // The reference the server minted for this order, charged against below.
   const pendingRef = useRef<string>("");
+  // The awaiting-payment order Paystack is being opened for.
+  const placedOrder = useRef<OrderResp | null>(null);
   const [pendingCustomer, setPendingCustomer] = useState<CustomerInfo | null>(
     null,
   );
@@ -352,11 +294,6 @@ export function useCheckout({
   useEffect(() => {
     if (recoveryRan.current) return;
     recoveryRan.current = true;
-    const pending = readPending();
-    if (!pending) return;
-    submitOrder(pending)
-      .then(() => clearPending())
-      .catch((err) => console.error("pending order recovery failed", err));
   }, []);
 
   function onSubmit(data: CheckoutValues) {
@@ -371,28 +308,35 @@ export function useCheckout({
     setPendingCustomer(customerInfo);
     pendingZone.current = deliveryZone;
 
-    // Tell the server what this payment is for, before the payment exists.
+    // Create the order before taking a kobo.
     //
-    // Everything after the charge — saving the order — depends on this
-    // browser surviving the next few seconds. It often does not: a dropped
-    // connection at the wrong moment used to mean money taken and no order,
-    // recoverable only if that same buyer reopened this same checkout. With
-    // the intent recorded, Paystack's webhook (and the server's sweep) can
-    // finish the job without them.
-    //
-    // Deliberately not awaited and never blocking: if recording fails the
-    // buyer should still be able to pay, and the old localStorage path still
-    // covers the common case.
-    const ref = newPaymentRef();
-    pendingRef.current = ref;
-    const intent = buildPayload(customerInfo, deliveryZone, ref);
-    if (intent) {
-      void ordersApi
-        .recordCheckoutIntent({ kind: "order", payment_reference: ref, payload: intent })
-        .catch((err) => console.error("could not record checkout intent", err));
-    }
-
-    setShowPaystack(true);
+    // The order is the record of the purchase now, and payment validates it.
+    // Charging first and saving after meant any interruption in between took
+    // money and left nothing behind — and nobody found out until the customer
+    // complained. If this call fails, nothing has been charged and the buyer
+    // can simply try again.
+    void (async () => {
+      setIsPlacing(true);
+      setOrderError("");
+      try {
+        const payload = buildPayload(customerInfo, deliveryZone, "");
+        if (!payload) {
+          setOrderError("Store details are still loading. Try again in a moment.");
+          return;
+        }
+        const order = await ordersApi.placeOrder(payload);
+        placedOrder.current = order;
+        pendingRef.current = order.payment_reference ?? "";
+        setShowPaystack(true);
+      } catch (err) {
+        console.error("placeOrder failed", err);
+        setOrderError(
+          `We couldn't start your order (${describeError(err)}). Nothing has been charged — please try again.`,
+        );
+      } finally {
+        setIsPlacing(false);
+      }
+    })();
   }
 
   // Built in one place so the same order can be described to the server
@@ -451,30 +395,20 @@ export function useCheckout({
 
   async function handlePaystackSuccess(ref: string) {
     setShowPaystack(false);
-    if (!storeId || !pendingCustomer) {
+    const order = placedOrder.current;
+    if (!order) {
       setOrderError(
-        `Payment received but checkout details were lost. Contact the store with reference ${ref}.`,
+        `Payment received but we lost track of your order. Contact the store with reference ${ref}.`,
       );
       return;
     }
-    const payload = buildPayload(pendingCustomer, pendingZone.current, ref);
-    if (!payload) {
-      setOrderError(
-        `Payment received but checkout details were lost. Contact the store with reference ${ref}.`,
-      );
-      return;
-    }
-
-    // Save before the network call so a paid order is never lost.
-    writePending(payload);
 
     setIsPlacing(true);
     try {
-      const order = await submitOrder(payload);
-      clearPending();
+      await ordersApi.confirmPayment(ref || order.payment_reference || "");
       setOrderNumber(`#${order.id.slice(0, 8).toUpperCase()}`);
       clearCart();
-      if (storeSlug) {
+      if (storeSlug && pendingCustomer) {
         router.push(
           `/orders/${order.id}?email=${encodeURIComponent(pendingCustomer.email)}`,
         );
@@ -482,10 +416,19 @@ export function useCheckout({
         setOrderPlaced(true);
       }
     } catch (err) {
-      console.error("createOrder failed", err);
-      setOrderError(
-        `Payment received, but the order wasn't saved yet (${describeError(err)}). Reference: ${ref}. We'll retry automatically next time you open checkout.`,
-      );
+      // The money is safe and so is the order: it exists, and Paystack's
+      // webhook confirms it server-side within seconds whether or not this
+      // call ever succeeded. So this is reassurance, not an error to act on.
+      console.error("confirmPayment failed", err);
+      setOrderNumber(`#${order.id.slice(0, 8).toUpperCase()}`);
+      clearCart();
+      if (storeSlug && pendingCustomer) {
+        router.push(
+          `/orders/${order.id}?email=${encodeURIComponent(pendingCustomer.email)}`,
+        );
+      } else {
+        setOrderPlaced(true);
+      }
     } finally {
       setIsPlacing(false);
     }

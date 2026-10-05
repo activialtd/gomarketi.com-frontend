@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -24,7 +24,9 @@ import { color, type, space, tint } from "../../theme/tokens";
 import { KeyboardAvoidingView, Platform } from "react-native";
 import { groupCartByStore } from "../../lib/checkout-grouping";
 import {
-  createCheckout,
+  placeCheckout,
+  confirmPayment,
+  type OrderResp,
   getDeliveryOptions,
   ApiError,
   type DeliveryOption,
@@ -159,10 +161,15 @@ export function CheckoutScreen() {
   // every render, e.g. from a keystroke elsewhere on screen while paying).
   const reference = useMemo(() => `gmk_${Date.now()}`, []);
 
-  const onPaid = async (ref: string) => {
-    setPaying(false);
-    setCheckoutError(null);
+  // Orders created before payment, held here so onPaid can confirm them.
+  const placed = useRef<OrderResp[] | null>(null);
 
+  // Create the orders first, then open Paystack against the reference they
+  // come back with. Nothing is charged if this fails, so the buyer can simply
+  // try again — unlike the old order, where the charge came first and an
+  // interruption afterwards took the money and left nothing behind.
+  const startPayment = async () => {
+    setCheckoutError(null);
     const grouped = groupCartByStore(items);
     if (!grouped.ok) {
       setCheckoutError(grouped.error);
@@ -171,32 +178,53 @@ export function CheckoutScreen() {
 
     setCheckingOut(true);
     try {
-      const { orders } = await createCheckout({
+      const { orders } = await placeCheckout({
         customer_name: user?.fullName || "Customer",
         customer_email: user?.email ?? "",
         customer_phone: phone,
         delivery_address: address,
-        payment_reference: ref,
         stores: grouped.stores,
         delivery_option_id: selectedDelivery?.id,
       });
-
-      registerOrders(orders);
-      clear();
-      reset("home");
-      push("orders");
+      placed.current = orders;
+      setPaying(true);
     } catch (err) {
-      // Payment already succeeded with Paystack at this point — surface the
-      // error but keep the cart intact so the buyer can retry checkout
-      // (createCheckout is idempotent on `ref`, so retrying is safe).
       setCheckoutError(
         err instanceof ApiError
           ? err.message
-          : "Payment succeeded but we couldn't finish placing your order. Please try again.",
+          : "We couldn't start your order. Nothing has been charged — please try again.",
       );
     } finally {
       setCheckingOut(false);
     }
+  };
+
+  const onPaid = async (ref: string) => {
+    setPaying(false);
+    setCheckoutError(null);
+
+    const orders = placed.current;
+    if (!orders?.length) {
+      setCheckoutError(`Payment received but we lost track of your order. Contact support with reference ${ref}.`);
+      return;
+    }
+
+    setCheckingOut(true);
+    try {
+      await confirmPayment(ref || orders[0].payment_reference || "");
+    } catch (err) {
+      // Not worth stopping the buyer for: the orders exist and Paystack's
+      // webhook confirms them server-side within seconds regardless. Logged
+      // rather than shown, because there is nothing for them to do.
+      console.warn("confirmPayment failed; the webhook will finish it", err);
+    } finally {
+      setCheckingOut(false);
+    }
+
+    registerOrders(orders);
+    clear();
+    reset("home");
+    push("orders");
   };
 
   return (
@@ -302,7 +330,7 @@ export function CheckoutScreen() {
           <Button
             label={`Pay ${fmtKobo(totalKobo)}`}
             disabled={!valid}
-            onPress={() => setPaying(true)}
+            onPress={() => void startPayment()}
           />
         </View>
 
