@@ -3,6 +3,7 @@ import {
   View,
   Text,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -18,7 +19,6 @@ import { PaystackSheet } from "../../components/PaystackSheet";
 import { useCart, formatNaira, toNaira, type CartLine } from "../../lib/cart-context";
 import { useOrders } from "../../lib/orders-context";
 import { useAuth } from "../../lib/auth-context";
-import { useLocation } from "../../hooks/useLocation";
 import { useNav } from "../../navigation/nav-context";
 import { color, type, space, tint } from "../../theme/tokens";
 import { KeyboardAvoidingView, Platform } from "react-native";
@@ -87,11 +87,9 @@ export function CheckoutScreen() {
   const { items, totalUsd, clear } = useCart();
   const { registerOrders } = useOrders();
   const { user } = useAuth();
-  const { address: capturedAddress } = useLocation();
   const { reset, push } = useNav();
 
   const [address, setAddress] = useState("");
-  const [addressEdited, setAddressEdited] = useState(false);
   const [phone, setPhone] = useState("");
   const [paying, setPaying] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
@@ -101,6 +99,7 @@ export function CheckoutScreen() {
   const [selectedDelivery, setSelectedDelivery] = useState<DeliveryOption | null>(
     null,
   );
+  const [shippingOpen, setShippingOpen] = useState(false);
 
   // The basket can span several vendors, each with their own delivery
   // choices, but the buyer pays for ONE delivery — the hub consolidates the
@@ -127,7 +126,10 @@ export function CheckoutScreen() {
         if (cancelled) return;
         const merged = lists.flat().filter((o) => o.is_active);
         setDeliveryOptions(merged);
-        setSelectedDelivery(merged[0] ?? null);
+        // Nothing preselected: defaulting to the first option showed a fee
+        // the buyer never chose, and the cheapest option is rarely the right
+        // one for a given address.
+        setSelectedDelivery(null);
       })
       .finally(() => !cancelled && setLoadingDelivery(false));
     return () => {
@@ -139,13 +141,9 @@ export function CheckoutScreen() {
   const deliveryKobo = selectedDelivery?.price_kobo ?? 0;
   const totalKobo = itemsKobo + deliveryKobo;
 
-  // Pre-fill from the buyer's captured location, but never overwrite
-  // something they've already typed or edited themselves.
-  useEffect(() => {
-    if (!addressEdited && capturedAddress) {
-      setAddress(capturedAddress);
-    }
-  }, [capturedAddress, addressEdited]);
+  // Deliberately not prefilled from the device's location. A GPS reading is
+  // a place, not an address someone can deliver a parcel to, and starting the
+  // field with a plausible-looking wrong one invites it being left alone.
 
   const valid =
     address.trim().length > 5 &&
@@ -245,8 +243,7 @@ export function CheckoutScreen() {
               placeholder="12 Adeola Odeku St, Victoria Island"
               value={address}
               onChangeText={(t) => {
-                setAddressEdited(true);
-                setAddress(t);
+                                setAddress(t);
               }}
             />
             <Input
@@ -258,7 +255,7 @@ export function CheckoutScreen() {
             />
           </View>
 
-          <Text style={[type.section, { marginTop: space.xxl }]}>Delivery</Text>
+          <Text style={[type.section, { marginTop: space.xxl }]}>Shipping</Text>
           {loadingDelivery ? (
             <View style={[s.card, { alignItems: "center" }]}>
               <ActivityIndicator color={color.primary} />
@@ -266,37 +263,30 @@ export function CheckoutScreen() {
           ) : deliveryOptions.length === 0 ? (
             <View style={s.card}>
               <Text style={type.body}>
-                This vendor has not set a delivery fee yet, so the order
+                This vendor has not set a shipping fee yet, so the order
                 cannot be placed. Contact the store and ask them to add one.
               </Text>
             </View>
           ) : (
-            <View style={{ gap: space.sm, marginTop: space.lg }}>
-              {deliveryOptions.map((opt) => {
-                const active = selectedDelivery?.id === opt.id;
-                return (
-                  <Pressable
-                    key={opt.id}
-                    onPress={() => setSelectedDelivery(opt)}
-                    style={[s.deliveryRow, active && s.deliveryRowActive]}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
-                        {opt.title}
-                      </Text>
-                      {!!opt.description && (
-                        <Text style={type.meta}>{opt.description}</Text>
-                      )}
-                    </View>
-                    <Text style={s.lineVal}>{fmtKobo(opt.price_kobo)}</Text>
-                  </Pressable>
-                );
-              })}
-              <Text style={type.meta}>
-                One delivery fee covers the whole order, however many vendors
-                it comes from.
+            // One row that opens the picker, rather than every option inline.
+            // A long list pushed the total and the pay button off screen, and
+            // this matches how the storefront asks the same question.
+            <Pressable
+              onPress={() => setShippingOpen(true)}
+              style={[s.deliveryRow, { marginTop: space.lg }]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
+                  {selectedDelivery ? selectedDelivery.title : "Choose a shipping option"}
+                </Text>
+                <Text style={type.meta}>
+                  {selectedDelivery?.description || "Tap to pick where we are delivering to."}
+                </Text>
+              </View>
+              <Text style={s.lineVal}>
+                {selectedDelivery ? fmtKobo(selectedDelivery.price_kobo) : "—"}
               </Text>
-            </View>
+            </Pressable>
           )}
 
           <Text style={[type.section, { marginTop: space.xxl }]}>
@@ -310,11 +300,18 @@ export function CheckoutScreen() {
                 priceLabel={formatNaira(line.product.price * line.qty)}
               />
             ))}
-            {deliveryKobo > 0 && (
-              <View style={s.line}>
-                <Text style={type.body}>
-                  Delivery{selectedDelivery ? ` — ${selectedDelivery.title}` : ""}
-                </Text>
+            {/* Only once a shipping option is actually chosen — a fee the
+                buyer has not picked has no business being in their total. */}
+            {selectedDelivery && (
+              <View style={s.itemRow}>
+                <View style={s.itemText}>
+                  <Text style={type.body}>Shipping — {selectedDelivery.title}</Text>
+                  {!!selectedDelivery.description && (
+                    <Text style={[type.meta, { marginTop: 2 }]}>
+                      {selectedDelivery.description}
+                    </Text>
+                  )}
+                </View>
                 <Text style={s.lineVal}>{fmtKobo(deliveryKobo)}</Text>
               </View>
             )}
@@ -333,6 +330,52 @@ export function CheckoutScreen() {
             onPress={() => void startPayment()}
           />
         </View>
+
+        <Modal
+          visible={shippingOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShippingOpen(false)}
+        >
+          <Pressable style={s.sheetBackdrop} onPress={() => setShippingOpen(false)}>
+            {/* Stops a tap inside the sheet closing it, while a tap on the
+                dimmed area still does. */}
+            <Pressable style={s.sheet} onPress={() => {}}>
+              <View style={s.sheetHandle} />
+              <Text style={[type.section, { marginBottom: space.sm }]}>
+                Choose shipping
+              </Text>
+              <ScrollView
+                style={{ maxHeight: 380 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {deliveryOptions.map((opt) => {
+                  const active = selectedDelivery?.id === opt.id;
+                  return (
+                    <Pressable
+                      key={opt.id}
+                      onPress={() => {
+                        setSelectedDelivery(opt);
+                        setShippingOpen(false);
+                      }}
+                      style={[s.deliveryRow, active && s.deliveryRowActive]}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
+                          {opt.title}
+                        </Text>
+                        {!!opt.description && (
+                          <Text style={type.meta}>{opt.description}</Text>
+                        )}
+                      </View>
+                      <Text style={s.lineVal}>{fmtKobo(opt.price_kobo)}</Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
 
         {paying && (
           <PaystackSheet
@@ -381,6 +424,28 @@ const s = StyleSheet.create({
   // long the product name runs.
   itemText: { flex: 1 },
   lineVal: { fontFamily: "Jakarta_500", fontSize: 14, color: color.text },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: color.card,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: space.gutter,
+    paddingTop: space.md,
+    paddingBottom: space.xxl,
+    gap: space.sm,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: color.line,
+    marginBottom: space.md,
+  },
   deliveryRow: {
     flexDirection: "row",
     alignItems: "center",
