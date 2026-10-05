@@ -84,7 +84,7 @@ function SummaryLine({
 }
 
 export function CheckoutScreen() {
-  const { items, totalUsd, clear } = useCart();
+  const { items, subtotalUsd, clear } = useCart();
   const { registerOrders } = useOrders();
   const { user } = useAuth();
   const { reset, push } = useNav();
@@ -137,7 +137,11 @@ export function CheckoutScreen() {
     };
   }, [storeSlugs.join(",")]);
 
-  const itemsKobo = toNaira(totalUsd) * 100;
+  // Goods only. This used to read totalUsd, which carried a hardcoded ₦2,250
+  // "delivery" the server knew nothing about — so Paystack was charged one
+  // figure and the order verified against another, and the exact-match check
+  // refused every payment that got this far.
+  const itemsKobo = toNaira(subtotalUsd) * 100;
   const deliveryKobo = selectedDelivery?.price_kobo ?? 0;
   const totalKobo = itemsKobo + deliveryKobo;
 
