@@ -131,7 +131,7 @@ export default function AbandonedOrdersPage() {
           <div
             className="hidden sm:grid px-4 py-2.5 border-b"
             style={{
-              gridTemplateColumns: "1fr 100px 90px 140px",
+              gridTemplateColumns: "1fr 100px 90px 210px",
               gap: "12px",
               background: "#fafafa",
               borderColor: "#e2e8f0",

@@ -73,6 +73,12 @@ export function ProductDetailScreen({
     setPage(i);
   };
 
+  // A product reached by the mock-catalogue fallback below has no storeId, and
+  // checkout cannot group it into an order — it would sit in the cart until
+  // the buyer pressed Pay and nothing happened. Better to say so here than to
+  // let it become a dead end two screens later.
+  const buyable = !!product?.storeId;
+
   const addToCart = () => {
     add(product, { variant, size, qty });
     setInCart(true);
@@ -290,7 +296,11 @@ export function ProductDetailScreen({
               <Text style={s.ctaPrice}>{formatNaira(product.price * qty)}</Text>
             </View>
             <View style={{ flex: 1, marginLeft: space.lg }}>
-              <Button label="Add to cart" onPress={addToCart} />
+              <Button
+                label={buyable ? "Add to cart" : "Unavailable"}
+                disabled={!buyable}
+                onPress={addToCart}
+              />
             </View>
           </>
         ) : (

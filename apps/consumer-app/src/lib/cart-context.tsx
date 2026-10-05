@@ -27,7 +27,7 @@ type CartState = {
   items: CartLine[];
   count: number;
   subtotalUsd: number;
-  deliveryUsd: number;
+  /** Goods only. Shipping is added at checkout, once an area is chosen. */
   totalUsd: number;
   add: (
     p: Product,
@@ -76,13 +76,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const value = useMemo(() => {
     const count = items.reduce((n, i) => n + i.qty, 0);
     const subtotalUsd = items.reduce((n, i) => n + i.product.price * i.qty, 0);
-    const deliveryUsd = items.length ? 1.5 : 0; // TODO(backend): quoted fee
     return {
       items,
       count,
       subtotalUsd,
-      deliveryUsd,
-      totalUsd: subtotalUsd + deliveryUsd,
+      // The cart knows what the goods cost and nothing else. Shipping is the
+      // vendor's own price for a chosen area and is only known at checkout,
+      // so totalUsd is the goods total — a placeholder fee here was being
+      // charged through Paystack without the server ever agreeing to it.
+      totalUsd: subtotalUsd,
       add,
       remove,
       setQty,

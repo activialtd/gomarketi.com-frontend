@@ -1,15 +1,42 @@
-import React from "react";
-import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
+import React, { useState } from "react";
+import { View, Text, Image, ScrollView, Pressable, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Button } from "../../components/ui/Button";
 import { useCart, formatNaira } from "../../lib/cart-context";
+import type { Product } from "../../lib/mock-products";
 import { useNav } from "../../navigation/nav-context";
 import { color, type, space, tint, HIT } from "../../theme/tokens";
 
+/**
+ * The product's picture, falling back to its category glyph.
+ *
+ * The cart drew the glyph unconditionally, so a MacBook showed a car — which
+ * reads as the wrong item rather than as a missing image.
+ */
+function CartThumb({ product }: { product: Product }) {
+  const [failed, setFailed] = useState(false);
+  const cover = product.images?.[0];
+
+  return (
+    <View style={[s.thumb, { backgroundColor: tint[product.tint] }]}>
+      {cover && !failed ? (
+        <Image
+          source={{ uri: cover }}
+          style={StyleSheet.absoluteFill}
+          resizeMode="cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Ionicons name={product.icon} size={22} color={color.ink} />
+      )}
+    </View>
+  );
+}
+
 export function CartScreen() {
-  const { items, subtotalUsd, deliveryUsd, totalUsd, setQty, remove } =
+  const { items, subtotalUsd, totalUsd, setQty, remove } =
     useCart();
   const { push } = useNav();
 
@@ -34,18 +61,7 @@ export function CartScreen() {
           >
             {items.map((line) => (
               <View key={line.key} style={s.row}>
-                <View
-                  style={[
-                    s.thumb,
-                    { backgroundColor: tint[line.product.tint] },
-                  ]}
-                >
-                  <Ionicons
-                    name={line.product.icon}
-                    size={22}
-                    color={color.ink}
-                  />
-                </View>
+                <CartThumb product={line.product} />
 
                 <View style={{ flex: 1 }}>
                   <Text numberOfLines={1} style={s.name}>
@@ -101,7 +117,11 @@ export function CartScreen() {
 
           <View style={s.summary}>
             <Row label="Subtotal" value={formatNaira(subtotalUsd)} />
-            <Row label="Delivery" value={formatNaira(deliveryUsd)} />
+            {/* No shipping line here: the price depends on the area the buyer
+                picks at checkout, and the ₦2,250 that used to sit here was a
+                placeholder nobody had agreed to — including the server, which
+                refused the payment it produced. */}
+            <Row label="Shipping" value="At checkout" />
             <View style={s.rule} />
             <Row label="Total" value={formatNaira(totalUsd)} bold />
             <Button

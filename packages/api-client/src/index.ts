@@ -421,6 +421,8 @@ export interface AbandonedCartResp {
   store_id: string;
   customer_id?: string;
   customer_email?: string;
+  /** Given at checkout. Present only when the buyer supplied one. */
+  customer_phone?: string;
   items: OrderItem[];
   total_kobo: number;
   abandoned_at: string;
