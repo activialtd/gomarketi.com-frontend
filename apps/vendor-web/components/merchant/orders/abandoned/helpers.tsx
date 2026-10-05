@@ -3,7 +3,28 @@
 import { useState } from "react";
 import { type AbandonedCartResp } from "@gomarket/api-client";
 import { fmtNaira } from "@gomarket/shared-utils";
-import { ChevronDown, Mail, Package } from "lucide-react";
+import { ChevronDown, Mail, MessageCircle, Package } from "lucide-react";
+
+/**
+ * A wa.me link with the message already written, or null when the buyer left
+ * no number.
+ *
+ * Numbers arrive in whatever shape the buyer typed — "0801 234 5678",
+ * "+234 801...", or the "234..." the storefront normalises to — and a local
+ * one passed through unchanged produces a link that opens to nothing.
+ */
+function whatsappLink(phone: string | undefined, firstItem?: string): string | null {
+  const digits = (phone ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+  let intl = digits;
+  if (digits.startsWith("0")) intl = "234" + digits.slice(1);
+  else if (!digits.startsWith("234") && digits.length === 10) intl = "234" + digits;
+  if (intl.length < 11) return null;
+
+  const about = firstItem ? ` about the ${firstItem}` : "";
+  const text = `Hi! I saw you were checking out${about} but didn't finish. Can I help with anything?`;
+  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`;
+}
 
 function timeAgo(iso: string) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -23,13 +44,14 @@ export function AbandonedRow({ cart }: { cart: AbandonedCartResp }) {
   // and a total does not tell them whether it was worth a phone call.
   const [open, setOpen] = useState(false);
   const itemCount = cart.items.reduce((n, i) => n + i.quantity, 0);
+  const wa = whatsappLink(cart.customer_phone, cart.items[0]?.name);
 
   return (
     <div className="border-b last:border-0" style={{ borderColor: "#f1f5f9" }}>
       <div
         className="grid items-center px-4 py-3.5"
         style={{
-          gridTemplateColumns: "1fr 100px 90px 140px",
+          gridTemplateColumns: "1fr 100px 90px 210px",
           gap: "12px",
         }}
       >
@@ -66,17 +88,31 @@ export function AbandonedRow({ cart }: { cart: AbandonedCartResp }) {
           {timeAgo(cart.abandoned_at)}
         </p>
 
-        {cart.customer_email ? (
-          <a
-            href={`mailto:${cart.customer_email}?subject=Did you forget something?`}
-            className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-[7px] border text-[11px] font-semibold transition-colors"
-            style={{ borderColor: "#e2e8f0", background: "#fff", color: "#374151" }}
-          >
-            <Mail className="w-3.5 h-3.5" /> Email
-          </a>
-        ) : (
-          <span />
-        )}
+        <div className="flex items-center gap-1.5 justify-end">
+          {/* WhatsApp first: it is how these conversations actually happen
+              here, and a message lands where an email to a shopper rarely
+              does. Falls back to email when no number was given. */}
+          {wa && (
+            <a
+              href={wa}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-[7px] text-[11px] font-semibold transition-colors"
+              style={{ background: "#25D366", color: "#fff" }}
+            >
+              <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
+            </a>
+          )}
+          {cart.customer_email && (
+            <a
+              href={`mailto:${cart.customer_email}?subject=${encodeURIComponent("You left something in your cart")}`}
+              className="flex items-center justify-center gap-1.5 h-8 px-3 rounded-[7px] border text-[11px] font-semibold transition-colors"
+              style={{ borderColor: "#e2e8f0", background: "#fff", color: "#374151" }}
+            >
+              <Mail className="w-3.5 h-3.5" /> Email
+            </a>
+          )}
+        </div>
       </div>
 
       {/* Same shape as the order detail's item list, so a vendor reads the two
