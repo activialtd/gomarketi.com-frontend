@@ -3,6 +3,16 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, X, Send } from "lucide-react";
 
+/** Nigerian numbers in any of the shapes vendors type, as wa.me wants them. */
+function toWaNumber(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("234")) return digits;
+  if (digits.startsWith("0")) return "234" + digits.slice(1);
+  // A bare subscriber number, no trunk prefix.
+  if (digits.length === 10) return "234" + digits;
+  return digits;
+}
+
 interface WhatsAppFloatProps {
   number: string;
   storeName: string;
@@ -22,9 +32,12 @@ export function WhatsAppFloat({
   );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // strip everything except digits so a display value like "+234 801 234 5678"
-  // still produces a valid wa.me link
-  const cleanNumber = number.replace(/\D/g, "");
+  // wa.me needs a full international number with no punctuation. Vendors enter
+  // theirs every which way — "+234 801 234 5678", "0801 234 5678", or the
+  // "2348012345678" the storefront normalises support phones to — and a local
+  // "0801..." passed through as-is produces a link that silently opens to
+  // nothing.
+  const cleanNumber = toWaNumber(number);
 
   // autofocus the textarea when the panel opens
   useEffect(() => {

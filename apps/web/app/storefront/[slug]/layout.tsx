@@ -11,7 +11,7 @@ async function getStore(slug: string) {
       cache: "no-store",
     });
     if (!res.ok) return null;
-    return await res.json() as { id: string; name: string; tagline?: string; theme_config?: string };
+    return await res.json() as { id: string; name: string; tagline?: string; theme_config?: string; support_phone?: string };
   } catch { return null; }
 }
 
@@ -101,7 +101,7 @@ export default async function StoreLayout({
           slug={slug}
           primary={colors?.primary}
           tagline={sec?.footer?.tagline}
-          whatsapp={contact.whatsapp}
+          whatsapp={contact.whatsapp || store.support_phone}
           instagram={social.instagram}
           twitter={social.twitter}
           facebook={social.facebook}
@@ -128,7 +128,7 @@ export default async function StoreLayout({
         primary={colors?.primary}
         secondary={colors?.secondary}
         tagline={sec?.footer?.tagline}
-        whatsapp={contact.whatsapp}
+        whatsapp={contact.whatsapp || store.support_phone}
         instagram={social.instagram}
         twitter={social.twitter}
         facebook={social.facebook}
