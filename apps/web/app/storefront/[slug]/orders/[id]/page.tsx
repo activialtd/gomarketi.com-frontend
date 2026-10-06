@@ -33,6 +33,7 @@ interface OrderData {
   store_slug?: string;
   delivery_confirmed_at?: string | null;
   dispute_status?: string | null;
+  is_pickup?: boolean;
 }
 
 // ── Status config ─────────────────────────────────────────────────────────────
@@ -68,8 +69,25 @@ const STEPS = [
   },
 ] as const;
 
-function stepIndex(status: string) {
-  const i = STEPS.findIndex((s) => s.key === status);
+// A collected order never ships — it is put aside and waited for — so the
+// third step changes wording and icon rather than lying about a van.
+function stepsFor(isPickup: boolean) {
+  if (!isPickup) return STEPS;
+  return STEPS.map((step) =>
+    step.key === "shipped"
+      ? {
+          ...step,
+          key: "ready_for_collection" as const,
+          label: "Ready to collect",
+          sub: "Waiting for you at the store",
+          icon: PackageCheck,
+        }
+      : step,
+  );
+}
+
+function stepIndex(steps: readonly { key: string }[], status: string) {
+  const i = steps.findIndex((s) => s.key === status);
   return i >= 0 ? i : 0;
 }
 
@@ -186,11 +204,13 @@ function DeliveryConfirmation({
     );
   }
 
-  if (order.status !== "shipped") return null;
+  if (order.status !== "shipped" && order.status !== "ready_for_collection") return null;
 
   return (
     <div style={{ background: "#fff", border: "1.5px solid #bbf7d0", borderRadius: "16px", padding: "20px", marginBottom: "16px", boxShadow: "0 4px 24px rgba(26,122,66,0.06)" }}>
-      <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#1C1C1C" }}>Has your order arrived?</p>
+      <p style={{ margin: 0, fontSize: "15px", fontWeight: 800, color: "#1C1C1C" }}>
+        {order.is_pickup ? "Have you collected your order?" : "Has your order arrived?"}
+      </p>
       <p style={{ margin: "5px 0 16px", fontSize: "13px", color: "#6b7280", lineHeight: 1.6 }}>
         Confirming releases payment to the vendor, so please only do it once you have the items.
       </p>
@@ -210,7 +230,7 @@ function DeliveryConfirmation({
           {busy === "confirm"
             ? <Loader2 className="w-4 h-4 animate-spin" />
             : <CheckCircle2 style={{ width: "16px", height: "16px" }} />}
-          Yes, I&apos;ve received it
+          {order.is_pickup ? "Yes, I've collected it" : "Yes, I've received it"}
         </button>
 
         <button
@@ -225,7 +245,7 @@ function DeliveryConfirmation({
           }}
         >
           <AlertTriangle style={{ width: "16px", height: "16px" }} />
-          It hasn&apos;t arrived
+          {order.is_pickup ? "It wasn't ready" : "It hasn't arrived"}
         </button>
       </div>
 
@@ -337,8 +357,9 @@ export default function OrderTrackingPage({
   }
 
   const isCancelled = order.status === "cancelled";
-  const currentStep = isCancelled ? -1 : stepIndex(order.status);
-  const progressPct = isCancelled ? 0 : (currentStep / (STEPS.length - 1)) * 100;
+  const steps = stepsFor(!!order.is_pickup);
+  const currentStep = isCancelled ? -1 : stepIndex(steps, order.status);
+  const progressPct = isCancelled ? 0 : (currentStep / (steps.length - 1)) * 100;
 
   return (
     <>
@@ -412,8 +433,8 @@ export default function OrderTrackingPage({
             </div>
 
             {/* Steps */}
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${STEPS.length}, 1fr)`, gap: "8px" }}>
-              {STEPS.map((step, i) => {
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${steps.length}, 1fr)`, gap: "8px" }}>
+              {steps.map((step, i) => {
                 const done = i < currentStep;
                 const active = i === currentStep;
                 const Icon = step.icon;
@@ -550,6 +571,11 @@ function StatusMessage({ status }: { status: string }) {
     confirmed: {
       title: "Order confirmed — being prepared",
       body: "The store has confirmed your order and is preparing it for shipment. We'll notify you as soon as it's on the way.",
+      bg: "#fafafa", border: "#ececec", text: "#404040",
+    },
+    ready_for_collection: {
+      title: "Ready to collect",
+      body: "It is packed and waiting for you at the store. Confirm below once you have it — that is what releases payment to the seller.",
       bg: "#fafafa", border: "#ececec", text: "#404040",
     },
     shipped: {

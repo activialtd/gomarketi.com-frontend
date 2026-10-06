@@ -401,6 +401,34 @@ function DeliveryOptionsSection({
     };
   }, [storeId, accessToken]);
 
+  const pickupOption = options.find((o) => o.is_pickup);
+
+  // Offering collection is a yes/no decision, not a delivery area to describe,
+  // so it gets a button rather than the three fields below. The vendor can
+  // edit the wording afterwards to name the exact spot and opening hours.
+  async function handleAddPickup() {
+    if (!storeId || !accessToken || pickupOption) return;
+    setBusyId("pickup");
+    setError(null);
+    try {
+      const created = await storefrontApi.createDeliveryOption(
+        storeId,
+        {
+          title: "Collect from our shop",
+          description: "Come to the store to pick up your order.",
+          price_kobo: 0,
+          is_pickup: true,
+        },
+        accessToken,
+      );
+      setOptions((prev) => [...prev, created]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not turn on collection.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   async function handleAdd() {
     if (!storeId || !accessToken || !draft.title.trim()) return;
     setBusyId("new");
@@ -571,6 +599,36 @@ function DeliveryOptionsSection({
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Collection sits apart from the delivery areas below: it is a
+            yes/no about whether buyers may come to the shop, not another
+            place to deliver to. Once added it appears in the list above and
+            can be renamed to name the exact spot and opening hours. */}
+        {!pickupOption && (
+          <div
+            className="flex items-center justify-between gap-3 p-3 rounded-[10px] border"
+            style={{ borderColor: "#e2e8f0", background: "#fafafa" }}
+          >
+            <div className="min-w-0">
+              <p className="text-[13px] font-bold" style={{ color: "#1C1C1C" }}>
+                Let customers collect in person
+              </p>
+              <p className="text-[11px] mt-0.5" style={{ color: "#6b7280" }}>
+                Adds a free &ldquo;collect from our shop&rdquo; choice at checkout, and
+                skips asking them for a delivery address.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={busyId === "pickup"}
+              onClick={handleAddPickup}
+              className="shrink-0 h-9 px-4 rounded-[9px] text-[12px] font-bold text-white disabled:opacity-50"
+              style={{ background: "#1A7A42" }}
+            >
+              {busyId === "pickup" ? "Adding…" : "Turn on"}
+            </button>
           </div>
         )}
 

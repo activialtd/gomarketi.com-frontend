@@ -124,7 +124,13 @@ export function CheckoutScreen() {
     Promise.all(storeSlugs.map((slug) => getDeliveryOptions(slug).catch(() => [])))
       .then((lists) => {
         if (cancelled) return;
-        const merged = lists.flat().filter((o) => o.is_active);
+        const merged = lists
+          .flat()
+          .filter((o) => o.is_active)
+          // Collection last: delivery is what most buyers are here for, and a
+          // free option at the top of the list invites being picked by
+          // accident.
+          .sort((a, b) => Number(!!a.is_pickup) - Number(!!b.is_pickup));
         setDeliveryOptions(merged);
         // Nothing preselected: defaulting to the first option showed a fee
         // the buyer never chose, and the cheapest option is rarely the right
@@ -149,8 +155,12 @@ export function CheckoutScreen() {
   // a place, not an address someone can deliver a parcel to, and starting the
   // field with a plausible-looking wrong one invites it being left alone.
 
+  const isPickup = !!selectedDelivery?.is_pickup;
+
   const valid =
-    address.trim().length > 5 &&
+    // A collected order has nowhere to deliver to, so no address is asked for
+    // and none is required.
+    (isPickup || address.trim().length > 5) &&
     phone.trim().length >= 7 &&
     items.length > 0 &&
     // Every basket needs a delivery choice: the orders service refuses an
@@ -184,7 +194,9 @@ export function CheckoutScreen() {
         customer_name: user?.fullName || "Customer",
         customer_email: user?.email ?? "",
         customer_phone: phone,
-        delivery_address: address,
+        delivery_address: isPickup
+          ? "Customer is collecting from the store"
+          : address,
         stores: grouped.stores,
         delivery_option_id: selectedDelivery?.id,
       });
@@ -240,16 +252,21 @@ export function CheckoutScreen() {
           contentContainerStyle={{ padding: space.gutter }}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={type.section}>Delivery details</Text>
+          <Text style={type.section}>
+            {isPickup ? "Your details" : "Delivery details"}
+          </Text>
           <View style={{ gap: space.lg, marginTop: space.lg }}>
-            <Input
-              label="Delivery address"
-              placeholder="12 Adeola Odeku St, Victoria Island"
-              value={address}
-              onChangeText={(t) => {
-                                setAddress(t);
-              }}
-            />
+            {/* No address for a collected order — asking for one is friction
+                in the flow the buyer chose to avoid it. The phone stays:
+                that is how the vendor says the order is ready. */}
+            {!isPickup && (
+              <Input
+                label="Delivery address"
+                placeholder="12 Adeola Odeku St, Victoria Island"
+                value={address}
+                onChangeText={setAddress}
+              />
+            )}
             <Input
               label="Phone"
               placeholder="+234 801 234 5678"
@@ -284,7 +301,8 @@ export function CheckoutScreen() {
                   {selectedDelivery ? selectedDelivery.title : "Choose a shipping option"}
                 </Text>
                 <Text style={type.meta}>
-                  {selectedDelivery?.description || "Tap to pick where we are delivering to."}
+                  {selectedDelivery?.description ||
+                    "Tap to pick delivery, or collect it from the store yourself."}
                 </Text>
               </View>
               <Text style={s.lineVal}>
@@ -309,7 +327,9 @@ export function CheckoutScreen() {
             {selectedDelivery && (
               <View style={s.itemRow}>
                 <View style={s.itemText}>
-                  <Text style={type.body}>Shipping — {selectedDelivery.title}</Text>
+                  <Text style={type.body}>
+                    {selectedDelivery.is_pickup ? "Collection" : "Shipping"} — {selectedDelivery.title}
+                  </Text>
                   {!!selectedDelivery.description && (
                     <Text style={[type.meta, { marginTop: 2 }]}>
                       {selectedDelivery.description}

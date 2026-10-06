@@ -9,14 +9,22 @@ import { useAuthStore, roleAtLeast } from "@/store/useAuthStore";
 import { useBatch } from "@/lib/swr/hooks";
 import { fmtNaira, fmtDate } from "@/lib/format";
 
-const STATUS_STYLE: Record<AdminOrderStatus, { bg: string; fg: string; label: string }> = {
+type StatusStyle = { bg: string; fg: string; label: string };
+
+const STATUS_STYLE: Record<AdminOrderStatus, StatusStyle> = {
+  awaiting_payment: { bg: "var(--input)", fg: "var(--muted)", label: "Awaiting payment" },
   pending: { bg: "var(--input)", fg: "var(--muted)", label: "Pending" },
   confirmed: { bg: "rgba(59,130,246,0.12)", fg: "#1d4ed8", label: "Confirmed — awaiting hub" },
   at_hub: { bg: "rgba(245,158,11,0.14)", fg: "#b45309", label: "At GoMarketi hub" },
   shipped: { bg: "rgba(34,197,94,0.12)", fg: "#15803d", label: "Dispatched" },
+  ready_for_collection: { bg: "rgba(245,158,11,0.14)", fg: "#b45309", label: "Ready to collect" },
   delivered: { bg: "rgba(26,122,66,0.14)", fg: "#0A2E1A", label: "Delivered" },
   cancelled: { bg: "rgba(239,68,68,0.1)", fg: "#dc2626", label: "Cancelled" },
+  abandoned: { bg: "rgba(239,68,68,0.1)", fg: "#dc2626", label: "Abandoned — never paid" },
 };
+
+// A status the backend adds before this map does must not blank the page out.
+const UNKNOWN_STATUS: StatusStyle = { bg: "var(--input)", fg: "var(--muted)", label: "Unknown" };
 
 export default function BatchDetailPage({ params }: { params: Promise<{ paymentReference: string }> }) {
   const { paymentReference } = use(params);
@@ -155,7 +163,7 @@ export default function BatchDetailPage({ params }: { params: Promise<{ paymentR
 
       <div className="space-y-3">
         {data.orders.map((o) => {
-          const style = STATUS_STYLE[o.status];
+          const style = STATUS_STYLE[o.status] ?? UNKNOWN_STATUS;
           return (
             <div key={o.id} className="card p-4">
               <div className="mb-2 flex items-center justify-between">

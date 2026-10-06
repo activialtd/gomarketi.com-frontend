@@ -200,6 +200,11 @@ export interface DeliveryOptionResp {
   price_kobo: number;
   position: number;
   is_active: boolean;
+  /**
+   * "Collect it yourself" rather than a delivery area. Always free, and
+   * checkout does not need a delivery address for it.
+   */
+  is_pickup?: boolean;
   created_at: string;
 }
 
@@ -208,6 +213,11 @@ export interface CreateDeliveryOptionReq {
   description?: string;
   price_kobo: number;
   position?: number;
+  /**
+   * Marks this as collection rather than a delivery area. A store may have
+   * one, and any price sent with it is ignored — collection is free.
+   */
+  is_pickup?: boolean;
 }
 
 export interface UpdateDeliveryOptionReq {
@@ -275,7 +285,15 @@ export interface OrderItem {
 }
 
 export type OrderStatus =
-  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+  | "awaiting_payment"
+  | "pending"
+  | "confirmed"
+  | "at_hub"
+  | "shipped"
+  | "ready_for_collection"
+  | "delivered"
+  | "cancelled"
+  | "abandoned";
 
 // Who physically delivers an order. A basket spanning several vendors becomes
 // several orders sharing one payment reference and goes through GoMarketi's
@@ -284,7 +302,7 @@ export type OrderStatus =
 export type Fulfilment = "vendor" | "gomarketi";
 
 export type VendorSettableOrderStatus =
-  "confirmed" | "at_hub" | "shipped" | "cancelled";
+  "confirmed" | "at_hub" | "shipped" | "ready_for_collection" | "cancelled";
 
 // What a vendor may set, which depends on who delivers. Mirrors vendorMaySet
 // in services/orders/internal/service/orders.go — change both together or the
@@ -294,7 +312,12 @@ export type VendorSettableOrderStatus =
 // with the buyer's confirm-delivery call or the auto-release sweep.
 export function vendorSettableStatuses(
   fulfilment: Fulfilment,
+  isPickup = false,
 ): VendorSettableOrderStatus[] {
+  // Nothing is dispatched for a collected order; the vendor puts it aside and
+  // the buyer comes for it.
+  if (isPickup) return ["confirmed", "ready_for_collection", "cancelled"];
+
   return fulfilment === "gomarketi"
     // The vendor accepts the order and GoMarketi moves it from there, so
     // at_hub and shipped are the platform's to set, not theirs.
@@ -308,6 +331,8 @@ export interface OrderResp {
   store_id: string;
   /** Who delivers this order — decides which statuses the vendor may set. */
   fulfilment: Fulfilment;
+  /** The buyer is collecting this one; nobody is delivering it. */
+  is_pickup?: boolean;
   /**
    * The reference to charge against. Minted server-side when the order is
    * placed, so the order and its payment cannot disagree.
@@ -1639,8 +1664,19 @@ export const adminApi = {
 
 // ── Batches / hub fulfillment ─────────────────────────────────────────────────
 
+// Same lifecycle OrderStatus describes; kept separate because the admin API
+// is its own service. A pickup order reaches this view too, with
+// ready_for_collection where a delivered one would say shipped.
 export type AdminOrderStatus =
-  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+  | "awaiting_payment"
+  | "pending"
+  | "confirmed"
+  | "at_hub"
+  | "shipped"
+  | "ready_for_collection"
+  | "delivered"
+  | "cancelled"
+  | "abandoned";
 export type AdminEscrowStatus = "held" | "released" | "reversed" | null;
 export type AdminDisputeStatus = "reported" | "refunded" | "dismissed";
 

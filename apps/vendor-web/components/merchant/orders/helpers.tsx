@@ -9,6 +9,7 @@ import { fmtNaira } from "@gomarket/shared-utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   Clock,
+  Store,
   RefreshCw,
   Truck,
   Building2,
@@ -38,6 +39,14 @@ export const STATUS_CFG: Record<
   },
   at_hub: { label: "At GoMarketi hub", bg: "#ede9fe", color: "#5b21b6", icon: Building2 },
   shipped: { label: "Dispatched", bg: "#e0f2fe", color: "#0369a1", icon: Truck },
+  ready_for_collection: {
+    label: "Ready to collect",
+    bg: "#e0f2fe",
+    color: "#0369a1",
+    icon: Store,
+  },
+  awaiting_payment: { label: "Awaiting payment", bg: "#f1f5f9", color: "#475569", icon: Clock },
+  abandoned: { label: "Abandoned", bg: "#f1f5f9", color: "#64748b", icon: Clock },
   delivered: {
     label: "Delivered",
     bg: "#dcfce7",
@@ -148,11 +157,14 @@ export function UpdateOrderModal({
   const editable =
     order.status === "pending" ||
     (order.status === "confirmed" && order.fulfilment === "vendor");
-  const settable = vendorSettableStatuses(order.fulfilment);
+  const settable = vendorSettableStatuses(order.fulfilment, order.is_pickup);
   // On an order the vendor delivers, confirming is followed by dispatching it.
   // On a shared basket, confirming is the whole of their involvement.
-  const nextStep: VendorSettableOrderStatus =
-    order.fulfilment === "gomarketi" ? "confirmed" : "shipped";
+  const nextStep: VendorSettableOrderStatus = order.is_pickup
+    ? "ready_for_collection"
+    : order.fulfilment === "gomarketi"
+      ? "confirmed"
+      : "shipped";
   // Preselect the next step rather than the current one — moving the order
   // forward is why the dialog is open.
   const [status, setStatus] = useState<VendorSettableOrderStatus>(
@@ -240,7 +252,9 @@ export function UpdateOrderModal({
               <p className="text-[11.5px] leading-relaxed" style={{ color: "#6b7280" }}>
                 {order.fulfilment === "gomarketi"
                   ? "This customer also bought from other vendors, so GoMarketi delivers the whole basket. Confirm the order and get it ready — we take it from there, and your payment is released once the customer has it."
-                  : "You deliver this order yourself and keep the delivery fee on top of the items. Mark it dispatched once it is actually on its way; the customer confirms delivery at the end, which is what releases your payment."}
+                  : order.is_pickup
+                    ? "This customer is collecting in person. Mark it ready once it is packed and waiting — they confirm when they have it, which is what releases your payment."
+                    : "You deliver this order yourself and keep the delivery fee on top of the items. Mark it dispatched once it is actually on its way; the customer confirms delivery at the end, which is what releases your payment."}
                 {" "}The customer sees each step on their tracking page and gets an email.
               </p>
               <div className="grid grid-cols-2 gap-2">

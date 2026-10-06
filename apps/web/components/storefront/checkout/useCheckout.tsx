@@ -20,7 +20,9 @@ export const checkoutSchema = z.object({
   phone: z
     .string()
     .regex(/^(0|\+234)[789][01]\d{8}$/, "Enter a valid Nigerian phone number"),
-  address: z.string().min(8, "Enter your full delivery address"),
+  // Required only for delivery — see the check in onSubmit, which knows
+  // whether the buyer chose collection.
+  address: z.string(),
   city: z.string().min(2, "Required"),
   state: z.string().min(2, "Required"),
   note: z.string().optional(),
@@ -92,6 +94,8 @@ export type DeliveryZone = {
   note: string;
   /** True when this zone came from the store's own options. */
   fromStore?: boolean;
+  /** Collection rather than delivery — free, and needs no address. */
+  isPickup?: boolean;
 };
 
 // toZones maps the store's delivery options onto the shape the checkout UI
@@ -109,7 +113,11 @@ export function toZones(options: DeliveryOptionResp[] | undefined): DeliveryZone
       feeKobo: o.price_kobo,
       note: o.description,
       fromStore: true,
-    }));
+      isPickup: !!o.is_pickup,
+    }))
+    // Collection last: delivery is what most buyers are here for, and a free
+    // option sitting at the top of the list invites being picked by accident.
+    .sort((a, b) => Number(a.isPickup) - Number(b.isPickup));
 }
 
 export const DELIVERY_ZONES: DeliveryZone[] = [
@@ -303,6 +311,19 @@ export function useCheckout({
       return;
     }
     setOrderError("");
+    // Delivery needs somewhere to go; collection does not. Checked here
+    // rather than in the schema, which cannot see which option was chosen.
+    if (!deliveryZone?.isPickup) {
+      const missing: Array<[keyof CheckoutValues, string]> = [];
+      if ((data.address ?? "").trim().length < 8) missing.push(["address", "Enter your full delivery address"]);
+      if ((data.city ?? "").trim().length < 2) missing.push(["city", "Enter your city"]);
+      if ((data.state ?? "").trim().length < 2) missing.push(["state", "Select your state"]);
+      if (missing.length) {
+        for (const [field, message] of missing) form.setError(field, { message });
+        return;
+      }
+    }
+
     const customerInfo: CustomerInfo = { ...data };
     setCustomer(customerInfo);
     setPendingCustomer(customerInfo);
@@ -352,10 +373,17 @@ export function useCheckout({
     // No delivery or note field on the order yet, so the vendor sees the
     // chosen zone and note inside the delivery address.
     const zoneFee = allDigital || !zone ? 0 : zone.feeKobo;
-    const addressParts = [
-      `${pendingCustomer.address}, ${pendingCustomer.city}, ${pendingCustomer.state}`,
-    ];
-    if (!allDigital) {
+    const addressParts: string[] = [];
+    if (zone?.isPickup) {
+      // There is no address. Say that plainly, so a vendor reading the order
+      // does not start arranging a delivery.
+      addressParts.push("Customer is collecting from the store");
+    } else {
+      addressParts.push(
+        `${pendingCustomer.address}, ${pendingCustomer.city}, ${pendingCustomer.state}`,
+      );
+    }
+    if (!allDigital && !zone?.isPickup) {
       addressParts.push(
         `Delivery: ${zone?.name ?? "not set"} (${fmtNaira(zoneFee)}${
           CHARGE_DELIVERY_AT_CHECKOUT ? ", paid" : ", pay on delivery"
