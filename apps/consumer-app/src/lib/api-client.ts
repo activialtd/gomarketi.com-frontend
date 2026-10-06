@@ -585,9 +585,21 @@ export type CheckoutStoreOrder = {
 // OrderStatus mirrors the backend's real lifecycle (see
 // services/orders/internal/dto/orders.go) — a vendor delivers to the
 // GoMarketi hub (at_hub), GoMarketi dispatches the consolidated batch
-// (shipped), the buyer confirms receipt (delivered).
+// (shipped), the buyer confirms receipt (delivered). An order the buyer is
+// collecting gets ready_for_collection in place of shipped: it is waiting on
+// a counter, not on a bike. "awaiting_payment" and "abandoned" bracket the
+// checkout itself — an order exists before the charge, and is marked
+// abandoned if the charge never lands.
 export type OrderStatus =
-  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+  | "awaiting_payment"
+  | "pending"
+  | "confirmed"
+  | "at_hub"
+  | "shipped"
+  | "ready_for_collection"
+  | "delivered"
+  | "cancelled"
+  | "abandoned";
 export type EscrowStatus = "held" | "released" | "reversed";
 // A dispute is orthogonal to status — "reported" means the buyer says this
 // specific order never arrived, even though it was checked in and
@@ -604,6 +616,10 @@ export type OrderResp = {
   items: CheckoutOrderItem[];
   total_kobo: number;
   delivery_address: string;
+  // The buyer chose to collect from the store, so there is no delivery fee
+  // and delivery_address holds a placeholder rather than a real address.
+  is_pickup?: boolean;
+  customer_phone?: string;
   payment_reference?: string;
   hub_received_at?: string;
   dispatched_at?: string;

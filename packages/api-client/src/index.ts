@@ -285,7 +285,15 @@ export interface OrderItem {
 }
 
 export type OrderStatus =
-  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+  | "awaiting_payment"
+  | "pending"
+  | "confirmed"
+  | "at_hub"
+  | "shipped"
+  | "ready_for_collection"
+  | "delivered"
+  | "cancelled"
+  | "abandoned";
 
 // Who physically delivers an order. A basket spanning several vendors becomes
 // several orders sharing one payment reference and goes through GoMarketi's
@@ -294,7 +302,7 @@ export type OrderStatus =
 export type Fulfilment = "vendor" | "gomarketi";
 
 export type VendorSettableOrderStatus =
-  "confirmed" | "at_hub" | "shipped" | "cancelled";
+  "confirmed" | "at_hub" | "shipped" | "ready_for_collection" | "cancelled";
 
 // What a vendor may set, which depends on who delivers. Mirrors vendorMaySet
 // in services/orders/internal/service/orders.go — change both together or the
@@ -304,7 +312,12 @@ export type VendorSettableOrderStatus =
 // with the buyer's confirm-delivery call or the auto-release sweep.
 export function vendorSettableStatuses(
   fulfilment: Fulfilment,
+  isPickup = false,
 ): VendorSettableOrderStatus[] {
+  // Nothing is dispatched for a collected order; the vendor puts it aside and
+  // the buyer comes for it.
+  if (isPickup) return ["confirmed", "ready_for_collection", "cancelled"];
+
   return fulfilment === "gomarketi"
     // The vendor accepts the order and GoMarketi moves it from there, so
     // at_hub and shipped are the platform's to set, not theirs.
@@ -1651,8 +1664,19 @@ export const adminApi = {
 
 // ── Batches / hub fulfillment ─────────────────────────────────────────────────
 
+// Same lifecycle OrderStatus describes; kept separate because the admin API
+// is its own service. A pickup order reaches this view too, with
+// ready_for_collection where a delivered one would say shipped.
 export type AdminOrderStatus =
-  "pending" | "confirmed" | "at_hub" | "shipped" | "delivered" | "cancelled";
+  | "awaiting_payment"
+  | "pending"
+  | "confirmed"
+  | "at_hub"
+  | "shipped"
+  | "ready_for_collection"
+  | "delivered"
+  | "cancelled"
+  | "abandoned";
 export type AdminEscrowStatus = "held" | "released" | "reversed" | null;
 export type AdminDisputeStatus = "reported" | "refunded" | "dismissed";
 

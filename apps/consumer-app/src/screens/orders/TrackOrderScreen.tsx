@@ -5,22 +5,29 @@ import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Button } from "../../components/ui/Button";
 import { useOrders } from "../../lib/orders-context";
-import { STATUS_STEPS, summarizeBatch, formatKobo } from "../../lib/order-status";
+import { summarizeBatch, awaitsConfirmation, formatKobo } from "../../lib/order-status";
 import { color, type, space } from "../../theme/tokens";
 
 const VENDOR_STATUS_LABEL: Record<string, string> = {
+  awaiting_payment: "Awaiting payment",
   pending: "Awaiting payment",
   confirmed: "Confirmed — awaiting hub delivery",
   at_hub: "At GoMarketi hub",
   shipped: "Out for delivery",
+  ready_for_collection: "Ready to collect",
   delivered: "Delivered",
   cancelled: "Cancelled — refunded",
+  abandoned: "Not paid for",
 };
 
-// A dispute can be reported on any order that's actually left the hub —
-// there's nothing to report missing before that.
+// A dispute can be reported on any order the vendor says they've handed over
+// — dispatched, waiting to be collected, or marked delivered. There's nothing
+// to report missing before that.
 function canReportMissing(status: string, disputeStatus?: string): boolean {
-  return (status === "shipped" || status === "delivered") && !disputeStatus;
+  return (
+    (status === "shipped" || status === "ready_for_collection" || status === "delivered") &&
+    !disputeStatus
+  );
 }
 
 export function TrackOrderScreen({ reference }: { reference?: string }) {
@@ -51,7 +58,7 @@ export function TrackOrderScreen({ reference }: { reference?: string }) {
   const summary = summarizeBatch(batch.orders);
   const totalKobo = batch.orders.reduce((sum, o) => sum + o.total_kobo, 0);
   const address = batch.orders[0]?.delivery_address ?? "";
-  const awaitingOrders = batch.orders.filter((o) => o.status === "shipped" && !o.delivery_confirmed_at);
+  const awaitingOrders = batch.orders.filter(awaitsConfirmation);
 
   async function handleConfirm() {
     setConfirming(true);
@@ -89,7 +96,7 @@ export function TrackOrderScreen({ reference }: { reference?: string }) {
       <ScrollView contentContainerStyle={{ padding: space.gutter }}>
         {!summary.allCancelled && (
           <View style={s.steps}>
-            {STATUS_STEPS.map((st, i) => (
+            {summary.steps.map((st, i) => (
               <View key={st.key} style={s.step}>
                 <View style={[s.stepDot, i <= summary.activeIdx && s.stepDotOn]}>
                   <Ionicons
@@ -105,12 +112,16 @@ export function TrackOrderScreen({ reference }: { reference?: string }) {
         )}
 
         <Text style={[type.body, { textAlign: "center", marginTop: space.lg }]}>
-          Delivering to: {address}
+          {summary.isPickup ? "You're collecting this from the store" : `Delivering to: ${address}`}
         </Text>
 
         {summary.anyAwaitingConfirmation && (
           <View style={{ marginTop: space.lg }}>
-            <Button label="I've received this" onPress={handleConfirm} loading={confirming} />
+            <Button
+              label={summary.isPickup ? "I've collected this" : "I've received this"}
+              onPress={handleConfirm}
+              loading={confirming}
+            />
             {confirmError && <Text style={s.error}>{confirmError}</Text>}
           </View>
         )}
