@@ -628,6 +628,11 @@ export type DeliveryOption = {
   price_kobo: number;
   position: number;
   is_active: boolean;
+  /**
+   * "Collect it yourself" rather than a delivery area. Always free, and
+   * checkout does not ask for a delivery address.
+   */
+  is_pickup?: boolean;
 };
 
 // getDeliveryOptions returns a store's delivery choices. Public, no auth.

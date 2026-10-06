@@ -200,6 +200,11 @@ export interface DeliveryOptionResp {
   price_kobo: number;
   position: number;
   is_active: boolean;
+  /**
+   * "Collect it yourself" rather than a delivery area. Always free, and
+   * checkout does not need a delivery address for it.
+   */
+  is_pickup?: boolean;
   created_at: string;
 }
 
@@ -208,6 +213,11 @@ export interface CreateDeliveryOptionReq {
   description?: string;
   price_kobo: number;
   position?: number;
+  /**
+   * Marks this as collection rather than a delivery area. A store may have
+   * one, and any price sent with it is ignored — collection is free.
+   */
+  is_pickup?: boolean;
 }
 
 export interface UpdateDeliveryOptionReq {
@@ -308,6 +318,8 @@ export interface OrderResp {
   store_id: string;
   /** Who delivers this order — decides which statuses the vendor may set. */
   fulfilment: Fulfilment;
+  /** The buyer is collecting this one; nobody is delivering it. */
+  is_pickup?: boolean;
   /**
    * The reference to charge against. Minted server-side when the order is
    * placed, so the order and its payment cannot disagree.

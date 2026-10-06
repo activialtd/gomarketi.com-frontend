@@ -76,6 +76,14 @@ export default function EkoCheckout(props: CheckoutProps) {
   // Nothing is preselected for delivery any more, so paying before choosing
   // is now possible — and would be charged, then refused by the server when
   // it tries to price a delivery option that was never picked.
+  // Step numbers are counted, not written down: collection drops the address
+  // section and digital goods drop shipping, and a form that jumps from 1 to
+  // 3 looks like something failed to load.
+  const showAddress = !deliveryZone?.isPickup;
+  const showShipping = !allDigital;
+  const stepShipping = showAddress ? 3 : 2;
+  const stepNote = 1 + (showAddress ? 1 : 0) + (showShipping ? 1 : 0) + 1;
+
   const placeDisabled = isPlacing || !storeReady || deliveryMissing;
   const submit = handleSubmit(onSubmit);
 
@@ -192,39 +200,44 @@ export default function EkoCheckout(props: CheckoutProps) {
             </p>
           </Section>
 
-          <Section step={2} title="Delivery address">
-            <Field label="Street address" error={errors.address?.message}>
-              <input
-                className={inputCls(!!errors.address)}
-                placeholder="House number, street name"
-                {...register("address")}
-              />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="City" error={errors.city?.message}>
+          {/* A collected order has nowhere to deliver to, so the whole
+              section goes rather than sitting there greyed out. */}
+          {showAddress && (
+
+            <Section step={2} title="Delivery address">
+              <Field label="Street address" error={errors.address?.message}>
                 <input
-                  className={inputCls(!!errors.city)}
-                  placeholder="e.g. Surulere"
-                  {...register("city")}
+                  className={inputCls(!!errors.address)}
+                  placeholder="House number, street name"
+                  {...register("address")}
                 />
               </Field>
-              <Field label="State" error={errors.state?.message}>
-                <StateSelect
-                  className={inputCls(!!errors.state)}
-                  value={watch("state") ?? ""}
-                  options={NIGERIAN_STATES}
-                  onChange={(v) =>
-                    setValue("state", v, { shouldValidate: true, shouldDirty: true })
-                  }
-                  onBlur={() => void trigger("state")}
-                  error={!!errors.state}
-                />
-              </Field>
-            </div>
-          </Section>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="City" error={errors.city?.message}>
+                  <input
+                    className={inputCls(!!errors.city)}
+                    placeholder="e.g. Surulere"
+                    {...register("city")}
+                  />
+                </Field>
+                <Field label="State" error={errors.state?.message}>
+                  <StateSelect
+                    className={inputCls(!!errors.state)}
+                    value={watch("state") ?? ""}
+                    options={NIGERIAN_STATES}
+                    onChange={(v) =>
+                      setValue("state", v, { shouldValidate: true, shouldDirty: true })
+                    }
+                    onBlur={() => void trigger("state")}
+                    error={!!errors.state}
+                  />
+                </Field>
+              </div>
+            </Section>
+          )}
 
           {!allDigital && (
-            <Section step={3} title="Shipping method">
+            <Section step={stepShipping} title="Shipping method">
               <button
                 type="button"
                 onClick={() => setIsShippingModalOpen(true)}
@@ -258,7 +271,7 @@ export default function EkoCheckout(props: CheckoutProps) {
           )}
 
           <Section
-            step={allDigital ? 3 : 4}
+            step={stepNote}
             title={
               <>
                 Order note{" "}
