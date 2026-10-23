@@ -21,6 +21,7 @@ import { useCart } from "../../lib/cart-context";
 import { useNav } from "../../navigation/nav-context";
 import { ProductGrid } from "./ProductGrid";
 import { VendorCarousel } from "./VendorCarousel";
+import { LoadError } from "./LoadError";
 import { useKeyboardHeight } from "../../hooks/useKeyboardHeight";
 import { color, type, space, HIT } from "../../theme/tokens";
 
@@ -68,6 +69,8 @@ export function SearchModal({
     loadingMore,
     hasMore,
     loadMore,
+    error,
+    retry,
     carouselItems,
     showCarousel,
     vendorToStore,
@@ -156,6 +159,8 @@ export function SearchModal({
               <View style={s.empty}>
                 <ActivityIndicator color={color.primary} />
               </View>
+            ) : error ? (
+              <LoadError title="Search isn't working right now" message={error} onRetry={retry} />
             ) : nothingMatched ? (
               <View style={s.empty}>
                 <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
@@ -249,7 +254,7 @@ export function SearchModal({
                   products={gridProducts}
                   onAdd={(p) => add(p)}
                   onOpen={(p) =>
-                    push("product", { productId: p.id, product: p })
+                    push("product", { product: p })
                   }
                   onEndReached={hasMore ? loadMore : undefined}
                   loadingMore={loadingMore}
@@ -264,7 +269,7 @@ export function SearchModal({
                       products={relatedProducts}
                       onAdd={(p) => add(p)}
                       onOpen={(p) =>
-                        push("product", { productId: p.id, product: p })
+                        push("product", { product: p })
                       }
                     />
                   </>

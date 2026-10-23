@@ -21,13 +21,11 @@ import { Bouncy } from "../../components/ui/Bouncy";
 import { color, space, HIT, stickerShadow } from "../../theme/tokens";
 import { LinearGradient } from "expo-linear-gradient";
 import { useNav } from "../../navigation/nav-context";
+import { getMarkets, Market } from "../../lib/api-client";
 
-// Shifted from generic actions to actual market destinations
-const MARKETS: { label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { label: "Computer Village", icon: "laptop-outline" },
-  { label: "Balogun Market", icon: "shirt-outline" },
-  { label: "Alaba Int'l", icon: "tv-outline" },
-];
+// Market shortcuts come from the markets the platform actually has, not a
+// hardcoded list — the first few the API returns.
+const MARKET_CHIPS = 3;
 
 function AuroraField() {
   const t1 = useRef(new Animated.Value(0)).current;
@@ -158,6 +156,19 @@ export function HomeScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [committedQuery, setCommittedQuery] = useState("");
   const [listening, setListening] = useState(false);
+  const [markets, setMarkets] = useState<Market[]>([]);
+
+  // Shortcuts only: on failure the row simply doesn't appear, and the
+  // Market Directory card above it still leads to the full list.
+  useEffect(() => {
+    let cancelled = false;
+    getMarkets()
+      .then((m) => !cancelled && setMarkets(m.slice(0, MARKET_CHIPS)))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const enter = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -260,18 +271,20 @@ export function HomeScreen() {
                 </Bouncy>
               </Animated.View>
 
-              <Animated.View style={[s.chips, riseIn(28)]}>
-                {MARKETS.map((p) => (
-                  <Bouncy
-                    key={p.label}
-                    style={s.chip}
-                    onPress={() => commitSearch(p.label)}
-                  >
-                    <Ionicons name={p.icon} size={14} color={color.ink} />
-                    <Text style={s.chipText}>{p.label}</Text>
-                  </Bouncy>
-                ))}
-              </Animated.View>
+              {markets.length > 0 && (
+                <Animated.View style={[s.chips, riseIn(28)]}>
+                  {markets.map((m) => (
+                    <Bouncy
+                      key={m.id}
+                      style={s.chip}
+                      onPress={() => push("marketDetail", { market: m })}
+                    >
+                      <Ionicons name="storefront-outline" size={14} color={color.ink} />
+                      <Text style={s.chipText}>{m.name}</Text>
+                    </Bouncy>
+                  ))}
+                </Animated.View>
+              )}
             </View>
 
             {/* center block: bloom + pill */}

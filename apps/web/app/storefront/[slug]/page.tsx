@@ -65,6 +65,8 @@ export interface StorefrontProduct {
   tags: string[];
   is_digital: boolean;
   category_id?: string;
+  /** The buyer may "Make an offer". The vendor's floor is never sent here. */
+  is_negotiable?: boolean;
 }
 
 async function getProducts(storeId: string): Promise<StorefrontProduct[]> {

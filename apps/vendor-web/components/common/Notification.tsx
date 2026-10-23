@@ -7,6 +7,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Bell,
+  HandCoins,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -37,6 +38,10 @@ const KIND_STYLES: Record<
   success: {
     bg: "bg-emerald-50 text-emerald-700",
     icon: <CheckCircle2 className="h-4 w-4" />,
+  },
+  offer: {
+    bg: "bg-orange-50 text-orange-700",
+    icon: <HandCoins className="h-4 w-4" />,
   },
 };
 
@@ -104,7 +109,7 @@ export default function NotificationsPopover() {
               No notifications yet
             </p>
             <p className="mt-1 text-xs text-muted">
-              Orders, payouts and alerts will show up here.
+              Orders, offers, payouts and alerts will show up here.
             </p>
           </div>
         ) : (

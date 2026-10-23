@@ -8,6 +8,7 @@ import { ROUTES } from "@/lib/config/routes";
 import { cn, Mark } from "@gomarket/ui";
 import { NAV, NavItem } from "@/lib/config/sidebar";
 import { useAuthStore, type StaffRole } from "@/store/useAuthStore";
+import { useOfferCounts } from "@/lib/swr/hooks";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -35,6 +36,23 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
   const [expanded, setExpanded] = useState<Set<string>>(
     () => new Set(["Products", "Orders"]),
   );
+
+  // Only ask for offer counts when the item that shows them is visible to
+  // this role — no point fetching for someone who cannot open the inbox.
+  const showsOfferBadge = NAV.some((section) =>
+    section.items.some(
+      (item) =>
+        canSeeItem(item, staffRole) &&
+        (item.liveBadge === "offers_pending" ||
+          item.children?.some((c) => c.liveBadge === "offers_pending")),
+    ),
+  );
+  const offerCounts = useOfferCounts(showsOfferBadge);
+
+  function liveBadgeCount(item: NavItem): number {
+    if (item.liveBadge === "offers_pending") return offerCounts?.pending ?? 0;
+    return 0;
+  }
 
   function toggleExpand(label: string) {
     setExpanded((prev) => {
@@ -285,7 +303,12 @@ export function Sidebar({ isOpen, onClose, onSignOut }: SidebarProps) {
                                       : "rgba(255,255,255,0.3)",
                                   }}
                                 />
-                                {child.label}
+                                <span className="flex-1">{child.label}</span>
+                                {liveBadgeCount(child) > 0 && (
+                                  <Badge variant="red">
+                                    {liveBadgeCount(child) > 99 ? "99+" : liveBadgeCount(child)}
+                                  </Badge>
+                                )}
                               </Link>
                             );
                           })}

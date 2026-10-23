@@ -108,6 +108,27 @@ export const createProductSchema = z.object({
   seoTitle: z.string().optional(),
   seoDescription: z.string().optional(),
   slug: z.string().optional(),
+
+  // Negotiable pricing — the floor is in naira here, sent as min_price_kobo.
+  isNegotiable: z.boolean().default(false),
+  minPrice: z.coerce.number().optional(),
+}).superRefine((v, ctx) => {
+  if (!v.isNegotiable) return;
+  // Same rules the catalogue enforces, checked here so the vendor hears about
+  // it next to the field instead of as a 400 after pressing publish.
+  if (!v.minPrice || v.minPrice <= 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["minPrice"],
+      message: "Enter the lowest price you'll accept",
+    });
+  } else if (v.price && Math.round(v.minPrice * 100) >= Math.round(v.price * 100)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["minPrice"],
+      message: "Must be below your selling price",
+    });
+  }
 });
 
 export const createCollectionSchema = z.object({

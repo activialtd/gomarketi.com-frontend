@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { ScrollView, Text, View, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
@@ -6,6 +6,7 @@ import { BentoGrid } from "../../components/ui/BentoGrid";
 import { BentoSkeleton } from "../../components/ui/BentoSkeleton";
 import { MarketBentoCard } from "../../components/ui/MarketBentoCard";
 import { getMarkets, Market } from "../../lib/api-client";
+import { LoadError } from "../../components/ui/LoadError";
 import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 
@@ -13,13 +14,19 @@ export function MarketsScreen() {
   const { push } = useNav();
   const [markets, setMarkets] = useState<Market[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // A failure used to read as "No markets yet", which isn't true.
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
     getMarkets()
       .then(setMarkets)
-      .catch(() => setMarkets([]))
+      .catch((err) => setError(err instanceof Error ? err.message : "Couldn't load markets"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(load, [load]);
 
   return (
     <SafeAreaView style={s.root} edges={["top", "bottom"]}>
@@ -35,6 +42,8 @@ export function MarketsScreen() {
 
         {loading ? (
           <BentoSkeleton count={8} />
+        ) : error ? (
+          <LoadError title="Couldn't load markets" message={error} onRetry={load} />
         ) : markets.length === 0 ? (
           <View style={s.empty}>
             <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>

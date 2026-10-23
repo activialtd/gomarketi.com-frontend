@@ -24,6 +24,7 @@ import { ProductDetailScreen } from "../screens/product/ProductDetailsScreen";
 import { StoreDetailScreen } from "../screens/store/StoreDetailScreen";
 import { MarketsScreen } from "../screens/markets/MarketsScreen";
 import { MarketDetailScreen } from "../screens/markets/MarketDetailScreen";
+import { MyOffersScreen } from "../screens/offers/MyOffersScreen";
 
 let nextRouteID = 1;
 
@@ -69,9 +70,8 @@ const SCREENS: Record<ScreenName, (p: any) => ReactNode> = {
   profile: () => <ProfileScreen />,
   settings: () => <SettingsScreen />,
   notifications: () => <NotificationsScreen />,
-  product: (p) => (
-    <ProductDetailScreen productId={p?.productId} product={p?.product} />
-  ),
+  product: (p) => <ProductDetailScreen product={p?.product} />,
+  offers: () => <MyOffersScreen />,
   store: (p) => <StoreDetailScreen store={p?.store} />,
   markets: () => <MarketsScreen />,
   marketDetail: (p) => <MarketDetailScreen market={p?.market} />,

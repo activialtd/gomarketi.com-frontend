@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, Menu, X } from "lucide-react";
+import { ShoppingBag, Menu, X, Handshake } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 import { CartDrawer } from "@/components/storefront/CartDrawer";
 import { WhatsAppFloat } from "@/components/WhatsappFloat";
+import { useSavedOffers } from "@/components/storefront/offers/useSavedOffers";
 
 function IconInstagram() {
   return (
@@ -95,6 +96,8 @@ export default function LagosLayout({
   const { itemCount } = useCart();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  // "My offers" appears once this device has made an offer here.
+  const hasOffers = useSavedOffers(slug).length > 0;
 
   // Clean paths — proxy.ts rewrites these transparently on the store's subdomain.
   const links = navItems?.length
@@ -150,14 +153,26 @@ export default function LagosLayout({
             ))}
           </div>
 
-          <button
-            onClick={() => setCartOpen(true)}
-            className="flex items-center gap-1.5 border border-white/20 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#F7F4EE] transition-colors hover:border-white/40"
-            aria-label="Cart"
-          >
-            <ShoppingBag className="h-3.5 w-3.5" />
-            {itemCount > 0 ? itemCount : "Bag"}
-          </button>
+          <div className="flex items-center gap-2">
+            {hasOffers && (
+              <Link
+                href="/offers"
+                className="flex items-center gap-1.5 px-2 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-white/70 no-underline transition-colors hover:text-white"
+                aria-label="My offers"
+              >
+                <Handshake className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Offers</span>
+              </Link>
+            )}
+            <button
+              onClick={() => setCartOpen(true)}
+              className="flex items-center gap-1.5 border border-white/20 px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-[#F7F4EE] transition-colors hover:border-white/40"
+              aria-label="Cart"
+            >
+              <ShoppingBag className="h-3.5 w-3.5" />
+              {itemCount > 0 ? itemCount : "Bag"}
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -181,6 +196,12 @@ export default function LagosLayout({
                   {l.label}
                 </Link>
               ))}
+              {hasOffers && (
+                <Link href="/offers" onClick={() => setMobileNavOpen(false)}
+                  className="border-b border-white/8 px-2 py-3 text-[13px] font-medium uppercase tracking-[0.1em] text-white/70 no-underline hover:text-white">
+                  My offers
+                </Link>
+              )}
             </div>
           </div>
         </div>

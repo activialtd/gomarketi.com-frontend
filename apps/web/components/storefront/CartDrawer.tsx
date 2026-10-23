@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { X, Minus, Plus, Trash2, ShoppingBag, ArrowRight, Download } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
+import { NegotiatedTag } from "@/components/storefront/offers/NegotiatedTag";
 
 function fmt(kobo: number) {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
@@ -99,10 +100,21 @@ export function CartDrawer({ open, onClose }: { open: boolean; onClose: () => vo
                     <p style={{ fontSize: "13px", fontWeight: 700, color: "#1C1C1C", marginBottom: "2px", lineHeight: 1.3 }}>
                       {line.productName}
                     </p>
-                    <p style={{ fontSize: "13px", fontWeight: 800, color: "var(--store-primary, #1A7A42)" }}>
-                      {fmt(line.unitPrice)}
-                    </p>
-                    {!line.isDigital ? (
+                    <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px 6px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 800, color: "var(--store-primary, #1A7A42)" }}>
+                        {fmt(line.unitPrice)}
+                      </span>
+                      {line.offerId && line.listUnitPrice != null && line.listUnitPrice > line.unitPrice && (
+                        <s style={{ fontSize: "11px", color: "#94a3b8" }}>{fmt(line.listUnitPrice)}</s>
+                      )}
+                      {line.offerId && <NegotiatedTag />}
+                    </div>
+                    {line.offerId ? (
+                      // The deal was agreed for this many; the quantity is fixed.
+                      <p style={{ fontSize: "11px", color: "#6b7280", marginTop: "6px" }}>
+                        Qty {line.quantity} · agreed deal
+                      </p>
+                    ) : !line.isDigital ? (
                       <div style={{
                         display: "inline-flex", alignItems: "center", gap: "8px",
                         border: "1px solid #e2e8f0", borderRadius: "7px",

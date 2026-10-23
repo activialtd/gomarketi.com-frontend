@@ -94,6 +94,8 @@ export function useProductSearch(query: string, location?: { lat?: number; lng?:
     loadingMore,
     hasMore,
     loadMore,
+    error,
+    retry,
   } = usePaginatedList<CatalogueProduct>(fetcher, PAGE_SIZE, [debouncedQuery]);
 
   // Vendor lookup for product cards: the vendors a product belongs to may not
@@ -131,6 +133,10 @@ export function useProductSearch(query: string, location?: { lat?: number; lng?:
     loadingMore,
     hasMore,
     loadMore,
+    // Products failing to load is the search failing — the vendor/related
+    // half degrades to empty on its own.
+    error,
+    retry,
     carouselItems,
     showCarousel,
     vendorToStore,

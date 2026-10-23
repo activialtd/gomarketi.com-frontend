@@ -4,8 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Button } from "../../components/ui/Button";
-import { useCart, formatNaira } from "../../lib/cart-context";
-import type { Product } from "../../lib/mock-products";
+import { useCart, lineUnitKobo } from "../../lib/cart-context";
+import { formatKobo } from "../../lib/order-status";
+import type { Product } from "../../lib/types";
 import { useNav } from "../../navigation/nav-context";
 import { color, type, space, tint, HIT } from "../../theme/tokens";
 
@@ -36,8 +37,7 @@ function CartThumb({ product }: { product: Product }) {
 }
 
 export function CartScreen() {
-  const { items, subtotalUsd, totalUsd, setQty, remove } =
-    useCart();
+  const { items, subtotalKobo, setQty, remove } = useCart();
   const { push } = useNav();
 
   return (
@@ -68,37 +68,46 @@ export function CartScreen() {
                     {line.product.name}
                   </Text>
                   <Text style={type.meta}>{line.product.vendor}</Text>
-                  {(line.variant || line.size) && (
-                    <Text style={s.variantLine}>
-                      {[line.variant, line.size && `Size ${line.size}`]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </Text>
+                  {line.deal ? (
+                    // A negotiated line: what the list price was, and the deal.
+                    <View style={s.dealRow}>
+                      <Text style={s.struck}>{formatKobo(line.product.priceKobo)}</Text>
+                      <Text style={s.price}>{formatKobo(lineUnitKobo(line))}</Text>
+                      <View style={s.dealChip}>
+                        <Text style={s.dealChipText}>Your deal</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={s.price}>{formatKobo(lineUnitKobo(line))}</Text>
                   )}
-                  <Text style={s.price}>{formatNaira(line.product.price)}</Text>
                 </View>
 
-                <View style={s.qty}>
-                  <Pressable
-                    onPress={() => setQty(line.key, line.qty - 1)}
-                    hitSlop={HIT}
-                    accessibilityLabel={`Decrease ${line.product.name}`}
-                  >
-                    <View style={s.qtyBtn}>
-                      <Ionicons name="remove" size={16} color={color.text} />
-                    </View>
-                  </Pressable>
-                  <Text style={s.qtyNum}>{line.qty}</Text>
-                  <Pressable
-                    onPress={() => setQty(line.key, line.qty + 1)}
-                    hitSlop={HIT}
-                    accessibilityLabel={`Increase ${line.product.name}`}
-                  >
-                    <View style={s.qtyBtn}>
-                      <Ionicons name="add" size={16} color={color.text} />
-                    </View>
-                  </Pressable>
-                </View>
+                {line.deal ? (
+                  // The vendor agreed a price for this many — no more, no fewer.
+                  <Text style={s.lockedQty}>× {line.qty}</Text>
+                ) : (
+                  <View style={s.qty}>
+                    <Pressable
+                      onPress={() => setQty(line.key, line.qty - 1)}
+                      hitSlop={HIT}
+                      accessibilityLabel={`Decrease ${line.product.name}`}
+                    >
+                      <View style={s.qtyBtn}>
+                        <Ionicons name="remove" size={16} color={color.text} />
+                      </View>
+                    </Pressable>
+                    <Text style={s.qtyNum}>{line.qty}</Text>
+                    <Pressable
+                      onPress={() => setQty(line.key, line.qty + 1)}
+                      hitSlop={HIT}
+                      accessibilityLabel={`Increase ${line.product.name}`}
+                    >
+                      <View style={s.qtyBtn}>
+                        <Ionicons name="add" size={16} color={color.text} />
+                      </View>
+                    </Pressable>
+                  </View>
+                )}
 
                 <Pressable
                   onPress={() => remove(line.key)}
@@ -116,14 +125,14 @@ export function CartScreen() {
           </ScrollView>
 
           <View style={s.summary}>
-            <Row label="Subtotal" value={formatNaira(subtotalUsd)} />
+            <Row label="Subtotal" value={formatKobo(subtotalKobo)} />
             {/* No shipping line here: the price depends on the area the buyer
                 picks at checkout, and the ₦2,250 that used to sit here was a
                 placeholder nobody had agreed to — including the server, which
                 refused the payment it produced. */}
             <Row label="Shipping" value="At checkout" />
             <View style={s.rule} />
-            <Row label="Total" value={formatNaira(totalUsd)} bold />
+            <Row label="Total" value={formatKobo(subtotalKobo)} bold />
             <Button
               label="Checkout"
               onPress={() => push("checkout")}
@@ -181,12 +190,23 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
   name: { fontFamily: "Jakarta_600", fontSize: 14, color: color.text },
-  variantLine: {
+  dealRow: { flexDirection: "row", alignItems: "center", gap: 6, flexWrap: "wrap" },
+  struck: {
     fontFamily: "Jakarta_500",
     fontSize: 12,
-    color: color.ink,
-    marginTop: 2,
+    color: color.textFaint,
+    textDecorationLine: "line-through",
+    marginTop: 3,
   },
+  dealChip: {
+    backgroundColor: color.sunshine,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    marginTop: 3,
+  },
+  dealChipText: { fontFamily: "Jakarta_700", fontSize: 10, color: color.ink900 },
+  lockedQty: { fontFamily: "Jakarta_600", fontSize: 14, color: color.text },
   price: {
     fontFamily: "Jakarta_700",
     fontSize: 14,

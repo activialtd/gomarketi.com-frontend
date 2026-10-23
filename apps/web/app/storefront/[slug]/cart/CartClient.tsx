@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2, ShoppingBag, ArrowRight, ArrowLeft, Shield } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
+import { NegotiatedTag } from "@/components/storefront/offers/NegotiatedTag";
 
 function fmt(kobo: number) {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
@@ -82,8 +83,8 @@ export default function CartClient() {
 
           {/* Rows */}
           {lines.map((line, i) => (
-            <div key={line.lineId} style={{
-              display: "flex", alignItems: "center", gap: "16px",
+            <div key={line.lineId} className="flex-wrap sm:flex-nowrap" style={{
+              display: "flex", alignItems: "center", gap: "12px 16px",
               padding: "20px", borderBottom: i < lines.length - 1 ? "1px solid #f9fafb" : "none",
             }}>
               {/* Image */}
@@ -100,20 +101,36 @@ export default function CartClient() {
                 }
               </div>
 
-              {/* Name */}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Name — on phones the unit price sits under it, since the
+                  four-column row is wider than the screen */}
+              <div className="min-w-0 grow basis-[calc(100%-88px)] sm:basis-0">
                 <p style={{ fontWeight: 700, fontSize: "14px", color: "#1C1C1C", lineHeight: 1.3, marginBottom: "4px" }}>
                   {line.productName}
+                </p>
+                {line.offerId && <NegotiatedTag />}
+                <p className="sm:hidden" style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
+                  {fmt(line.unitPrice)} each
+                  {line.offerId && line.listUnitPrice != null && line.listUnitPrice > line.unitPrice && (
+                    <s style={{ marginLeft: "6px", color: "#94a3b8" }}>{fmt(line.listUnitPrice)}</s>
+                  )}
                 </p>
               </div>
 
               {/* Unit price */}
-              <div style={{ minWidth: "80px", textAlign: "center" }}>
+              <div className="hidden sm:block" style={{ minWidth: "80px", textAlign: "center" }}>
                 <span style={{ fontSize: "14px", fontWeight: 600, color: "#374151" }}>{fmt(line.unitPrice)}</span>
+                {line.offerId && line.listUnitPrice != null && line.listUnitPrice > line.unitPrice && (
+                  <s style={{ display: "block", fontSize: "11px", color: "#94a3b8" }}>{fmt(line.listUnitPrice)}</s>
+                )}
               </div>
 
-              {/* Qty */}
-              <div style={{ minWidth: "110px", display: "flex", justifyContent: "center" }}>
+              {/* Qty — a negotiated line's quantity is the deal's and fixed */}
+              <div className="ml-[88px] sm:ml-0 sm:min-w-[110px]" style={{ display: "flex", justifyContent: "center" }}>
+                {line.offerId ? (
+                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#374151" }} title="Agreed quantity">
+                    × {line.quantity}
+                  </span>
+                ) : (
                 <div style={{
                   display: "inline-flex", alignItems: "center",
                   border: "1.5px solid #e2e8f0", borderRadius: "9px", overflow: "hidden",
@@ -130,10 +147,11 @@ export default function CartClient() {
                     +
                   </button>
                 </div>
+                )}
               </div>
 
               {/* Total + remove */}
-              <div style={{ minWidth: "90px", textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+              <div className="ml-auto sm:ml-0 sm:min-w-[90px]" style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
                 <span style={{ fontWeight: 800, fontSize: "15px", color: "var(--store-primary, #1A7A42)" }}>
                   {fmt(line.unitPrice * line.quantity)}
                 </span>

@@ -14,6 +14,9 @@ export function usePaginatedList<T>(fetcher: Fetcher<T>, pageSize: number, deps:
   const [loading, setLoading] = useState(true); // first page only
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  // A failed first page used to leave `loading` true forever — the skeleton
+  // just never went away. Now it surfaces, and `reset` doubles as retry.
+  const [error, setError] = useState<string | null>(null);
 
   const offsetRef = useRef(0);
   const hasMoreRef = useRef(true);
@@ -26,7 +29,10 @@ export function usePaginatedList<T>(fetcher: Fetcher<T>, pageSize: number, deps:
         prefetchRef.current = null;
         return;
       }
-      prefetchRef.current = fetcher(offset, pageSize);
+      const next = fetcher(offset, pageSize);
+      // Mark it handled now; loadMore awaits it and deals with a failure.
+      next.catch(() => {});
+      prefetchRef.current = next;
     },
     [fetcher, pageSize],
   );
@@ -39,16 +45,25 @@ export function usePaginatedList<T>(fetcher: Fetcher<T>, pageSize: number, deps:
     setItems([]);
     setHasMore(true);
     setLoading(true);
+    setError(null);
 
-    fetcher(0, pageSize).then((page) => {
-      if (requestID !== requestIDRef.current) return; // a newer reset superseded this one
-      setItems(page.items);
-      setHasMore(page.hasMore);
-      setLoading(false);
-      offsetRef.current = page.items.length;
-      hasMoreRef.current = page.hasMore;
-      prefetchNext(offsetRef.current);
-    });
+    fetcher(0, pageSize)
+      .then((page) => {
+        if (requestID !== requestIDRef.current) return; // a newer reset superseded this one
+        setItems(page.items);
+        setHasMore(page.hasMore);
+        setLoading(false);
+        offsetRef.current = page.items.length;
+        hasMoreRef.current = page.hasMore;
+        prefetchNext(offsetRef.current);
+      })
+      .catch((err) => {
+        if (requestID !== requestIDRef.current) return;
+        setError(err instanceof Error ? err.message : "Couldn't load this list");
+        setHasMore(false);
+        hasMoreRef.current = false;
+        setLoading(false);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
@@ -61,7 +76,17 @@ export function usePaginatedList<T>(fetcher: Fetcher<T>, pageSize: number, deps:
 
     // Already fetched ahead of time — apply instantly, no spinner wait.
     const pending = prefetchRef.current ?? fetcher(offsetRef.current, pageSize);
-    const page = await pending;
+    let page: Page<T>;
+    try {
+      page = await pending;
+    } catch {
+      // A failed later page keeps what's already shown; the next scroll to
+      // the end retries it.
+      if (requestID !== requestIDRef.current) return;
+      prefetchRef.current = null;
+      setLoadingMore(false);
+      return;
+    }
     if (requestID !== requestIDRef.current) return; // stale
 
     setItems((prev) => [...prev, ...page.items]);
@@ -72,5 +97,5 @@ export function usePaginatedList<T>(fetcher: Fetcher<T>, pageSize: number, deps:
     prefetchNext(offsetRef.current);
   }, [loadingMore, fetcher, pageSize, prefetchNext]);
 
-  return { items, loading, loadingMore, hasMore, loadMore };
+  return { items, loading, loadingMore, hasMore, loadMore, error, retry: reset };
 }

@@ -3,7 +3,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-export type NotificationKind = "order" | "wallet" | "system" | "success";
+export type NotificationKind = "order" | "wallet" | "system" | "success" | "offer";
 
 export interface AppNotification {
   id: string;

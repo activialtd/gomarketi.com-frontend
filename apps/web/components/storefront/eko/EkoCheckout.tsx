@@ -12,6 +12,7 @@ import {
   X as XIcon,
 } from "lucide-react";
 import { PaystackModal } from "@/components/storefront/PaystackModal";
+import { NegotiatedTag } from "@/components/storefront/offers/NegotiatedTag";
 import {
   useCheckout,
   fmtNaira,
@@ -33,6 +34,7 @@ export default function EkoCheckout(props: CheckoutProps) {
     subtotal,
     shipping,
     total,
+    chargeTotal,
     allDigital,
     deliveryPaidLater,
     deliveryZone,
@@ -332,10 +334,22 @@ export default function EkoCheckout(props: CheckoutProps) {
                         Digital download
                       </p>
                     )}
+                    {line.offerId && (
+                      <div className="mt-1">
+                        <NegotiatedTag />
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs font-bold text-neutral-900 shrink-0">
-                    {fmtNaira(line.unitPrice * line.quantity)}
-                  </p>
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs font-bold text-neutral-900">
+                      {fmtNaira(line.unitPrice * line.quantity)}
+                    </p>
+                    {line.offerId && line.listUnitPrice != null && line.listUnitPrice > line.unitPrice && (
+                      <s className="text-[10px] text-neutral-400">
+                        {fmtNaira(line.listUnitPrice * line.quantity)}
+                      </s>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -376,7 +390,9 @@ export default function EkoCheckout(props: CheckoutProps) {
 
       {showPaystack && pendingCustomer && (
         <PaystackModal
-          amount={total}
+          // The server's total for the order it just placed — never the
+          // client's sum (see useCheckout).
+          amount={chargeTotal}
           email={pendingCustomer.email}
           storeName={props.storeName ?? "GoMarketi Store"}
           reference={paymentRef}

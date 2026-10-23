@@ -16,6 +16,7 @@ import { BentoSkeleton } from "../../components/ui/BentoSkeleton";
 import { StoreBentoCard } from "../../components/ui/StoreBentoCard";
 import { searchStores, Market, StoreResult } from "../../lib/api-client";
 import { usePaginatedList } from "../../hooks/usePaginatedList";
+import { LoadError } from "../../components/ui/LoadError";
 import { useNav } from "../../navigation/nav-context";
 import { color, type, space } from "../../theme/tokens";
 
@@ -34,7 +35,7 @@ export function MarketDetailScreen({ market }: { market: Market }) {
     [market.id],
   );
 
-  const { items, loading, loadingMore, hasMore, loadMore } =
+  const { items, loading, loadingMore, hasMore, loadMore, error, retry } =
     usePaginatedList<StoreResult>(fetcher, PAGE_SIZE, [market.id]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -64,6 +65,8 @@ export function MarketDetailScreen({ market }: { market: Market }) {
 
         {loading ? (
           <BentoSkeleton count={6} />
+        ) : error ? (
+          <LoadError title="Couldn't load this market's vendors" message={error} onRetry={retry} />
         ) : items.length === 0 ? (
           <View style={s.empty}>
             <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>

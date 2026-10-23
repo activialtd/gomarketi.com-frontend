@@ -176,22 +176,24 @@ function AskScene() {
         end={{ x: 0.2, y: 1 }}
         style={sc.bigBlob}
       />
-      {/* floating result cards */}
+      {/* floating result cards — categories, not products: these were the
+          old placeholder catalogue's avocados and cold brew, which no
+          vendor here necessarily sells. */}
       <Animated.View style={[sc.miniCard, { top: 26, left: 30 }, bobY(f1, 12)]}>
-        <Ionicons name="nutrition" size={20} color={color.ink} />
-        <Text style={sc.miniText}>Avocados</Text>
+        <Ionicons name="basket" size={20} color={color.ink} />
+        <Text style={sc.miniText}>Groceries</Text>
       </Animated.View>
       <Animated.View
         style={[sc.miniCard, { top: 70, right: 24 }, bobY(f2, 15)]}
       >
-        <Ionicons name="cafe" size={20} color={color.ink} />
-        <Text style={sc.miniText}>Cold brew</Text>
+        <Ionicons name="hardware-chip" size={20} color={color.ink} />
+        <Text style={sc.miniText}>Electronics</Text>
       </Animated.View>
 
       {/* the pill with pulsing mic */}
       <View style={sc.pillWrap}>
         <View style={sc.pill}>
-          <Text style={sc.pillText}>“fresh avocados”</Text>
+          <Text style={sc.pillText}>“phones near me”</Text>
           <View style={{ alignItems: "center", justifyContent: "center" }}>
             <Animated.View
               style={[

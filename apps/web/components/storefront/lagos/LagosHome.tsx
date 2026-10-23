@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowUpRight, MessageCircle, Package, ChevronLeft, ChevronRight, Layers } from "lucide-react";
 import { LagosProductCard } from "./LagosProductCard";
+import { PriceTypeBadge } from "@/components/storefront/offers/PriceTypeBadge";
 import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
 import { ordersApi } from "@gomarket/api-client";
 
@@ -333,9 +334,12 @@ function LagosSplitProducts({ products }: { products: StorefrontProduct[] }) {
             <p className="text-[15px] font-semibold text-[#F7F4EE] truncate" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{p.name}</p>
             {p.tags?.[0] && <p className="text-[10px] text-white/30 uppercase tracking-[0.12em] mt-0.5">{p.tags[0]}</p>}
           </div>
-          <p className="text-[16px] font-semibold text-[#F7F4EE] flex-shrink-0">
-            ₦{(p.price_kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 })}
-          </p>
+          <div className="flex flex-shrink-0 flex-col items-end gap-1">
+            <p className="text-[16px] font-semibold text-[#F7F4EE]">
+              ₦{(p.price_kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 })}
+            </p>
+            <PriceTypeBadge negotiable={p.is_negotiable} tone="dark" square />
+          </div>
           <ArrowUpRight className="w-4 h-4 text-white/30 flex-shrink-0 group-hover:text-[#F7F4EE] transition-colors" />
         </Link>
       ))}

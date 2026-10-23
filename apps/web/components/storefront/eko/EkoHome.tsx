@@ -7,6 +7,7 @@ import {
   Sparkles, Package, ChevronLeft, ChevronRight, Layers,
 } from "lucide-react";
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
+import { PriceTypeBadge } from "@/components/storefront/offers/PriceTypeBadge";
 import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
 import { ordersApi } from "@gomarket/api-client";
 
@@ -246,9 +247,12 @@ function SplitProducts({ products }: { products: StorefrontProduct[] }) {
           <div className="flex-1 min-w-0">
             <p className="text-[15px] font-bold text-[var(--store-text)] truncate">{p.name}</p>
             {p.tags?.[0] && <p className="text-[11px] text-gray-400 mt-0.5 uppercase tracking-wide">{p.tags[0]}</p>}
-            <p className="mt-2 text-[16px] font-extrabold text-[var(--store-primary)]">
-              ₦{(p.price_kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 })}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-[16px] font-extrabold text-[var(--store-primary)]">
+                ₦{(p.price_kobo / 100).toLocaleString("en-NG", { maximumFractionDigits: 0 })}
+              </p>
+              <PriceTypeBadge negotiable={p.is_negotiable} />
+            </div>
           </div>
           <ArrowRight className="h-4 w-4 text-gray-300 flex-shrink-0" />
         </Link>

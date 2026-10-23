@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingBag, Search, Menu, X } from "lucide-react";
+import { ShoppingBag, Search, Menu, X, Handshake } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 import { CartDrawer } from "@/components/storefront/CartDrawer";
 import { WhatsAppFloat } from "@/components/WhatsappFloat";
+import { useSavedOffers } from "@/components/storefront/offers/useSavedOffers";
 
 function IconInstagram() {
   return (
@@ -97,6 +98,9 @@ export default function EkoLayout({
   const { itemCount } = useCart();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  // "My offers" appears once this device has made an offer here — most
+  // stores sell at fixed prices, and an empty page is no use to anyone.
+  const hasOffers = useSavedOffers(slug).length > 0;
 
   // Clean paths — proxy.ts rewrites these transparently on the store's subdomain.
   const navLinks = navItems?.length
@@ -147,6 +151,16 @@ export default function EkoLayout({
             <button className="hidden p-1.5 text-white/90 transition-colors hover:text-white lg:flex" aria-label="Search">
               <Search className="h-4 w-4" />
             </button>
+            {hasOffers && (
+              <Link
+                href="/offers"
+                className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[12px] font-bold text-white/90 no-underline transition-colors hover:text-white"
+                aria-label="My offers"
+              >
+                <Handshake className="h-4 w-4" />
+                <span className="hidden sm:inline">Offers</span>
+              </Link>
+            )}
             <button
               onClick={() => setCartOpen(true)}
               className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12px] font-bold text-white transition-colors"
@@ -188,6 +202,12 @@ export default function EkoLayout({
                   {link.label}
                 </Link>
               ))}
+              {hasOffers && (
+                <Link href="/offers" onClick={() => setMobileNavOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-3 py-2.5 text-[14px] font-semibold text-gray-700 no-underline transition-colors hover:bg-gray-50">
+                  <Handshake className="h-4 w-4" style={{ color: primary }} /> My offers
+                </Link>
+              )}
             </div>
           </div>
         </div>

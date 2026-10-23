@@ -20,6 +20,11 @@ export function ProfileScreen() {
       go: () => push("orders"),
     },
     {
+      icon: "pricetags-outline" as const,
+      label: "My offers",
+      go: () => push("offers"),
+    },
+    {
       icon: "notifications-outline" as const,
       label: "Notifications",
       go: () => push("notifications"),

@@ -16,7 +16,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { PaystackSheet } from "../../components/PaystackSheet";
-import { useCart, formatNaira, toNaira, type CartLine } from "../../lib/cart-context";
+import { useCart, lineUnitKobo, type CartLine } from "../../lib/cart-context";
 import { useOrders } from "../../lib/orders-context";
 import { useAuth } from "../../lib/auth-context";
 import { useNav } from "../../navigation/nav-context";
@@ -44,17 +44,10 @@ const fmtKobo = (kobo: number) =>
  * product with no image, or a URL that 404s, is ordinary rather than
  * exceptional.
  */
-function SummaryLine({
-  line,
-  priceLabel,
-}: {
-  line: CartLine;
-  priceLabel: string;
-}) {
+function SummaryLine({ line }: { line: CartLine }) {
   const [imgFailed, setImgFailed] = useState(false);
   const cover = line.product.images?.[0];
   const showImage = !!cover && !imgFailed;
-  const qualifier = [line.variant, line.size].filter(Boolean).join(", ");
 
   return (
     <View style={s.itemRow}>
@@ -74,17 +67,22 @@ function SummaryLine({
       <View style={s.itemText}>
         <Text numberOfLines={2} style={type.body}>
           {line.qty} × {line.product.name}
-          {qualifier ? ` (${qualifier})` : ""}
         </Text>
+        {line.deal && <Text style={type.meta}>Negotiated deal</Text>}
       </View>
 
-      <Text style={s.lineVal}>{priceLabel}</Text>
+      <View style={{ alignItems: "flex-end" }}>
+        {line.deal && (
+          <Text style={s.struck}>{fmtKobo(line.product.priceKobo * line.qty)}</Text>
+        )}
+        <Text style={s.lineVal}>{fmtKobo(lineUnitKobo(line) * line.qty)}</Text>
+      </View>
     </View>
   );
 }
 
 export function CheckoutScreen() {
-  const { items, subtotalUsd, clear } = useCart();
+  const { items, subtotalKobo, clear } = useCart();
   const { registerOrders } = useOrders();
   const { user } = useAuth();
   const { reset, push } = useNav();
@@ -147,7 +145,7 @@ export function CheckoutScreen() {
   // "delivery" the server knew nothing about — so Paystack was charged one
   // figure and the order verified against another, and the exact-match check
   // refused every payment that got this far.
-  const itemsKobo = toNaira(subtotalUsd) * 100;
+  const itemsKobo = subtotalKobo;
   const deliveryKobo = selectedDelivery?.price_kobo ?? 0;
   const totalKobo = itemsKobo + deliveryKobo;
 
@@ -163,18 +161,26 @@ export function CheckoutScreen() {
     (isPickup || address.trim().length > 5) &&
     phone.trim().length >= 7 &&
     items.length > 0 &&
+    // Paystack needs it, and a deal line is only honoured for the email the
+    // offer was made with.
+    !!user?.email &&
     // Every basket needs a delivery choice: the orders service refuses an
     // order whose store has set none, so there is nothing to fall back to.
     selectedDelivery != null;
 
-  // Stable for the lifetime of one payment attempt — PaystackSheet stays
-  // mounted throughout, and payment idempotency now depends on this
-  // reference not changing mid-payment (it would otherwise be recomputed on
-  // every render, e.g. from a keystroke elsewhere on screen while paying).
-  const reference = useMemo(() => `gmk_${Date.now()}`, []);
-
   // Orders created before payment, held here so onPaid can confirm them.
   const placed = useRef<OrderResp[] | null>(null);
+
+  // What Paystack is asked to charge, fixed once per payment attempt from the
+  // orders the server just created — stable while PaystackSheet is mounted,
+  // never recomputed from a keystroke elsewhere on screen.
+  //
+  // The amount is the sum of the orders' own total_kobo, not totalKobo
+  // above: the server prices every line itself (a deal line at its agreed
+  // price), and confirm-payment verifies the charge against those orders.
+  // The reference is the one the server minted for them; charging a
+  // client-made one left confirm-payment and the webhook nothing to match.
+  const [charge, setCharge] = useState<{ reference: string; amountKobo: number } | null>(null);
 
   // Create the orders first, then open Paystack against the reference they
   // come back with. Nothing is charged if this fails, so the buyer can simply
@@ -191,7 +197,7 @@ export function CheckoutScreen() {
     setCheckingOut(true);
     try {
       const { orders } = await placeCheckout({
-        customer_name: user?.fullName || "Customer",
+        customer_name: user?.fullName || user?.email || "",
         customer_email: user?.email ?? "",
         customer_phone: phone,
         delivery_address: isPickup
@@ -200,9 +206,21 @@ export function CheckoutScreen() {
         stores: grouped.stores,
         delivery_option_id: selectedDelivery?.id,
       });
+      const serverRef = orders[0]?.payment_reference;
+      if (!orders.length || !serverRef) {
+        setCheckoutError("We couldn't start your order. Nothing has been charged — please try again.");
+        return;
+      }
       placed.current = orders;
+      setCharge({
+        reference: serverRef,
+        amountKobo: orders.reduce((sum, o) => sum + o.total_kobo, 0),
+      });
       setPaying(true);
     } catch (err) {
+      // A 400 here is often the server refusing a price — a product
+      // repriced since it went in the cart, or a deal that expired or was
+      // already used. Its message says which, so it's shown as is.
       setCheckoutError(
         err instanceof ApiError
           ? err.message
@@ -316,11 +334,7 @@ export function CheckoutScreen() {
           </Text>
           <View style={s.card}>
             {items.map((line) => (
-              <SummaryLine
-                key={line.key}
-                line={line}
-                priceLabel={formatNaira(line.product.price * line.qty)}
-              />
+              <SummaryLine key={line.key} line={line} />
             ))}
             {/* Only once a shipping option is actually chosen — a fee the
                 buyer has not picked has no business being in their total. */}
@@ -411,11 +425,11 @@ export function CheckoutScreen() {
           </Pressable>
         </Modal>
 
-        {paying && (
+        {paying && charge && user?.email && (
           <PaystackSheet
-            email={user?.email ?? "customer@gomarketi.com"}
-            amountKobo={totalKobo}
-            reference={reference}
+            email={user.email}
+            amountKobo={charge.amountKobo}
+            reference={charge.reference}
             onSuccess={onPaid}
             onCancel={() => setPaying(false)}
           />
@@ -458,6 +472,12 @@ const s = StyleSheet.create({
   // long the product name runs.
   itemText: { flex: 1 },
   lineVal: { fontFamily: "Jakarta_500", fontSize: 14, color: color.text },
+  struck: {
+    fontFamily: "Jakarta_400",
+    fontSize: 12,
+    color: color.textFaint,
+    textDecorationLine: "line-through",
+  },
   sheetBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.4)",
