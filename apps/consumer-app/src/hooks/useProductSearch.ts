@@ -43,6 +43,18 @@ export function useProductSearch(query: string, location?: { lat?: number; lng?:
   const [vendors, setVendors] = useState<VendorResult[]>([]);
   const [related, setRelated] = useState<CatalogueProduct[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  // Every product's seller, gathered from each response's `stores`. The
+  // vendor results alone can't label a product: searching "suit" finds the
+  // suit but not its shop, and a product with no store was dropped.
+  const [productStores, setProductStores] = useState<Map<string, VendorResult>>(new Map());
+  const rememberStores = useCallback((stores: VendorResult[]) => {
+    if (!stores.length) return;
+    setProductStores((prev) => {
+      const next = new Map(prev);
+      for (const st of stores) next.set(st.id, st);
+      return next;
+    });
+  }, []);
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -62,6 +74,7 @@ export function useProductSearch(query: string, location?: { lat?: number; lng?:
           setVendors(res.vendors);
           setRelated(res.relatedProducts);
           setSuggestions(res.suggestions);
+          rememberStores(res.stores);
           setLoadingMeta(false);
         })
         .catch(() => {
@@ -84,7 +97,10 @@ export function useProductSearch(query: string, location?: { lat?: number; lng?:
         type: "products",
         limit,
         offset,
-      }).then((res) => ({ items: res.products, hasMore: res.productsHasMore })),
+      }).then((res) => {
+        rememberStores(res.stores);
+        return { items: res.products, hasMore: res.productsHasMore };
+      }),
     [debouncedQuery],
   );
 
@@ -98,12 +114,14 @@ export function useProductSearch(query: string, location?: { lat?: number; lng?:
     retry,
   } = usePaginatedList<CatalogueProduct>(fetcher, PAGE_SIZE, [debouncedQuery]);
 
-  // Vendor lookup for product cards: the vendors a product belongs to may not
-  // be in the vendor results, so fall back to what the product carries.
-  const storeById = useMemo(
-    () => new Map(vendors.map((v) => [v.id, vendorToStore(v)])),
-    [vendors],
-  );
+  // Vendor lookup for product cards: the matched vendors, then the sellers
+  // the responses named for their products.
+  const storeById = useMemo(() => {
+    const map = new Map<string, StoreResult>();
+    for (const v of productStores.values()) map.set(v.id, vendorToStore(v));
+    for (const v of vendors) map.set(v.id, vendorToStore(v));
+    return map;
+  }, [vendors, productStores]);
 
   const gridProducts = useMemo(
     () => catalogueProductsToAppProducts(rawProducts, storeById),

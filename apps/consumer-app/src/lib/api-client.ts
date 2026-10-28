@@ -529,6 +529,11 @@ export type SearchAllResult = {
   relatedProducts: CatalogueProduct[];
   /** Query completions from product names and tags. */
   suggestions: string[];
+  /**
+   * The seller of every product and related product above, whether or not
+   * that store matched the query — `vendors` only holds the ones that did.
+   */
+  stores: VendorResult[];
 };
 
 // searchAll returns products and vendors for one query. `type` narrows it to
@@ -549,6 +554,7 @@ export async function searchAll(params: {
     vendors_has_more: boolean;
     related_products: CatalogueProduct[];
     suggestions: string[];
+    stores?: VendorResult[];
   }>("/v1/catalogue/public/search", {
     q: params.q,
     type: params.type,
@@ -565,6 +571,7 @@ export async function searchAll(params: {
     vendorsHasMore: resp.vendors_has_more,
     relatedProducts: resp.related_products ?? [],
     suggestions: resp.suggestions ?? [],
+    stores: resp.stores ?? [],
   };
 }
 
