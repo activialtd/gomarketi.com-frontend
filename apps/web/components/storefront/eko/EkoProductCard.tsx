@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { ShoppingBag, Plus, Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
+import { PriceTypeBadge } from "@/components/storefront/offers/PriceTypeBadge";
 
 function fmtPrice(kobo: number): string {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -127,10 +128,11 @@ export function ProductCard({
           </button>
         </div>
 
-        <div className="mt-1.5 px-0.5">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 px-0.5">
           <span className="text-[14px] font-bold text-[var(--store-primary)]">
             {fmtPrice(product.price_kobo)}
           </span>
+          <PriceTypeBadge negotiable={product.is_negotiable} />
         </div>
       </div>
     </Link>

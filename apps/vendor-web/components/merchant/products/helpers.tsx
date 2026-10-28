@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import { type CollectionResp, catalogueApi } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
+import { type NegotiablePricing } from "@/lib/api/offers";
 
 const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
 
@@ -62,6 +63,50 @@ export function StatCard({
         </p>
       </div>
     </div>
+  );
+}
+
+/**
+ * Negotiable vs Fixed, with the floor for negotiable ones. The floor is
+ * private to the vendor — this list is the vendor's own, so it is shown.
+ */
+export function PricingModeBadge({
+  product,
+  stacked = false,
+}: {
+  product: Product;
+  /** Floor on its own line — for the narrow price column of the list view. */
+  stacked?: boolean;
+}) {
+  if (!product.isNegotiable) {
+    return (
+      <span
+        className="inline-flex text-[9.5px] font-bold uppercase px-1.5 py-0.5 rounded-full whitespace-nowrap"
+        style={{ background: "#f1f5f9", color: "#94a3b8", letterSpacing: "0.04em" }}
+      >
+        Fixed
+      </span>
+    );
+  }
+  const floor =
+    product.minPrice !== undefined ? `Floor ${fmt(product.minPrice)}` : null;
+  return (
+    <span
+      className={`inline-flex ${stacked ? "flex-col items-start gap-0.5" : "flex-wrap items-center gap-1.5"}`}
+      title="Buyers can make an offer. Offers at or above your floor are accepted instantly."
+    >
+      <span
+        className="text-[9.5px] font-bold uppercase px-1.5 py-0.5 rounded-full whitespace-nowrap"
+        style={{ background: "#fff7ed", color: "#c2410c", letterSpacing: "0.04em" }}
+      >
+        Negotiable
+      </span>
+      {floor && (
+        <span className="text-[10px] font-medium whitespace-nowrap" style={{ color: "#9a3412" }}>
+          {floor}
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -108,9 +153,17 @@ export function ProductRowMenu({
     setBusy("duplicate");
     setError("");
     try {
-      const full = await catalogueApi.getProduct(product.id, accessToken);
+      const full = (await catalogueApi.getProduct(product.id, accessToken)) as Awaited<
+        ReturnType<typeof catalogueApi.getProduct>
+      > &
+        NegotiablePricing;
+      // A copy keeps the original's negotiation settings, floor included.
+      const negotiation: NegotiablePricing = full.is_negotiable && full.min_price_kobo
+        ? { is_negotiable: true, min_price_kobo: full.min_price_kobo }
+        : {};
       await catalogueApi.createProduct(
         {
+          ...negotiation,
           name: `${full.name} (Copy)`,
           description: full.description,
           category_id: full.category_id,
@@ -406,6 +459,9 @@ export function ProductCard({
           </div>
           <StatusBadge status={product.status} />
         </div>
+        <div className="mt-1.5">
+          <PricingModeBadge product={product} />
+        </div>
         {product.hasVariants && (
           <p
             className="text-[10px] mt-1.5 font-medium"
@@ -546,6 +602,9 @@ export function ProductRow({
             {fmt(product.compareAtPrice)}
           </p>
         )}
+        <div className="mt-0.5">
+          <PricingModeBadge product={product} stacked />
+        </div>
       </div>
 
       {/* Status */}

@@ -34,6 +34,8 @@ export type Product = {
   createdAt: string; // ISO date string
   weight?: number; // kg
   tags: string[];
+  isNegotiable?: boolean; // buyers can make an offer
+  minPrice?: number; // the vendor's private floor, naira — vendor views only
 };
 
 export type Collection = {

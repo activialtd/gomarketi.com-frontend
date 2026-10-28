@@ -12,7 +12,8 @@ export type ScreenName =
   | "product"
   | "store"
   | "markets"
-  | "marketDetail";
+  | "marketDetail"
+  | "offers";
 
 // Added 'id' here so the navigator can track unique stack entries
 export type Route = {

@@ -13,10 +13,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "../../components/ui/Button";
-import { PRODUCTS, Product } from "../../lib/mock-products";
-import { useCart, formatNaira } from "../../lib/cart-context";
+import { Product } from "../../lib/types";
+import { useCart } from "../../lib/cart-context";
+import { formatKobo } from "../../lib/order-status";
+import { NegotiableBadge } from "../../components/ui/NegotiableBadge";
+import { MakeOfferSheet } from "../../components/offers/MakeOfferSheet";
 import { useNav } from "../../navigation/nav-context";
-import { color, type, space, tint, HIT } from "../../theme/tokens";
+import { color, type, space, tint, HIT, stickerShadow } from "../../theme/tokens";
 
 const { width } = Dimensions.get("window");
 const GALLERY_H = 400;
@@ -24,39 +27,34 @@ const GALLERY_H = 400;
 /**
  * Product detail.
  * - Gallery: story-style progress bars + swipeable pager + thumbnail rail.
- * - Variants: color swatches; Sizes: chips.
+ * - Negotiable products get a "Make an offer" card opening MakeOfferSheet.
  * - CTA is two-stage: "Add to cart" → after adding, becomes "Checkout · ₦total"
  *   with a quiet "Add another" beneath it.
+ *
+ * Every way into this screen (store page, search) hands over the catalogue
+ * product it already has, so there's nothing to fetch. Arriving without one
+ * shows a not-found state rather than guessing.
  */
-export function ProductDetailScreen({
-  productId,
-  product: productProp,
-}: {
-  productId?: string;
-  product?: Product;
-}) {
+export function ProductDetailScreen({ product }: { product?: Product }) {
   const { pop, push } = useNav();
-  const { add, count, totalUsd } = useCart();
-  // A real (API-backed) product is passed directly since it won't exist in
-  // the mock PRODUCTS array; only fall back to the mock lookup by id when
-  // no product object was handed over.
-  const product: Product | undefined = productProp ?? PRODUCTS.find((p) => p.id === productId);
+  const { add, count, subtotalKobo } = useCart();
 
   const pager = useRef<ScrollView>(null);
   const [page, setPage] = useState(0);
   const [qty, setQty] = useState(1);
   const [failed, setFailed] = useState<Record<number, boolean>>({});
-  const [variant, setVariant] = useState<string | undefined>(
-    product?.variants?.[0]?.name,
-  );
-  const [size, setSize] = useState<string | undefined>(product?.sizes?.[0]);
+  const [offerOpen, setOfferOpen] = useState(false);
   const [inCart, setInCart] = useState(false); // drives the CTA morph
 
   if (!product) {
     return (
       <SafeAreaView style={s.root}>
         <View style={s.center}>
-          <Text style={type.body}>Product not found.</Text>
+          <Ionicons name="search-outline" size={40} color={color.textFaint} />
+          <Text style={[type.title, { marginTop: space.md }]}>Product not found</Text>
+          <Pressable onPress={pop} hitSlop={HIT} accessibilityRole="button">
+            <Text style={s.addAnother}>Go back</Text>
+          </Pressable>
         </View>
       </SafeAreaView>
     );
@@ -73,19 +71,18 @@ export function ProductDetailScreen({
     setPage(i);
   };
 
-  // A product reached by the mock-catalogue fallback below has no storeId, and
-  // checkout cannot group it into an order — it would sit in the cart until
-  // the buyer pressed Pay and nothing happened. Better to say so here than to
-  // let it become a dead end two screens later.
-  const buyable = !!product?.storeId;
+  // Checkout can't group a line without a store into an order — it would sit
+  // in the cart until the buyer pressed Pay and nothing happened. Better to
+  // say so here than to let it become a dead end two screens later.
+  const buyable = !!product.storeId;
 
   const addToCart = () => {
-    add(product, { variant, size, qty });
+    add(product, { qty });
     setInCart(true);
     setQty(1); // reset for a potential second add
   };
 
-  // Selection changed after adding? Let them add the new combo too.
+  // Want more after adding? Let them add again.
   const addAnother = () => setInCart(false);
 
   return (
@@ -185,77 +182,44 @@ export function ProductDetailScreen({
             <View style={{ flex: 1 }}>
               <Text style={s.name}>{product.name}</Text>
               <Text style={[type.body, { marginTop: 2 }]}>
-                {product.vendor} · {product.unit}
+                {product.vendor}
               </Text>
-            </View>
-            <View style={s.ratingChip}>
-              <Ionicons name="star" size={12} color={color.ink} />
-              <Text style={s.ratingText}>{product.rating.toFixed(1)}</Text>
-              <Text style={s.reviews}>({product.reviews})</Text>
+              <View style={{ marginTop: space.sm }}>
+                <NegotiableBadge negotiable={product.isNegotiable} />
+              </View>
             </View>
           </View>
 
-          <Text style={[type.section, { marginTop: space.xl }]}>About</Text>
-          <Text style={[type.body, { marginTop: space.sm }]}>
-            {product.description}
-          </Text>
-
-          {/* variants: color swatches */}
-          {product.variants && (
-            <>
-              <View style={s.varHead}>
-                <Text style={type.section}>Color</Text>
-                <Text style={type.body}>{variant}</Text>
+          {product.isNegotiable && buyable && (
+            <View style={s.offerCard}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.offerTitle}>Price is negotiable</Text>
+                <Text style={type.meta}>
+                  Name your price — the vendor can accept, counter or decline.
+                </Text>
+                <Pressable onPress={() => push("offers")} hitSlop={HIT}>
+                  <Text style={s.myOffers}>My offers</Text>
+                </Pressable>
               </View>
-              <View style={s.swatches}>
-                {product.variants.map((v) => (
-                  <Pressable
-                    key={v.name}
-                    onPress={() => setVariant(v.name)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Color ${v.name}`}
-                    accessibilityState={{ selected: variant === v.name }}
-                  >
-                    <View
-                      style={[
-                        s.swatchRing,
-                        variant === v.name && s.swatchRingOn,
-                      ]}
-                    >
-                      <View style={[s.swatch, { backgroundColor: v.hex }]} />
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
-            </>
+              <Pressable
+                onPress={() => setOfferOpen(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Make an offer"
+              >
+                <View style={s.offerBtn}>
+                  <Text style={s.offerBtnText}>Make an offer</Text>
+                </View>
+              </Pressable>
+            </View>
           )}
 
-          {/* sizes */}
-          {product.sizes && (
+          {/* Only when the vendor wrote one — an empty "About" is noise. */}
+          {!!product.description.trim() && (
             <>
-              <Text style={[type.section, { marginTop: space.xl }]}>Size</Text>
-              <View style={s.sizes}>
-                {product.sizes.map((sz) => (
-                  <Pressable
-                    key={sz}
-                    onPress={() => setSize(sz)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Size ${sz}`}
-                    accessibilityState={{ selected: size === sz }}
-                  >
-                    <View style={[s.sizeChip, size === sz && s.sizeChipOn]}>
-                      <Text
-                        style={[
-                          s.sizeText,
-                          size === sz && { color: color.onInk },
-                        ]}
-                      >
-                        {sz}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))}
-              </View>
+              <Text style={[type.section, { marginTop: space.xl }]}>About</Text>
+              <Text style={[type.body, { marginTop: space.sm }]}>
+                {product.description}
+              </Text>
             </>
           )}
 
@@ -293,7 +257,7 @@ export function ProductDetailScreen({
           <>
             <View>
               <Text style={type.meta}>Price</Text>
-              <Text style={s.ctaPrice}>{formatNaira(product.price * qty)}</Text>
+              <Text style={s.ctaPrice}>{formatKobo(product.priceKobo * qty)}</Text>
             </View>
             <View style={{ flex: 1, marginLeft: space.lg }}>
               <Button
@@ -308,12 +272,12 @@ export function ProductDetailScreen({
             <Pressable
               onPress={() => push("cart")}
               accessibilityRole="button"
-              accessibilityLabel={`Checkout, total ${formatNaira(totalUsd)}`}
+              accessibilityLabel={`Checkout, total ${formatKobo(subtotalKobo)}`}
             >
               <View style={s.checkoutBtn}>
                 <Ionicons name="cart" size={18} color={color.onInk} />
                 <Text style={s.checkoutText}>
-                  Checkout · {formatNaira(totalUsd)}
+                  Checkout · {formatKobo(subtotalKobo)}
                 </Text>
               </View>
             </Pressable>
@@ -327,6 +291,14 @@ export function ProductDetailScreen({
           </View>
         )}
       </View>
+
+      {product.isNegotiable && (
+        <MakeOfferSheet
+          visible={offerOpen}
+          product={product}
+          onClose={() => setOfferOpen(false)}
+        />
+      )}
     </View>
   );
 }
@@ -416,63 +388,34 @@ const s = StyleSheet.create({
     color: color.text,
     letterSpacing: -0.3,
   },
-  ratingChip: {
+  offerCard: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: space.md,
+    marginTop: space.xl,
+    padding: space.lg,
+    borderRadius: 20,
     backgroundColor: color.panel,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  ratingText: { fontFamily: "Jakarta_700", fontSize: 13, color: color.ink },
-  reviews: { fontFamily: "Jakarta_400", fontSize: 11, color: color.textMuted },
-
-  varHead: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: space.xxl,
-  },
-  swatches: { flexDirection: "row", gap: 12, marginTop: space.md },
-  swatchRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    padding: 3,
-    borderWidth: 2,
-    borderColor: "transparent",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  swatchRingOn: { borderColor: color.ink },
-  swatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
     borderWidth: 1,
     borderColor: color.line,
   },
-
-  sizes: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-    marginTop: space.md,
-  },
-  sizeChip: {
-    minWidth: 48,
+  offerTitle: { fontFamily: "Jakarta_700", fontSize: 15, color: color.text },
+  offerBtn: {
+    paddingHorizontal: 16,
     height: 42,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: color.lineStrong,
-    backgroundColor: color.card,
+    borderRadius: 21,
+    backgroundColor: color.sunshine,
     alignItems: "center",
     justifyContent: "center",
+    ...stickerShadow(color.ink900, 3),
   },
-  sizeChipOn: { backgroundColor: color.ink, borderColor: color.ink },
-  sizeText: { fontFamily: "Jakarta_600", fontSize: 14, color: color.text },
+  offerBtnText: { fontFamily: "Jakarta_700", fontSize: 14, color: color.ink900 },
+  myOffers: {
+    fontFamily: "Jakarta_600",
+    fontSize: 12,
+    color: color.primary,
+    marginTop: 4,
+  },
 
   qtyRow: {
     flexDirection: "row",

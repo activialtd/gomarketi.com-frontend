@@ -1,8 +1,12 @@
-import { CartLine, NGN_RATE } from "./cart-context";
+import { CartLine, lineUnitKobo } from "./cart-context";
 import { CheckoutOrderItem, CheckoutStoreOrder } from "./api-client";
 
 export type GroupCartResult =
-  | { ok: true; stores: CheckoutStoreOrder[]; linesByStore: Record<string, CartLine[]> }
+  | {
+      ok: true;
+      stores: CheckoutStoreOrder[];
+      linesByStore: Record<string, CartLine[]>;
+    }
   | { ok: false; error: string };
 
 // groupCartByStore splits a cart that may span multiple vendors into the
@@ -11,10 +15,8 @@ export type GroupCartResult =
 // function so this logic (the one part of checkout risky enough to want
 // tested) is testable without a React Native runtime.
 //
-// Blocks checkout outright if any line is missing storeId rather than
-// silently dropping or mis-grouping it — reachable in practice via
-// ProductDetailsScreen's mock-catalogue fallback when no product prop is
-// passed (e.g. a deep link carrying only a product id).
+// Still blocks checkout outright if a line somehow has no storeId rather
+// than silently dropping or mis-grouping it.
 export function groupCartByStore(items: CartLine[]): GroupCartResult {
   if (items.length === 0) {
     return { ok: false, error: "Your cart is empty." };
@@ -31,19 +33,18 @@ export function groupCartByStore(items: CartLine[]): GroupCartResult {
   const linesByStore: Record<string, CartLine[]> = {};
 
   for (const line of items) {
-    const storeId = line.product.storeId as string;
+    const storeId = line.product.storeId;
 
-    // Product.price is pre-divided by NGN_RATE (see catalogue-adapter.ts)
-    // so cart-context's USD-flavored math displays the right Naira amount —
-    // reverse that here to recover the real price_kobo the backend expects.
-    const priceKobo = Math.round(line.product.price * NGN_RATE * 100);
-
+    // The server prices every line itself: a plain line must carry the
+    // product's current price, a deal line the offer's agreed price plus its
+    // offer_id. Anything else is refused with a message checkout shows.
     const item: CheckoutOrderItem = {
       product_id: line.product.id,
       name: line.product.name,
       image_url: line.product.images?.[0],
       quantity: line.qty,
-      price_kobo: priceKobo,
+      price_kobo: lineUnitKobo(line),
+      ...(line.deal ? { offer_id: line.deal.offerId } : {}),
     };
 
     const existing = stores.get(storeId);

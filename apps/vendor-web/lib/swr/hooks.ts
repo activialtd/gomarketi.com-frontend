@@ -40,6 +40,12 @@ import {
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { ROUTES } from "@/lib/config/routes";
+import {
+  offersApi,
+  wasRecentOwnAction,
+  nairaWhole,
+  type OfferTab,
+} from "@/lib/api/offers";
 
 // ── Token helper ──────────────────────────────────────────────────────────────
 
@@ -108,6 +114,38 @@ export function useAbandonedCarts() {
     () => ordersApi.listAbandonedCarts({ per_page: 100 }, tok()),
     { revalidateOnFocus: false, dedupingInterval: 120_000 } // 2 min
   );
+}
+
+// ── Offers (negotiable pricing) ───────────────────────────────────────────────
+
+/** One inbox tab. Every response also carries the counts for all four tabs. */
+export function useOffers(status: OfferTab) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useSWR(
+    accessToken ? `offers:${status}` : null,
+    () => offersApi.list({ status, per_page: 50 }, tok()),
+    { revalidateOnFocus: false, dedupingInterval: 30_000 } // WS drives updates
+  );
+}
+
+/**
+ * Just the tab counts, for the nav badge and the Orders page link. Asks for a
+ * single row so the badge does not pull a whole inbox on every page.
+ */
+export function useOfferCounts(enabled = true) {
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const { data } = useSWR(
+    accessToken && enabled ? "offers:counts" : null,
+    () => offersApi.list({ status: "pending", per_page: 1 }, tok()),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+      // Until the orders service ships offers this is a 404 — a missing badge
+      // is fine, a retry loop on every page is not.
+      shouldRetryOnError: false,
+    }
+  );
+  return data?.counts;
 }
 
 // ── Customers ─────────────────────────────────────────────────────────────────
@@ -273,6 +311,7 @@ export const invalidate = {
   campaigns: () => mutate("campaigns"),
   paymentGateways: () => mutate("payment-gateways"),
   staff: () => mutate("staff"),
+  offers: () => mutate((key: string) => key?.startsWith("offers"), undefined, { revalidate: true }),
 };
 
 // ── WebSocket real-time events ──────────────────────────────────────────────
@@ -284,6 +323,19 @@ const ORDER_STATUS_TITLES: Record<string, string> = {
   shipped: "Order dispatched",
   delivered: "Order delivered — payment released",
   cancelled: "Order cancelled",
+};
+
+/**
+ * What an offer_updated means to the vendor when they did not cause it. The
+ * event carries only the new status, so the wording stays general.
+ */
+const OFFER_STATUS_COPY: Record<string, { title: string; body: string; silent?: boolean }> = {
+  pending: { title: "A buyer came back with a new offer", body: "They answered your counter — it's your move." },
+  accepted: { title: "Deal agreed", body: "The buyer can check out at the agreed price now." },
+  declined: { title: "A buyer declined your counter", body: "The negotiation is closed.", silent: true },
+  withdrawn: { title: "A buyer withdrew their offer", body: "The negotiation is closed.", silent: true },
+  expired: { title: "An offer expired", body: "Nobody moved within 48 hours.", silent: true },
+  redeemed: { title: "A negotiated deal was paid for", body: "It's in your orders now.", silent: true },
 };
 
 // The backend only ever implemented GET /v1/orders/ws (gorilla/websocket) —
@@ -334,6 +386,7 @@ export function useOrderEvents() {
       invalidate.orders();
       invalidate.wallet();
       invalidate.analytics();
+      invalidate.offers();
     }, WS_FALLBACK_INTERVAL);
   }, []);
 
@@ -400,6 +453,47 @@ export function useOrderEvents() {
               body: data?.order_id ? `Order #${data.order_id.slice(0, 8).toUpperCase()}` : undefined,
               href: ROUTES.MERCHANT.ORDERS,
               silent: !loud,
+            });
+          }
+          break;
+        }
+        case "offer_created": {
+          invalidate.offers();
+          const data = msg.data as
+            | { product_name?: string; amount_kobo?: number; status?: string }
+            | undefined;
+          const amount = typeof data?.amount_kobo === "number" ? nairaWhole(data.amount_kobo) : null;
+          const on = data?.product_name ? ` on ${data.product_name}` : "";
+          // An offer at or above the floor arrives already accepted — the
+          // vendor has nothing to decide, but a sale is on its way.
+          const instant = data?.status === "accepted";
+          notify({
+            kind: "offer",
+            title: instant
+              ? `Instant deal${amount ? `: ${amount}` : ""}${on}`
+              : `New offer${amount ? `: ${amount}` : ""}${on}`,
+            body: instant
+              ? "It cleared your lowest price, so it was accepted automatically."
+              : "Accept, counter or decline before it expires.",
+            href: ROUTES.MERCHANT.OFFERS,
+          });
+          break;
+        }
+        case "offer_updated": {
+          invalidate.offers();
+          const data = msg.data as { offer_id?: string; status?: string } | undefined;
+          const status = data?.status;
+          // The vendor's own accept/counter/decline comes straight back here;
+          // a notification for your own click is noise.
+          if (!status || (data?.offer_id && wasRecentOwnAction(data.offer_id))) break;
+          const copy = OFFER_STATUS_COPY[status];
+          if (copy) {
+            notify({
+              kind: "offer",
+              title: copy.title,
+              body: copy.body,
+              href: ROUTES.MERCHANT.OFFERS,
+              silent: copy.silent,
             });
           }
           break;

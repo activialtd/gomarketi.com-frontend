@@ -2,8 +2,9 @@ import React from "react";
 import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { type SharedValue } from "react-native-reanimated";
-import { Product } from "../../lib/mock-products";
-import { formatNaira } from "../../lib/cart-context";
+import { Product } from "../../lib/types";
+import { formatKobo } from "../../lib/order-status";
+import { NegotiableBadge } from "./NegotiableBadge";
 import { color, tint, type, space } from "../../theme/tokens";
 import { ITEM_WIDTH, ITEM_GAP, ITEM_SIZE, useCoverflowScroll, useCoverflowItemStyle } from "./coverflow-scroll";
 
@@ -89,8 +90,11 @@ function CoverflowCard({
           <Text numberOfLines={1} style={[type.meta, { marginTop: 2 }]}>
             {product.vendor}
           </Text>
+          <View style={{ marginTop: 6 }}>
+            <NegotiableBadge negotiable={product.isNegotiable} />
+          </View>
           <View style={s.row}>
-            <Text style={s.price}>{formatNaira(product.price)}</Text>
+            <Text style={s.price}>{formatKobo(product.priceKobo)}</Text>
             <Pressable
               onPress={() => onAdd(product)}
               hitSlop={8}

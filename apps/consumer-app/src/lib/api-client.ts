@@ -438,6 +438,9 @@ export type CatalogueProduct = {
   images: string[];
   tags: string[];
   canonical_product_id?: string;
+  // The vendor takes offers on this product. Its floor (min_price_kobo) is
+  // only ever returned to the vendor, never on these public endpoints.
+  is_negotiable: boolean;
 };
 
 export type ProductPage = {
@@ -526,6 +529,11 @@ export type SearchAllResult = {
   relatedProducts: CatalogueProduct[];
   /** Query completions from product names and tags. */
   suggestions: string[];
+  /**
+   * The seller of every product and related product above, whether or not
+   * that store matched the query — `vendors` only holds the ones that did.
+   */
+  stores: VendorResult[];
 };
 
 // searchAll returns products and vendors for one query. `type` narrows it to
@@ -546,6 +554,7 @@ export async function searchAll(params: {
     vendors_has_more: boolean;
     related_products: CatalogueProduct[];
     suggestions: string[];
+    stores?: VendorResult[];
   }>("/v1/catalogue/public/search", {
     q: params.q,
     type: params.type,
@@ -562,6 +571,7 @@ export async function searchAll(params: {
     vendorsHasMore: resp.vendors_has_more,
     relatedProducts: resp.related_products ?? [],
     suggestions: resp.suggestions ?? [],
+    stores: resp.stores ?? [],
   };
 }
 
@@ -572,7 +582,11 @@ export type CheckoutOrderItem = {
   name: string;
   image_url?: string;
   quantity: number;
+  // For a line bought on a negotiated deal, price_kobo must equal the
+  // offer's agreed_kobo — the server prices every line itself and refuses a
+  // mismatch.
   price_kobo: number;
+  offer_id?: string;
 };
 
 export type CheckoutStoreOrder = {
@@ -748,4 +762,104 @@ export async function reportMissing(
     email,
     reason,
   });
+}
+
+// ── Offers ("Make an offer") ────────────────────────────────────────────────
+// A buyer offers below list price on a negotiable product. An offer at or
+// above the vendor's private floor is accepted on the spot; anything lower
+// goes to the vendor to accept, counter or decline. The floor is never sent
+// to a buyer client — every hint the app gives is computed from list price.
+
+// pending   — waiting on the vendor
+// countered — the vendor countered, waiting on the buyer
+// accepted  — deal agreed; buyable at agreed_kobo until expires_at
+// redeemed  — the deal was paid for
+// declined / expired / withdrawn — closed
+export type OfferStatus =
+  | "pending"
+  | "countered"
+  | "accepted"
+  | "declined"
+  | "expired"
+  | "redeemed"
+  | "withdrawn";
+
+export type OfferEvent = {
+  actor: "buyer" | "vendor" | "system";
+  action: "offer" | "counter" | "accept" | "decline" | "withdraw" | "expire" | "redeem";
+  amount_kobo?: number;
+  message?: string;
+  created_at: string;
+};
+
+export type Offer = {
+  id: string;
+  store_id: string;
+  store_slug?: string;
+  store_name?: string;
+  product_id: string;
+  product_name: string;
+  product_image?: string;
+  list_price_kobo: number;
+  offer_kobo: number;
+  counter_kobo?: number;
+  agreed_kobo?: number;
+  /** Units the deal covers (1–10) — a cart line on this deal can't exceed it. */
+  quantity: number;
+  status: OfferStatus;
+  auto_accepted: boolean;
+  /** A negotiation allows three buyer offers in total. */
+  buyer_offers_left: number;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  message?: string;
+  /** Open offers lapse 48h after the last move; an accepted deal holds 48h. */
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+  /** Oldest first — rendered as a conversation. */
+  events: OfferEvent[];
+};
+
+// createOffer sends a buyer's offer. Public on the backend (the web
+// storefront's guests use it too), so it goes out unauthenticated; the
+// signed-in app then finds it again by account email via getMyOffers, which
+// is why buyer_token — the guest's handle on the offer — isn't kept here.
+// 400/409 carry a human message: not negotiable, at/above list price, under
+// half of it, or an open offer on this product already exists.
+export async function createOffer(input: {
+  product_id: string;
+  amount_kobo: number;
+  quantity?: number;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  message?: string;
+}): Promise<{ offer: Offer; buyer_token: string }> {
+  return request<{ offer: Offer; buyer_token: string }>("/v1/orders/public/offers", input);
+}
+
+// getMyOffers lists every offer made with the signed-in account's email,
+// newest first.
+export async function getMyOffers(): Promise<{ offers: Offer[] }> {
+  return authorizedRequest<{ offers: Offer[] }>("/v1/orders/offers/mine");
+}
+
+export type OfferResponseAction = "accept" | "counter" | "decline" | "withdraw";
+
+// respondToMyOffer is the buyer's move on an open negotiation:
+//   accept / decline — only while countered (takes or refuses the vendor's counter)
+//   counter          — only while countered with buyer_offers_left > 0; must be
+//                      above the buyer's last offer and below the counter
+//   withdraw         — while pending or countered
+// Returns the updated offer (a counter that clears the floor comes back accepted).
+export async function respondToMyOffer(
+  offerId: string,
+  body: { action: OfferResponseAction; amount_kobo?: number; message?: string },
+): Promise<Offer> {
+  return authorizedRequest<Offer>(
+    `/v1/orders/offers/mine/${encodeURIComponent(offerId)}/respond`,
+    { method: "POST", body },
+  );
 }

@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Download, ShoppingBag, Check, Share2,
-  Shield, Zap, RotateCcw, ChevronRight,
+  Shield, Zap, RotateCcw, ChevronRight, Handshake,
 } from "lucide-react";
 import { useCart } from "@/lib/cartContext";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
 import { ProductCard } from "./EkoProductCard";
+import { PriceTypeBadge } from "@/components/storefront/offers/PriceTypeBadge";
+import { MakeOfferSheet } from "@/components/storefront/offers/MakeOfferSheet";
 
 function fmt(kobo: number) {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
@@ -18,6 +20,7 @@ function fmt(kobo: number) {
 export default function EkoProductDetails({
   product,
   related = [],
+  slug = "",
 }: {
   product: StorefrontProduct;
   related?: StorefrontProduct[];
@@ -28,12 +31,17 @@ export default function EkoProductDetails({
   const [activeImg, setActiveImg] = useState(0);
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
+  const [offerOpen, setOfferOpen] = useState(false);
+  const closeOffer = useCallback(() => setOfferOpen(false), []);
 
   // Digital products don't carry a real stock count (CreateProduct.tsx
   // defaults untracked-inventory items to 9999), so only physical products
   // are ever actually out of / low on stock.
   const isOutOfStock = !product.is_digital && product.stock <= 0;
   const isLowStock = !product.is_digital && product.stock > 0 && product.stock <= 5;
+  const canOffer = !!product.is_negotiable && !isOutOfStock;
+  // A deal covers 1–10 units; never more than the vendor actually has.
+  const offerMaxQty = product.is_digital ? 1 : Math.max(1, Math.min(10, product.stock));
 
   function handleAdd() {
     if (isOutOfStock) return;
@@ -141,6 +149,7 @@ export default function EkoProductDetails({
               <span style={{ fontSize: "34px", fontWeight: 900, color: "var(--store-primary, #1A7A42)", letterSpacing: "-0.5px" }}>
                 {fmt(product.price_kobo)}
               </span>
+              <PriceTypeBadge negotiable={product.is_negotiable} size="md" className="self-center" />
               {product.is_digital && (
                 <span style={{ fontSize: "13px", color: "#6b7280" }}>One-time purchase</span>
               )}
@@ -221,6 +230,24 @@ export default function EkoProductDetails({
                   : <><ShoppingBag style={{ width: "17px", height: "17px" }} /> Add to cart</>
                 }
               </button>
+
+              {canOffer && (
+                <>
+                  <button onClick={() => setOfferOpen(true)} style={{
+                    height: "54px", borderRadius: "14px",
+                    border: "2px dashed var(--store-primary, #1A7A42)",
+                    background: "var(--store-bg, #F0FAF3)",
+                    color: "var(--store-primary, #1A7A42)",
+                    fontSize: "15px", fontWeight: 800, cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                  }}>
+                    <Handshake style={{ width: "18px", height: "18px" }} /> Make an offer
+                  </button>
+                  <p style={{ fontSize: "12px", color: "#6b7280", textAlign: "center", margin: 0 }}>
+                    The seller is open to offers on this item.
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Trust badges */}
@@ -256,6 +283,10 @@ export default function EkoProductDetails({
           </div>
         </div>
       </div>
+
+      {offerOpen && (
+        <MakeOfferSheet product={product} slug={slug} maxQty={offerMaxQty} onClose={closeOffer} />
+      )}
 
       {/* Related products */}
       {related.length > 0 && (

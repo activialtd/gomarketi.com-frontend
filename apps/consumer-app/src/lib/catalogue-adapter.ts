@@ -1,14 +1,11 @@
 import { CatalogueProduct, StoreResult } from "./api-client";
-import { Product } from "./mock-products";
-import { NGN_RATE } from "./cart-context";
+import { Product } from "./types";
 import { categoryMeta } from "./store-category";
 
 /**
- * cart-context multiplies Product.price by NGN_RATE to display Naira
- * (it was built assuming a fake USD catalog). Real products are priced in
- * kobo, so the price handed to Product here is pre-divided by NGN_RATE to
- * compensate — the displayed Naira amount still comes out correct without
- * touching the cart's pricing model.
+ * Turns a catalogue product plus the store it belongs to into the app's
+ * Product. Prices stay in kobo end to end — formatKobo (order-status.ts) is
+ * the one place they become Naira on screen.
  */
 export function catalogueProductToAppProduct(p: CatalogueProduct, store: StoreResult): Product {
   const meta = categoryMeta(store.category);
@@ -20,12 +17,12 @@ export function catalogueProductToAppProduct(p: CatalogueProduct, store: StoreRe
     storeSlug: store.slug,
     storeName: store.name,
     category: store.category,
-    price: p.price_kobo / 100 / NGN_RATE,
-    rating: 4.5,
-    reviews: 0,
-    unit: "unit",
+    priceKobo: p.price_kobo,
+    // Always present per the API contract; coerced so a catalogue service
+    // that predates the field reads as "fixed price" rather than undefined.
+    isNegotiable: !!p.is_negotiable,
     description: p.description ?? "",
-    images: p.images,
+    images: p.images ?? [],
     icon: meta.icon,
     tint: meta.tint,
   };

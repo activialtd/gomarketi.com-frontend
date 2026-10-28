@@ -1,9 +1,7 @@
 import type { OrderResp, OrderStatus } from "./api-client";
 
-// Order totals are real kobo from the backend — NOT the mock catalog's
-// USD-equivalent unit that cart-context's formatNaira()/toNaira() convert
-// via NGN_RATE. Using that helper here would silently multiply real Naira
-// amounts by 1500. This is the correct, direct kobo -> Naira formatter.
+// Every amount in the app is integer kobo, straight from the API — this is
+// the one kobo -> Naira formatter for orders, cart, products and offers.
 export function formatKobo(kobo: number): string {
   return `₦${Math.round(kobo / 100).toLocaleString()}`;
 }

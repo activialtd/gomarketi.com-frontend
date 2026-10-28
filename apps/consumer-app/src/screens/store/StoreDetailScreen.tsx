@@ -21,7 +21,8 @@ import {
   CatalogueProduct,
 } from "../../lib/api-client";
 import { catalogueProductToAppProduct } from "../../lib/catalogue-adapter";
-import { Product } from "../../lib/mock-products";
+import { Product } from "../../lib/types";
+import { LoadError } from "../../components/ui/LoadError";
 import { useCart } from "../../lib/cart-context";
 import { useNav } from "../../navigation/nav-context";
 import { usePaginatedList } from "../../hooks/usePaginatedList";
@@ -115,6 +116,8 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
     loadingMore,
     hasMore,
     loadMore,
+    error,
+    retry,
   } = usePaginatedList<Product>(fetcher, PAGE_SIZE, [store.id]);
 
   const availableCategories = useMemo(() => {
@@ -125,10 +128,9 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       if (activeCategory && p.category !== activeCategory) return false;
-      if (
-        activePrice &&
-        (p.price < activePrice.min || p.price >= activePrice.max)
-      )
+      // The filter bands are in Naira; prices are kobo.
+      const naira = p.priceKobo / 100;
+      if (activePrice && (naira < activePrice.min || naira >= activePrice.max))
         return false;
       return true;
     });
@@ -210,6 +212,12 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
         <View style={s.coverflowWrap}>
           {loading ? (
             <CoverflowSkeleton />
+          ) : error ? (
+            <LoadError
+              title="Couldn't load this store's products"
+              message={error}
+              onRetry={retry}
+            />
           ) : filteredProducts.length === 0 ? (
             <View style={s.empty}>
               <Text style={[type.label, { fontFamily: "Jakarta_600" }]}>
@@ -240,7 +248,7 @@ export function StoreDetailScreen({ store }: { store: StoreResult }) {
               <ProductCoverflow
                 products={filteredProducts}
                 onAdd={(p) => add(p)}
-                onOpen={(p) => push("product", { productId: p.id, product: p })}
+                onOpen={(p) => push("product", { product: p })}
                 onEndReached={hasMore && !isFiltering ? loadMore : undefined}
               />
               {loadingMore && (

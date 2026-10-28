@@ -9,6 +9,7 @@ import { useCart, type CustomerInfo } from "@/lib/cartContext";
 import {
   ApiError,
   ordersApi,
+  type CreateOrderItem,
   type CreateOrderReq,
   type DeliveryOptionResp,
   type OrderResp,
@@ -191,6 +192,19 @@ export type CheckoutProps = {
   deliveryOptions?: DeliveryOptionResp[];
 };
 
+// A line may carry the accepted offer it was priced by. The orders service
+// checks offer_id against the agreed price, quantity and email, and prices
+// every other line from the catalogue itself.
+type CheckoutOrderItem = CreateOrderItem & { offer_id?: string };
+
+// The place call answers with the order it created. Read it through this so
+// an envelope of several orders (as /checkout returns) is charged in full
+// too, rather than for the first order only.
+function placedOrders(resp: OrderResp | { orders?: OrderResp[] }): OrderResp[] {
+  if ("orders" in resp && Array.isArray(resp.orders)) return resp.orders;
+  return [resp as OrderResp];
+}
+
 function describeError(err: unknown): string {
   if (err instanceof ApiError) {
     const fieldMsgs = err.fields?.map((f) => `${f.field}: ${f.message}`);
@@ -218,13 +232,18 @@ export function useCheckout({
   const [orderNumber, setOrderNumber] = useState("");
   const [showPaystack, setShowPaystack] = useState(false);
   // The reference the server minted for this order, charged against below.
-  const pendingRef = useRef<string>("");
+  // State rather than a ref: it is handed to the Paystack modal at render.
+  const [paymentRef, setPaymentRef] = useState("");
   // The awaiting-payment order Paystack is being opened for.
   const placedOrder = useRef<OrderResp | null>(null);
   const [pendingCustomer, setPendingCustomer] = useState<CustomerInfo | null>(
     null,
   );
   const [orderError, setOrderError] = useState("");
+  // What Paystack charges: the server's total for the orders it just created.
+  // The server prices every line itself, so this — not the sum on screen — is
+  // the amount confirm-payment will verify against.
+  const [chargeTotal, setChargeTotal] = useState(0);
   const allDigitalLines = lines.length > 0 && lines.every((l) => l.isDigital);
   const deliveryZones = toZones(deliveryOptions);
   // True when this store has not set up delivery at all — checkout is blocked
@@ -282,8 +301,9 @@ export function useCheckout({
 
   const storeReady = storeId != null;
 
-  // Items total computed from the exact integers sent to the backend, so the
-  // amount Paystack charges always equals the total the backend verifies.
+  // Items total computed from the exact integers sent to the backend. This is
+  // what the buyer is shown; Paystack is charged `chargeTotal`, the server's
+  // own total for the placed order, which these match unless a price moved.
   const unitKobo = (price: number) => Math.round(price);
   const subtotal = lines.reduce(
     (sum, l) => sum + unitKobo(l.unitPrice) * l.quantity,
@@ -294,7 +314,7 @@ export function useCheckout({
   const shipping = allDigital ? 0 : (deliveryZone?.feeKobo ?? 0);
   const chargedShipping = CHARGE_DELIVERY_AT_CHECKOUT ? shipping : 0;
   const deliveryPaidLater = !CHARGE_DELIVERY_AT_CHECKOUT && shipping > 0;
-  const total = subtotal + chargedShipping; // pass exactly this (kobo) to Paystack
+  const total = subtotal + chargedShipping; // shown on the Pay button
 
   // Resubmit an order whose payment went through but whose save failed on a
   // previous visit (failed request, closed tab, dropped network).
@@ -324,6 +344,35 @@ export function useCheckout({
       }
     }
 
+    // Negotiated lines: the deal only holds for the email it was agreed with
+    // and until it lapses. Both are re-checked on the server; checking here
+    // means the buyer hears it next to the email field, not as a refusal.
+    const dealLines = lines.filter((l) => l.offerId);
+    const typedEmail = data.email.trim().toLowerCase();
+    const wrongEmail = dealLines.find(
+      (l) => l.offerEmail && l.offerEmail.toLowerCase() !== typedEmail,
+    );
+    if (wrongEmail) {
+      form.setError(
+        "email",
+        {
+          message: `Your deal on ${wrongEmail.productName} was agreed for ${wrongEmail.offerEmail} — use that email, or remove the deal from your cart.`,
+        },
+        { shouldFocus: true },
+      );
+      return;
+    }
+    const lapsed = dealLines.find(
+      (l) => l.offerExpiresAt && new Date(l.offerExpiresAt).getTime() <= Date.now(),
+    );
+    if (lapsed) {
+      setOrderError(
+        `Your deal on ${lapsed.productName} has expired. Remove it from your cart — you can still buy it at the listed price.`,
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
     const customerInfo: CustomerInfo = { ...data };
     setCustomer(customerInfo);
     setPendingCustomer(customerInfo);
@@ -345,15 +394,34 @@ export function useCheckout({
           setOrderError("Store details are still loading. Try again in a moment.");
           return;
         }
-        const order = await ordersApi.placeOrder(payload);
+        const orders = placedOrders(await ordersApi.placeOrder(payload));
+        const order = orders[0];
+        const charge = orders.reduce((sum, o) => sum + (o.total_kobo ?? 0), 0);
+        if (!order || charge <= 0) {
+          setOrderError(
+            "We couldn't confirm your order total with the store. Nothing has been charged — please try again.",
+          );
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return;
+        }
         placedOrder.current = order;
-        pendingRef.current = order.payment_reference ?? "";
+        setPaymentRef(order.payment_reference ?? "");
+        setChargeTotal(charge);
         setShowPaystack(true);
       } catch (err) {
         console.error("placeOrder failed", err);
+        const msg = describeError(err);
+        // A 4xx is the store refusing the order for a reason the buyer can
+        // act on — a price that changed, a deal that lapsed — and the server
+        // says which. Lead with its words rather than burying them.
         setOrderError(
-          `We couldn't start your order (${describeError(err)}). Nothing has been charged — please try again.`,
+          err instanceof ApiError && err.status >= 400 && err.status < 500
+            ? `${msg}${/[.!?]$/.test(msg) ? "" : "."} Nothing has been charged.`
+            : `We couldn't start your order (${msg}). Nothing has been charged — please try again.`,
         );
+        // The banner sits at the top of the page; on a phone the buyer is at
+        // the bottom, pressing Pay, and would otherwise never see it.
+        window.scrollTo({ top: 0, behavior: "smooth" });
       } finally {
         setIsPlacing(false);
       }
@@ -402,13 +470,16 @@ export function useCheckout({
       customer_email: pendingCustomer.email,
       customer_phone: pendingCustomer.phone,
       delivery_address: addressParts.join(" | "),
-      items: lines.map((l) => ({
-        product_id: l.productId,
-        name: l.productName,
-        image_url: l.productImage,
-        quantity: l.quantity,
-        price_kobo: unitKobo(l.unitPrice),
-      })),
+      items: lines.map(
+        (l): CheckoutOrderItem => ({
+          product_id: l.productId,
+          name: l.productName,
+          image_url: l.productImage,
+          quantity: l.quantity,
+          price_kobo: unitKobo(l.unitPrice),
+          ...(l.offerId ? { offer_id: l.offerId } : {}),
+        }),
+      ),
       // For store-defined zones the server reads the price from its own
       // option row; delivery_fee_kobo is only used by stores with no options.
       delivery_option_id:
@@ -468,6 +539,7 @@ export function useCheckout({
     subtotal,
     shipping,
     total,
+    chargeTotal,
     allDigital,
     deliveryPaidLater,
     deliveryZone,
@@ -480,7 +552,7 @@ export function useCheckout({
     orderPlaced,
     orderNumber,
     showPaystack,
-    paymentRef: pendingRef.current,
+    paymentRef,
     pendingCustomer,
     orderError,
     setShowPaystack,

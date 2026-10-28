@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import {
   Search,
   Clock,
@@ -10,11 +11,13 @@ import {
   XCircle,
   ShoppingBag,
   Loader2,
+  HandCoins,
 } from "lucide-react";
 import { type OrderResp, type OrderStatus } from "@gomarket/api-client";
 import { OrderRow, StatCard } from "./helpers";
 import { fmtNaira } from "@gomarket/shared-utils";
-import { useOrders, invalidate } from "@/lib/swr/hooks";
+import { useOrders, useOfferCounts, invalidate } from "@/lib/swr/hooks";
+import { ROUTES } from "@/lib/config/routes";
 
 const PAGE_SIZE = 10;
 
@@ -25,6 +28,7 @@ export default function AllOrdersPage() {
   const [activeStatFilter, setActiveStatFilter] = useState<string | null>(null);
 
   const { data: ordersData, isLoading: loading, mutate } = useOrders();
+  const offerCounts = useOfferCounts();
   const orders: OrderResp[] = ordersData?.orders ?? [];
 
   function handleOrderUpdated(updated: OrderResp) {
@@ -100,6 +104,25 @@ export default function AllOrdersPage() {
             </span>
           )}
         </div>
+
+        {/* Offers that need an answer are orders waiting to happen — keep
+            them one click from here. */}
+        <Link
+          href={ROUTES.MERCHANT.OFFERS}
+          className="flex items-center gap-1.5 h-9 px-3.5 rounded-[8px] border text-[12px] font-semibold transition-colors hover:bg-[#F0FAF3]"
+          style={{ borderColor: "#e2e8f0", background: "#fff", color: "#374151" }}
+        >
+          <HandCoins className="w-3.5 h-3.5" style={{ color: "#ea580c" }} />
+          Offers
+          {!!offerCounts?.pending && (
+            <span
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+              style={{ background: "#fff7ed", color: "#c2410c" }}
+            >
+              {offerCounts.pending} to answer
+            </span>
+          )}
+        </Link>
       </div>
 
       <div className="px-6 lg:px-8 py-5 space-y-5">

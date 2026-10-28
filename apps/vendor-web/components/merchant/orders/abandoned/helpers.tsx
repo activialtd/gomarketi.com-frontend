@@ -4,26 +4,15 @@ import { useState } from "react";
 import { type AbandonedCartResp } from "@gomarket/api-client";
 import { fmtNaira } from "@gomarket/shared-utils";
 import { ChevronDown, Mail, MessageCircle, Package } from "lucide-react";
+import { whatsappLink } from "@/lib/whatsapp";
 
-/**
- * A wa.me link with the message already written, or null when the buyer left
- * no number.
- *
- * Numbers arrive in whatever shape the buyer typed — "0801 234 5678",
- * "+234 801...", or the "234..." the storefront normalises to — and a local
- * one passed through unchanged produces a link that opens to nothing.
- */
-function whatsappLink(phone: string | undefined, firstItem?: string): string | null {
-  const digits = (phone ?? "").replace(/\D/g, "");
-  if (!digits) return null;
-  let intl = digits;
-  if (digits.startsWith("0")) intl = "234" + digits.slice(1);
-  else if (!digits.startsWith("234") && digits.length === 10) intl = "234" + digits;
-  if (intl.length < 11) return null;
-
+/** The nudge a vendor sends a shopper who left mid-checkout. */
+function abandonedWhatsappLink(phone: string | undefined, firstItem?: string): string | null {
   const about = firstItem ? ` about the ${firstItem}` : "";
-  const text = `Hi! I saw you were checking out${about} but didn't finish. Can I help with anything?`;
-  return `https://wa.me/${intl}?text=${encodeURIComponent(text)}`;
+  return whatsappLink(
+    phone,
+    `Hi! I saw you were checking out${about} but didn't finish. Can I help with anything?`,
+  );
 }
 
 function timeAgo(iso: string) {
@@ -44,7 +33,7 @@ export function AbandonedRow({ cart }: { cart: AbandonedCartResp }) {
   // and a total does not tell them whether it was worth a phone call.
   const [open, setOpen] = useState(false);
   const itemCount = cart.items.reduce((n, i) => n + i.quantity, 0);
-  const wa = whatsappLink(cart.customer_phone, cart.items[0]?.name);
+  const wa = abandonedWhatsappLink(cart.customer_phone, cart.items[0]?.name);
 
   return (
     <div className="border-b last:border-0" style={{ borderColor: "#f1f5f9" }}>

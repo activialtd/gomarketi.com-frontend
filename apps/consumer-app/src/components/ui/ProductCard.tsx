@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, Pressable, Image, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Product } from "../../lib/mock-products";
-import { formatNaira } from "../../lib/cart-context";
+import { Product } from "../../lib/types";
+import { formatKobo } from "../../lib/order-status";
+import { NegotiableBadge } from "./NegotiableBadge";
 import { color, type, space, tint, HIT } from "../../theme/tokens";
 
 export function ProductCard({
@@ -49,11 +50,14 @@ export function ProductCard({
             {product.name}
           </Text>
           <Text numberOfLines={1} style={[type.meta, { marginTop: 2 }]}>
-            {product.vendor} · {product.rating.toFixed(1)}★
+            {product.vendor}
           </Text>
+          <View style={{ marginTop: 6 }}>
+            <NegotiableBadge negotiable={product.isNegotiable} />
+          </View>
 
           <View style={s.row}>
-            <Text style={s.price}>{formatNaira(product.price)}</Text>
+            <Text style={s.price}>{formatKobo(product.priceKobo)}</Text>
             <Pressable
               onPress={() => onAdd?.(product)}
               hitSlop={HIT}

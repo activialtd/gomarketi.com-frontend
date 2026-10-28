@@ -5,34 +5,39 @@ import React, {
   useState,
   ReactNode,
 } from "react";
-import { Product } from "./mock-products";
+import { Product } from "./types";
 
-export type CartLine = {
-  key: string; // product.id | variant | size
-  product: Product;
-  qty: number;
-  variant?: string;
-  size?: string;
+/**
+ * A negotiated deal a cart line is bought on. The server checks all three at
+ * checkout: the offer must still be accepted, price_kobo must equal the
+ * agreed unit price, and the quantity can't exceed what the deal covers.
+ */
+export type CartDeal = {
+  offerId: string;
+  unitKobo: number;
+  quantity: number;
 };
 
-/** TODO(backend): real pricing/currency from API. Display-only NGN rate. */
-export const NGN_RATE = 1500;
-export const toNaira = (usd: number) => Math.round(usd * NGN_RATE);
-export const formatNaira = (usd: number) => `₦${toNaira(usd).toLocaleString()}`;
+export type CartLine = {
+  key: string; // product.id | offer id
+  product: Product;
+  qty: number;
+  deal?: CartDeal;
+};
 
-const lineKey = (p: Product, variant?: string, size?: string) =>
-  [p.id, variant ?? "", size ?? ""].join("|");
+/** What one unit of this line costs — the agreed price on a deal line. */
+export const lineUnitKobo = (line: CartLine) =>
+  line.deal ? line.deal.unitKobo : line.product.priceKobo;
+
+const lineKey = (p: Product, deal?: CartDeal) =>
+  [p.id, deal?.offerId ?? ""].join("|");
 
 type CartState = {
   items: CartLine[];
   count: number;
-  subtotalUsd: number;
   /** Goods only. Shipping is added at checkout, once an area is chosen. */
-  totalUsd: number;
-  add: (
-    p: Product,
-    opts?: { variant?: string; size?: string; qty?: number },
-  ) => void;
+  subtotalKobo: number;
+  add: (p: Product, opts?: { qty?: number; deal?: CartDeal }) => void;
   remove: (key: string) => void;
   setQty: (key: string, qty: number) => void;
   clear: () => void;
@@ -44,22 +49,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartLine[]>([]);
 
   const add: CartState["add"] = (p, opts) => {
-    const key = lineKey(p, opts?.variant, opts?.size);
+    const deal = opts?.deal;
+    const key = lineKey(p, deal);
     const addQty = opts?.qty ?? 1;
     setItems((cur) => {
+      // A deal line holds exactly the deal's quantity — adding it again
+      // replaces it rather than stacking past what the vendor agreed to.
+      if (deal) {
+        const line: CartLine = { key, product: p, qty: deal.quantity, deal };
+        return cur.some((i) => i.key === key)
+          ? cur.map((i) => (i.key === key ? line : i))
+          : [...cur, line];
+      }
       const hit = cur.find((i) => i.key === key);
       return hit
         ? cur.map((i) => (i.key === key ? { ...i, qty: i.qty + addQty } : i))
-        : [
-            ...cur,
-            {
-              key,
-              product: p,
-              qty: addQty,
-              variant: opts?.variant,
-              size: opts?.size,
-            },
-          ];
+        : [...cur, { key, product: p, qty: addQty }];
     });
   };
 
@@ -69,22 +74,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const setQty = (key: string, qty: number) =>
     qty <= 0
       ? remove(key)
-      : setItems((cur) => cur.map((i) => (i.key === key ? { ...i, qty } : i)));
+      : setItems((cur) =>
+          // Quantity on a deal line is locked to the deal.
+          cur.map((i) => (i.key === key && !i.deal ? { ...i, qty } : i)),
+        );
 
   const clear = () => setItems([]);
 
   const value = useMemo(() => {
     const count = items.reduce((n, i) => n + i.qty, 0);
-    const subtotalUsd = items.reduce((n, i) => n + i.product.price * i.qty, 0);
+    // The cart knows what the goods cost and nothing else. Shipping is the
+    // vendor's own price for a chosen area and is only known at checkout —
+    // a placeholder fee here was once charged through Paystack without the
+    // server ever agreeing to it.
+    const subtotalKobo = items.reduce((n, i) => n + lineUnitKobo(i) * i.qty, 0);
     return {
       items,
       count,
-      subtotalUsd,
-      // The cart knows what the goods cost and nothing else. Shipping is the
-      // vendor's own price for a chosen area and is only known at checkout,
-      // so totalUsd is the goods total — a placeholder fee here was being
-      // charged through Paystack without the server ever agreeing to it.
-      totalUsd: subtotalUsd,
+      subtotalKobo,
       add,
       remove,
       setQty,

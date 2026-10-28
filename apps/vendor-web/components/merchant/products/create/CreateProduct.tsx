@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Star, ArrowLeft, HelpCircle } from "lucide-react";
+import { Loader2, Star, ArrowLeft, HelpCircle, HandCoins } from "lucide-react";
 import {
   Input,
   Select,
@@ -28,6 +28,8 @@ import {
 } from "@gomarket/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import CanonicalProductTypeahead from "./CanonicalProductTypeahead";
+import { NegotiableRange } from "./NegotiableRange";
+import { type NegotiablePricing } from "@/lib/api/offers";
 import { invalidate, useSubscription, useProducts } from "@/lib/swr/hooks";
 import { UpgradeBanner } from "@/components/common/PlanGate";
 
@@ -77,12 +79,14 @@ export default function CreateProductPage({
     control,
     watch,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<CreateProductFormValues>({
     resolver: zodResolver(createProductSchema) as any,
     defaultValues: {
       status: "draft",
       featured: false,
+      isNegotiable: false,
     },
   });
 
@@ -92,7 +96,12 @@ export default function CreateProductPage({
     (async () => {
       let p;
       try {
-        p = await catalogueApi.getProduct(productId, accessToken);
+        // The vendor's own endpoint also returns the negotiation fields, which
+      // the shared ProductResp type does not know about yet.
+      p = (await catalogueApi.getProduct(productId, accessToken)) as Awaited<
+        ReturnType<typeof catalogueApi.getProduct>
+      > &
+        NegotiablePricing;
       } catch (err) {
         if (!cancelled) {
           const message =
@@ -119,6 +128,8 @@ export default function CreateProductPage({
           sku: p.sku ?? "",
           status: p.is_published ? "active" : "draft",
           featured: false,
+          isNegotiable: !!p.is_negotiable,
+          minPrice: p.min_price_kobo ? p.min_price_kobo / 100 : undefined,
         });
       } catch (err) {
         // eslint-disable-next-line no-console
@@ -140,6 +151,9 @@ export default function CreateProductPage({
     register("description");
 
   const nameVal = watch("name") ?? "";
+  const isNegotiable = !!watch("isNegotiable");
+  const priceVal = Number(watch("price")) || 0;
+  const minPriceVal = Number(watch("minPrice")) || 0;
 
   async function onSubmit(
     data: CreateProductFormValues,
@@ -171,6 +185,14 @@ export default function CreateProductPage({
               .filter(Boolean)
           : [],
         canonical_product_id: canonicalProduct?.id ?? undefined,
+        // Turning negotiation off sends false on its own — the catalogue
+        // clears the floor itself.
+        ...(data.isNegotiable
+          ? {
+              is_negotiable: true,
+              min_price_kobo: Math.round((data.minPrice ?? 0) * 100),
+            }
+          : { is_negotiable: false }),
       };
 
       const productIdForPublish = isEditing
@@ -462,6 +484,80 @@ export default function CreateProductPage({
                     {...register("compareAtPrice")}
                   />
                 </Field>
+              </div>
+
+              {/* Negotiable pricing — Jiji-style "Make an offer" */}
+              <div
+                className="mt-5 pt-4 border-t space-y-4"
+                style={{ borderColor: "#f1f5f9" }}
+              >
+                <Controller
+                  control={control}
+                  name="isNegotiable"
+                  render={({ field }) => (
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-2.5 min-w-0">
+                        <div
+                          className="w-8 h-8 rounded-[8px] flex items-center justify-center shrink-0"
+                          style={{ background: "#fff7ed" }}
+                        >
+                          <HandCoins
+                            className="w-4 h-4"
+                            style={{ color: "#ea580c" }}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p
+                            className="text-[13px] font-bold"
+                            style={{ color: "#1C1C1C" }}
+                          >
+                            Price is negotiable
+                          </p>
+                          <p className="text-[11px]" style={{ color: "#6b7280" }}>
+                            Let buyers make you an offer. You set the lowest
+                            price you&apos;ll take.
+                          </p>
+                        </div>
+                      </div>
+                      <Toggle
+                        checked={!!field.value}
+                        onChange={field.onChange}
+                      />
+                    </div>
+                  )}
+                />
+
+                {isNegotiable && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Field
+                        label="Lowest price you'll accept (₦)"
+                        required
+                        error={errors.minPrice?.message}
+                        hint="Offers at or above this are accepted instantly."
+                      >
+                        <Input
+                          type="number"
+                          min={0}
+                          placeholder={
+                            priceVal ? String(Math.round(priceVal * 0.9)) : "0.00"
+                          }
+                          {...register("minPrice")}
+                        />
+                      </Field>
+                    </div>
+                    <NegotiableRange
+                      price={priceVal}
+                      floor={minPriceVal}
+                      onPickFloor={(naira) =>
+                        setValue("minPrice", naira, {
+                          shouldValidate: !!errors.minPrice,
+                          shouldDirty: true,
+                        })
+                      }
+                    />
+                  </div>
+                )}
               </div>
             </Section>
 

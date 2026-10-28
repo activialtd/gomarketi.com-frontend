@@ -27,6 +27,7 @@ export const ROUTES = {
     // Orders
     ORDERS: "/merchant/orders",
     ABANDONED: "/merchant/orders/abandoned",
+    OFFERS: "/merchant/orders/offers",
 
     // CRM
     CUSTOMERS: "/merchant/customers",

@@ -1,5 +1,5 @@
 // src/screens/notifications/NotificationsScreen.tsx
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -9,7 +9,13 @@ import { color, type, space } from "../../theme/tokens";
 
 /** Derived from order events for now. TODO(backend): push via expo-notifications. */
 export function NotificationsScreen() {
-  const { orders } = useOrders();
+  const { orders, refresh } = useOrders();
+
+  // The orders list is only filled once something fetches it — without this,
+  // opening Alerts before Orders showed "Nothing yet" for a buyer with orders.
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const items = orders.map((o) => ({
     id: o.id,

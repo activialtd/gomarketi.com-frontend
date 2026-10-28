@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Download } from "lucide-react";
 import type { StorefrontProduct } from "@/app/storefront/[slug]/page";
+import { PriceTypeBadge } from "@/components/storefront/offers/PriceTypeBadge";
 
 function fmtPrice(kobo: number): string {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -63,11 +64,12 @@ export function LagosProductCard({
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-        {/* Price tag */}
-        <div className="absolute right-3 top-3">
+        {/* Price tag — with whether it is open to offers right under it */}
+        <div className="absolute right-3 top-3 flex flex-col items-end gap-1">
           <span className="bg-[#F7F4EE] px-2.5 py-1 text-[11px] font-bold tracking-tight text-[#0E0E0E]">
             {fmtPrice(product.price_kobo)}
           </span>
+          <PriceTypeBadge negotiable={product.is_negotiable} tone="overlay" square />
         </div>
 
         {product.is_digital && (

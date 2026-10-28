@@ -1,7 +1,7 @@
 import React from "react";
 import { View, ActivityIndicator, FlatList, StyleSheet } from "react-native";
 import { ProductCard } from "./ProductCard";
-import { Product } from "../../lib/mock-products";
+import { Product } from "../../lib/types";
 import { color, space } from "../../theme/tokens";
 
 /**

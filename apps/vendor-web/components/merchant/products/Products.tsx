@@ -15,6 +15,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { type Product } from "@/lib/data/products";
+import { type NegotiablePricing } from "@/lib/api/offers";
 import { ROUTES } from "@/lib/config/routes";
 import { useProducts, useCategories, useCollections, useMyStore, invalidate } from "@/lib/swr/hooks";
 import {
@@ -51,7 +52,13 @@ export default function ProductsPage() {
 
   const rawCollections = collectionsResp?.collections ?? [];
 
-  const products: Product[] = (productsResp?.products ?? []).map((p) => ({
+  // The vendor's own list carries the negotiation fields; the shared
+  // ProductResp type does not know about them yet.
+  const products: Product[] = (
+    (productsResp?.products ?? []) as Array<
+      NonNullable<typeof productsResp>["products"][number] & NegotiablePricing
+    >
+  ).map((p) => ({
     id: p.id,
     name: p.name,
     slug: p.id,
@@ -68,6 +75,8 @@ export default function ProductsPage() {
     featured: false,
     createdAt: p.created_at,
     tags: p.tags ?? [],
+    isNegotiable: !!p.is_negotiable,
+    minPrice: p.min_price_kobo ? p.min_price_kobo / 100 : undefined,
   }));
 
   const toggleSelect = (id: string) => {

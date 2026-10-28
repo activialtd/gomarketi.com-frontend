@@ -14,6 +14,7 @@ import {
   Layers,
   Plus,
   Mail,
+  HandCoins,
 } from "lucide-react";
 import { ROUTES } from "./routes";
 import type { StaffRole } from "@/store/useAuthStore";
@@ -26,6 +27,11 @@ export type NavItem = {
   badgeVariant?: "green" | "red" | "gray";
   exact?: boolean;
   children?: NavItem[];
+  /**
+   * A count fetched at runtime rather than a fixed label — the Sidebar knows
+   * how to fill each one. Shown only while it is above zero.
+   */
+  liveBadge?: "offers_pending";
   /** Staff roles that may see this item. Omit = vendor-only (hidden from all staff). */
   allowedRoles?: StaffRole[];
 };
@@ -89,6 +95,12 @@ export const NAV: NavSection[] = [
             label: "Abandoned",
             href: ROUTES.MERCHANT.ABANDONED,
             icon: RotateCcw,
+          },
+          {
+            label: "Offers",
+            href: ROUTES.MERCHANT.OFFERS,
+            icon: HandCoins,
+            liveBadge: "offers_pending",
           },
         ],
       },
