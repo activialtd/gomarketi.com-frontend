@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { adminApi, type AdminListParams, type AdminErrorListParams } from "@gomarket/api-client";
+import { adminApi, type AdminListParams, type AdminErrorListParams } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 
 function tok(): string {

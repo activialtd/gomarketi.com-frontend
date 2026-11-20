@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { reportClientError } from '@gomarket/api-client';
+import { reportClientError } from '@wojalo/api-client';
 
 // Self-built crash capture — no Sentry/new dependency, reports into the same
 // admin-api error_events queue the backend writes to. This is the customer-

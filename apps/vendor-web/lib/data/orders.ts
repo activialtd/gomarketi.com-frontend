@@ -3,7 +3,7 @@ import {
   PaymentMethod,
   PaymentStatus,
   ShippingMethod,
-} from "@gomarket/shared-types";
+} from "@wojalo/shared-types";
 
 export const RECENT_ORDERS = [
   {

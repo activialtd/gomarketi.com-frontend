@@ -21,8 +21,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@gomarket/ui";
-import { storefrontApi, authApi, ApiError } from "@gomarket/api-client";
+} from "@wojalo/ui";
+import { storefrontApi, authApi, ApiError } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSubscription } from "@/lib/swr/hooks";
 import { ROUTES } from "@/lib/config/routes";
@@ -30,7 +30,7 @@ import {
   storeSetupSchema,
   type StoreSetupFormValues,
 } from "@/lib/validations/schemas";
-import { toSlug } from "@gomarket/shared-utils";
+import { toSlug } from "@wojalo/shared-utils";
 import {
   Field,
   STORE_CATEGORIES,
@@ -429,7 +429,7 @@ export function StoreSetupForm() {
           >
             {[
               "Higher daily transaction limits",
-              "GoMarket Verified badge on your store",
+              "Wojalo Verified badge on your store",
               "Faster payout processing",
             ].map((b) => (
               <div key={b} className="flex items-center gap-2.5">
@@ -681,7 +681,7 @@ export function StoreSetupForm() {
                         color: "#6b7280",
                       }}
                     >
-                      .gomarketi.com
+                      .wojalo.com
                     </div>
                   </div>
 
@@ -690,7 +690,7 @@ export function StoreSetupForm() {
                       className="mt-1.5 text-[11px] font-medium flex items-center gap-1"
                       style={{ color: BRAND }}
                     >
-                      <Check className="w-3 h-3" /> {slugVal}.gomarketi.com is
+                      <Check className="w-3 h-3" /> {slugVal}.wojalo.com is
                       available
                     </p>
                   )}

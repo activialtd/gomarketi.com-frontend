@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { reportClientError } from "@gomarket/api-client";
+import { reportClientError } from "@wojalo/api-client";
 
 interface Props {
   amount: number; // kobo
@@ -103,7 +103,7 @@ export function PaystackModal({ amount, email, storeName, publicKey, reference, 
         // before payment and the charge itself share one reference. Falls
         // back to generating one for any caller that does not pass it.
         const ref =
-          reference || `GMK_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          reference || `WJL_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         window.PaystackPop.setup({
           key,
           email,

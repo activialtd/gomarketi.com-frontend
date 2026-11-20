@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { AdminResp, AdminRole } from "@gomarket/api-client";
+import type { AdminResp, AdminRole } from "@wojalo/api-client";
 
 // admin-api issues a single access token with no refresh-token flow yet
 // (Phase 1 scope — see services/admin-api/src/auth) — persisting it directly

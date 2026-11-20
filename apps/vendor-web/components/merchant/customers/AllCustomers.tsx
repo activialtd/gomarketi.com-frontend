@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Search, Users, TrendingUp, ArrowUpDown, Loader2 } from "lucide-react";
-import { type CustomerResp } from "@gomarket/api-client";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { type CustomerResp } from "@wojalo/api-client";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { CustomerDrawer, CustomerRow } from "./helpers";
 import { useCustomers } from "@/lib/swr/hooks";
 

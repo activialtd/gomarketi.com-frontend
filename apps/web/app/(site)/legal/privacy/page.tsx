@@ -1,9 +1,9 @@
 import { LegalLayout, PolicySection } from "@/components/LegalSection";
 
 export const metadata = {
-  title: "Privacy Policy · GoMarketi",
+  title: "Privacy Policy · Wojalo",
   description:
-    "How GoMarketi collects, uses, stores, and protects your personal data.",
+    "How Wojalo collects, uses, stores, and protects your personal data.",
 };
 
 export default function PrivacyPage() {
@@ -27,7 +27,7 @@ export default function PrivacyPage() {
       ]}
     >
       <PolicySection id="collect" title="What we collect">
-        <p>To operate GoMarketi we collect the following categories of data:</p>
+        <p>To operate Wojalo we collect the following categories of data:</p>
         <ul>
           <li>
             <strong>Account information:</strong> name, email, phone number,
@@ -66,7 +66,7 @@ export default function PrivacyPage() {
           <li>
             To send order updates, receipts, and important service notices
           </li>
-          <li>To improve GoMarketi — analytics, bug fixes, and new features</li>
+          <li>To improve Wojalo — analytics, bug fixes, and new features</li>
           <li>To detect and prevent fraud and abuse of the platform</li>
           <li>
             To send promotional messages, only if you've opted in (you can opt
@@ -76,7 +76,7 @@ export default function PrivacyPage() {
       </PolicySection>
 
       <PolicySection id="share" title="Who we share it with">
-        <p>We share personal data only when necessary to operate GoMarketi:</p>
+        <p>We share personal data only when necessary to operate Wojalo:</p>
         <ul>
           <li>
             <strong>Vendors</strong> receive your name, delivery address, phone
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
         </ul>
         <p>
           To exercise any of these rights, contact us at{" "}
-          <a href="mailto:privacy@gomarketi.com">privacy@gomarketi.com</a>. We
+          <a href="mailto:privacy@wojalo.com">privacy@wojalo.com</a>. We
           respond within 30 days.
         </p>
       </PolicySection>
@@ -164,7 +164,7 @@ export default function PrivacyPage() {
 
       <PolicySection id="children" title="Children">
         <p>
-          GoMarketi is not intended for anyone under 16. We don't knowingly
+          Wojalo is not intended for anyone under 16. We don't knowingly
           collect data from children under 16. If you believe a child has
           provided us data, contact us and we'll delete it.
         </p>
@@ -172,7 +172,7 @@ export default function PrivacyPage() {
 
       <PolicySection id="changes" title="Changes to this policy">
         <p>
-          We may update this policy as GoMarketi evolves or as regulations
+          We may update this policy as Wojalo evolves or as regulations
           change. The "Last updated" date at the top of this page reflects the
           most recent change. Material changes will be communicated by email and
           in-app notice before they take effect.
@@ -182,9 +182,9 @@ export default function PrivacyPage() {
       <PolicySection id="contact" title="Contact us">
         <p>
           For any privacy question, contact our Data Protection Officer at{" "}
-          <a href="mailto:privacy@gomarketi.com">privacy@gomarketi.com</a>. For
+          <a href="mailto:privacy@wojalo.com">privacy@wojalo.com</a>. For
           general support, reach us through the app or at{" "}
-          <a href="mailto:support@gomarketi.com">support@gomarketi.com</a>.
+          <a href="mailto:support@wojalo.com">support@wojalo.com</a>.
         </p>
       </PolicySection>
     </LegalLayout>

@@ -1,7 +1,7 @@
 /**
  * Negotiable pricing ("Make an offer") — the vendor side of the API.
  *
- * Lives here rather than in @gomarket/api-client for now: that package's
+ * Lives here rather than in @wojalo/api-client for now: that package's
  * request() wrapper is private, so this module carries a small copy of it
  * (same base URL, same Bearer header, same one-shot refresh on 401 through the
  * shared refreshOnce() guard). Once the shared client grows an offers API this
@@ -10,7 +10,7 @@
  * All money is integer kobo.
  */
 
-import { ApiError, refreshOnce } from "@gomarket/api-client";
+import { ApiError, refreshOnce } from "@wojalo/api-client";
 
 // Must match the api-client's own fallback, or the two would talk to
 // different gateways when NEXT_PUBLIC_API_URL is unset.
@@ -100,7 +100,7 @@ export interface RespondToOfferReq {
   message?: string;
 }
 
-// ── Fetch wrapper (mirrors @gomarket/api-client's request) ────────────────────
+// ── Fetch wrapper (mirrors @wojalo/api-client's request) ────────────────────
 
 async function request<T>(path: string, init: RequestInit, accessToken: string): Promise<T> {
   const send = (token: string) =>

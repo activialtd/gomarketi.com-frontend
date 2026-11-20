@@ -59,7 +59,7 @@ export function SettingsScreen() {
         </View>
         {!!version && (
           <Text style={[type.meta, { textAlign: "center", marginTop: space.xl }]}>
-            GoMarketi · v{version}
+            Wojalo · v{version}
           </Text>
         )}
       </View>

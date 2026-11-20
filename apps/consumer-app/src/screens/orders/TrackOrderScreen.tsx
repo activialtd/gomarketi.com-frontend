@@ -12,7 +12,7 @@ const VENDOR_STATUS_LABEL: Record<string, string> = {
   awaiting_payment: "Awaiting payment",
   pending: "Awaiting payment",
   confirmed: "Confirmed — awaiting hub delivery",
-  at_hub: "At GoMarketi hub",
+  at_hub: "At Wojalo hub",
   shipped: "Out for delivery",
   ready_for_collection: "Ready to collect",
   delivered: "Delivered",

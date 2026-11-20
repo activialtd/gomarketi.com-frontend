@@ -1,5 +1,5 @@
-import { type ProductResp } from "@gomarket/api-client";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { type ProductResp } from "@wojalo/api-client";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { Package, Star, X } from "lucide-react";
 import { FileUpload } from "@/components/common/FileUpload";
 

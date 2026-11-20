@@ -17,8 +17,8 @@ import {
   ChevronRight,
   RefreshCw,
 } from "lucide-react";
-import { Input } from "@gomarket/ui";
-import { authApi, identityApi, ApiError } from "@gomarket/api-client";
+import { Input } from "@wojalo/ui";
+import { authApi, identityApi, ApiError } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
@@ -384,7 +384,7 @@ export function SignupForm() {
             ? `Connected via ${
                 oauthUser?.provider === "google" ? "Google" : "Apple"
               }. Fill in the rest.`
-            : "Create your GoMarket vendor account in seconds."}
+            : "Create your Wojalo vendor account in seconds."}
       </p>
 
       {/* ═══ METHOD SELECT ════════════════════════════════════ */}
@@ -1078,7 +1078,7 @@ function TermsBlock({ control, errors }: { control: any; errors: any }) {
                 >
                   Privacy Policy
                 </a>
-                {" of GoMarket."}
+                {" of Wojalo."}
               </span>
             </label>
           )}
@@ -1126,7 +1126,7 @@ function TermsBlock({ control, errors }: { control: any; errors: any }) {
               style={{ color: "#3D6B4F" }}
             >
               I&apos;d like to receive marketing tips and business updates from
-              GoMarket.
+              Wojalo.
             </span>
           </label>
         )}

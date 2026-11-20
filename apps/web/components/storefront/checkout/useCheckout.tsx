@@ -13,7 +13,7 @@ import {
   type CreateOrderReq,
   type DeliveryOptionResp,
   type OrderResp,
-} from "@gomarket/api-client";
+} from "@wojalo/api-client";
 
 export const checkoutSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),

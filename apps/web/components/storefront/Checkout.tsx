@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useCart, type CustomerInfo } from "@/lib/cartContext";
 import { PaystackModal } from "@/components/storefront/PaystackModal";
-import { ordersApi, type PaymentGatewayResp } from "@gomarket/api-client";
+import { ordersApi, type PaymentGatewayResp } from "@wojalo/api-client";
 
 function fmtNaira(kobo: number) {
   return "₦" + (kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 });
@@ -104,7 +104,7 @@ function loadFlutterwaveScript(): Promise<void> {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function CheckoutPage({
-  storeId, storeSlug = "", storeName = "GoMarketi Store",
+  storeId, storeSlug = "", storeName = "Wojalo Store",
 }: { storeId: string | null; storeSlug?: string; storeName?: string }) {
   const router = useRouter();
   // Clean path — proxy.ts rewrites this transparently on the store's subdomain.
@@ -624,7 +624,7 @@ export default function CheckoutPage({
             )}
 
             <p style={{ fontSize: "10px", color: "#94a3b8", textAlign: "center", marginTop: "8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "4px" }}>
-              <Lock className="w-3 h-3" /> Secured by GoMarketi
+              <Lock className="w-3 h-3" /> Secured by Wojalo
             </p>
           </div>
         </div>

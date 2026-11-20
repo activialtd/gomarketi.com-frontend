@@ -394,7 +394,7 @@ export default function EkoCheckout(props: CheckoutProps) {
           // client's sum (see useCheckout).
           amount={chargeTotal}
           email={pendingCustomer.email}
-          storeName={props.storeName ?? "GoMarketi Store"}
+          storeName={props.storeName ?? "Wojalo Store"}
           reference={paymentRef}
           onSuccess={handlePaystackSuccess}
           onClose={() => setShowPaystack(false)}

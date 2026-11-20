@@ -1,9 +1,9 @@
 import { LegalLayout, PolicySection } from "@/components/LegalSection";
 
 export const metadata = {
-  title: "Returns & Refunds · GoMarketi",
+  title: "Returns & Refunds · Wojalo",
   description:
-    "How to request a return or refund on GoMarketi — eligibility, timelines, and the process.",
+    "How to request a return or refund on Wojalo — eligibility, timelines, and the process.",
 };
 
 export default function ReturnsPage() {
@@ -88,7 +88,7 @@ export default function ReturnsPage() {
             account.
           </li>
           <li>
-            <strong>GoMarketi wallet credit:</strong> instant, if you opt for
+            <strong>Wojalo wallet credit:</strong> instant, if you opt for
             credit instead of refund.
           </li>
         </ul>
@@ -112,7 +112,7 @@ export default function ReturnsPage() {
           before responding.
         </p>
         <p>
-          Chargebacks initiated with your bank before contacting GoMarketi will
+          Chargebacks initiated with your bank before contacting Wojalo will
           pause any active refund review and may extend the total resolution
           time.
         </p>

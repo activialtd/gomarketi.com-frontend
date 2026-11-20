@@ -6,28 +6,28 @@ import { Mark } from "@/components/site/brand/Mark";
 import { eyebrow, heading } from "@/components/site/ui";
 
 export const metadata: Metadata = {
-  title: "Contact — GoMarket",
+  title: "Contact — Wojalo",
   description:
-    "Talk to the GoMarket team about shopping, opening a store, an order you placed, or working together.",
+    "Talk to the Wojalo team about shopping, opening a store, an order you placed, or working together.",
 };
 
 const CHANNELS = [
   {
     title: "General enquiries",
-    detail: "hello@gomarketi.com",
-    href: "mailto:hello@gomarketi.com",
+    detail: "hello@wojalo.com",
+    href: "mailto:hello@wojalo.com",
     body: "Anything about the product, the company or the press.",
   },
   {
     title: "Traders",
-    detail: "vendors@gomarketi.com",
-    href: "mailto:vendors@gomarketi.com",
+    detail: "vendors@wojalo.com",
+    href: "mailto:vendors@wojalo.com",
     body: "Opening a store, verification, payouts and delivery prices.",
   },
   {
     title: "An order you placed",
-    detail: "support@gomarketi.com",
-    href: "mailto:support@gomarketi.com",
+    detail: "support@wojalo.com",
+    href: "mailto:support@wojalo.com",
     body: "Where an order is, what arrived, and anything that went wrong.",
   },
 ];
@@ -110,7 +110,7 @@ export default function ContactPage() {
                   href="/vendors"
                   className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-primary underline underline-offset-4 hover:text-primary-soft"
                 >
-                  Selling on GoMarket →
+                  Selling on Wojalo →
                 </Link>
               </div>
             </div>

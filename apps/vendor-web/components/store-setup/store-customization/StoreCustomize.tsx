@@ -12,7 +12,7 @@ import {
   LivePreview, COLOR_PRESETS, FONT_PRESETS, FONT_FAMILIES,
   TemplateId, ColorPreset, EkoThumb, LagosThumb, AbujaThumb,
 } from "./helpers";
-import { storefrontApi, authApi } from "@gomarket/api-client";
+import { storefrontApi, authApi } from "@wojalo/api-client";
 import { PlanGate, planGte } from "@/components/common/PlanGate";
 import { useAuthStore } from "@/store/useAuthStore";
 import { FileUpload } from "@/components/common/FileUpload";
@@ -662,7 +662,7 @@ function FooterPanel({ s, storeName, set }: { s: ThemeConfig["sections"]["footer
         <p className="text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: "#94a3b8" }}>Brand</p>
         <Field label="Tagline"><Textarea value={s.tagline ?? ""} onChange={(v) => set({ tagline: v || undefined })} placeholder="Quality products, fast delivery" rows={2} /></Field>
         <Field label="Copyright text"><TextInput value={s.copyright ?? ""} onChange={(v) => set({ copyright: v || undefined })} placeholder={`© 2025 ${storeName}`} /></Field>
-        <SwitchRow label="Show 'Powered by GoMarketi'" on={s.showPoweredBy} onChange={() => set({ showPoweredBy: !s.showPoweredBy })} />
+        <SwitchRow label="Show 'Powered by Wojalo'" on={s.showPoweredBy} onChange={() => set({ showPoweredBy: !s.showPoweredBy })} />
       </div>
 
       {/* Columns */}
@@ -776,7 +776,7 @@ const SECTION_DEFS: SectionDef[] = [
 export default function StoreCustomize() {
   const accessToken = useAuthStore((s) => s.accessToken);
   const setAuth = useAuthStore((s) => s.setAuth);
-  const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+  const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "wojalo.com";
   const { data: subscription } = useSubscription();
   const planSlug: string = subscription?.plan?.slug ?? "free";
 
@@ -1126,7 +1126,7 @@ export default function StoreCustomize() {
                 <div className="w-2.5 h-2.5 rounded-full" style={{ background: "#22c55e" }} />
               </div>
               <div className="flex-1 mx-3 px-3 py-1 rounded-[5px] text-[10px] font-mono truncate" style={{ background: "#fff", border: "1px solid #e2e8f0", color: "#94a3b8" }}>
-                {store ? `${store.slug}.${STORE_DOMAIN}` : "your-store.gomarketi.com"}
+                {store ? `${store.slug}.${STORE_DOMAIN}` : "your-store.wojalo.com"}
               </div>
             </div>
             {/* Content */}

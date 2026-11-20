@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Link2, Loader2, X, Check } from "lucide-react";
-import { catalogueApi, type CanonicalProductResp } from "@gomarket/api-client";
+import { catalogueApi, type CanonicalProductResp } from "@wojalo/api-client";
 
 interface Props {
   query: string;

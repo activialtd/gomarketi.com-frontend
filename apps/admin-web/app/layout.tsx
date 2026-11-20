@@ -5,14 +5,16 @@ import Providers from "./providers";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
-  subsets: ["latin"],
+  // latin-ext + vietnamese carry ọ/Ọ for the Yoruba wordmark (Wọjàlọ);
+  // the extra files only download on pages that use those letters.
+  subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "GoMarketi Admin Center",
-  description: "Internal ops and support console for GoMarketi.",
+  title: "Wojalo Admin Center",
+  description: "Internal ops and support console for Wojalo.",
 };
 
 export default function RootLayout({

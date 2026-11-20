@@ -12,7 +12,7 @@ const SLIDES = [
     emoji: "🎉",
     title: "You're in!",
     description:
-      "Your GoMarket vendor account is ready. Let's take a quick look at what makes selling on GoMarket effortless.",
+      "Your Wojalo vendor account is ready. Let's take a quick look at what makes selling on Wojalo effortless.",
     bg: "rgba(26,122,66,0.09)",
     accent: "#1A7A42",
   },

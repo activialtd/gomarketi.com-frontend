@@ -1,5 +1,5 @@
 import { Product } from "@/lib/data/products";
-import { PRODUCTS_STATUS_CONFIG, fmt } from "@gomarket/shared-utils";
+import { PRODUCTS_STATUS_CONFIG, fmt } from "@wojalo/shared-utils";
 import {
   MoreHorizontal,
   Edit,
@@ -17,12 +17,12 @@ import {
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type CollectionResp, catalogueApi } from "@gomarket/api-client";
+import { type CollectionResp, catalogueApi } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 import { type NegotiablePricing } from "@/lib/api/offers";
 
-const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "wojalo.com";
 
 export function StatCard({
   label,

@@ -296,7 +296,7 @@ export type OrderStatus =
   | "abandoned";
 
 // Who physically delivers an order. A basket spanning several vendors becomes
-// several orders sharing one payment reference and goes through GoMarketi's
+// several orders sharing one payment reference and goes through Wojalo's
 // consolidation hub; an order alone on its reference is that vendor's own
 // delivery, end to end.
 export type Fulfilment = "vendor" | "gomarketi";
@@ -319,7 +319,7 @@ export function vendorSettableStatuses(
   if (isPickup) return ["confirmed", "ready_for_collection", "cancelled"];
 
   return fulfilment === "gomarketi"
-    // The vendor accepts the order and GoMarketi moves it from there, so
+    // The vendor accepts the order and Wojalo moves it from there, so
     // at_hub and shipped are the platform's to set, not theirs.
     ? ["confirmed", "cancelled"]
     // The vendor runs this one end to end, so they mark dispatch themselves.

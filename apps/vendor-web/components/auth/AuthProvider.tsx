@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { authApi, setTokenRefreshCallback, refreshOnce } from "@gomarket/api-client";
+import { authApi, setTokenRefreshCallback, refreshOnce } from "@wojalo/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

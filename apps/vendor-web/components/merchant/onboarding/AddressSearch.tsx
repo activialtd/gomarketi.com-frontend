@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { MapPin, Search, Loader2, X } from "lucide-react";
-import { NIGERIAN_STATES } from "@gomarket/shared-utils";
+import { NIGERIAN_STATES } from "@wojalo/shared-utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type G = any;

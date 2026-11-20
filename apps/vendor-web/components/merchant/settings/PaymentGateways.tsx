@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, CreditCard, Smartphone, Banknote, Info, CheckCircle2, Wifi, WifiOff } from "lucide-react";
-import { paymentGatewaysApi, type PaymentGatewayResp } from "@gomarket/api-client";
+import { paymentGatewaysApi, type PaymentGatewayResp } from "@wojalo/api-client";
 import { usePaymentGateways, invalidate } from "@/lib/swr/hooks";
 import { useAuthStore } from "@/store/useAuthStore";
 

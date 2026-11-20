@@ -10,11 +10,11 @@ import { PageWrapper } from "@/components/animations/PageWrapper";
 import { DashboardTour } from "@/components/merchant/tour/DashboardTour";
 import { SWRProvider } from "@/lib/swr/provider";
 import { useOrderEvents } from "@/lib/swr/hooks";
-import { authApi, storefrontApi, identityApi } from "@gomarket/api-client";
+import { authApi, storefrontApi, identityApi } from "@wojalo/api-client";
 import { clearAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
 
-const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "wojalo.com";
 
 export default function MerchantLayout({
   children,

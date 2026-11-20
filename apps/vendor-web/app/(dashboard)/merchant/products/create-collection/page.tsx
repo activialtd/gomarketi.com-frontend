@@ -4,7 +4,7 @@ import CreateCollection from "@/components/merchant/products/collections/CreateC
 import CreateCollectionSkeleton from "@/components/skeletons/CreateCollectionSkeleton";
 
 export const metadata: Metadata = {
-  title: "Create Collection | GoMarketi Vendor",
+  title: "Create Collection | Wojalo Vendor",
   description: "Create a new collection for your store.",
 };
 

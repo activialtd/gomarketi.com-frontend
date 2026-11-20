@@ -7,8 +7,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Eye, EyeOff, Users } from "lucide-react";
-import { Input } from "@gomarket/ui";
-import { authApi, identityApi, staffApi, ApiError } from "@gomarket/api-client";
+import { Input } from "@wojalo/ui";
+import { authApi, identityApi, staffApi, ApiError } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { setAuthSession } from "@/lib/auth/session";
 import { ROUTES } from "@/lib/config/routes";
@@ -172,7 +172,7 @@ export function LoginForm() {
       >
         {isStaffMode
           ? "Sign in with your staff credentials assigned by your store owner."
-          : "Sign in to access your GoMarket dashboard."}
+          : "Sign in to access your Wojalo dashboard."}
       </p>
 
       {/* ── OAuth buttons (vendor mode only) ────────────────── */}

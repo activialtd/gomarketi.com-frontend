@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { X, Shield, ArrowRight, Loader2 } from "lucide-react";
 import { usePaystackPayment } from "react-paystack";
-import { type PlanResp } from "@gomarket/api-client";
+import { type PlanResp } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 
 function fmt(kobo: number) {

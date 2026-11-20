@@ -12,9 +12,9 @@ import {
   AlertCircle,
   Info,
 } from "lucide-react";
-import { Input } from "@gomarket/ui";
+import { Input } from "@wojalo/ui";
 import { ROUTES } from "@/lib/config/routes";
-import { catalogueApi, type ProductResp, ApiError } from "@gomarket/api-client";
+import { catalogueApi, type ProductResp, ApiError } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   CreateCollectionFormValues,

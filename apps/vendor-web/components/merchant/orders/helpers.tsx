@@ -4,8 +4,8 @@ import {
   type VendorSettableOrderStatus,
   ordersApi,
   vendorSettableStatuses,
-} from "@gomarket/api-client";
-import { fmtNaira } from "@gomarket/shared-utils";
+} from "@wojalo/api-client";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
   Clock,
@@ -37,7 +37,7 @@ export const STATUS_CFG: Record<
     color: "#1e40af",
     icon: RefreshCw,
   },
-  at_hub: { label: "At GoMarketi hub", bg: "#ede9fe", color: "#5b21b6", icon: Building2 },
+  at_hub: { label: "At Wojalo hub", bg: "#ede9fe", color: "#5b21b6", icon: Building2 },
   shipped: { label: "Dispatched", bg: "#e0f2fe", color: "#0369a1", icon: Truck },
   ready_for_collection: {
     label: "Ready to collect",
@@ -62,7 +62,7 @@ export const STATUS_CFG: Record<
 };
 
 // What a vendor may set depends on who delivers the order — see
-// vendorSettableStatuses in @gomarket/api-client, which mirrors the
+// vendorSettableStatuses in @wojalo/api-client, which mirrors the
 // backend's rule. "delivered" is in neither list: it releases escrow, so the
 // buyer sets it by confirming receipt.
 
@@ -152,7 +152,7 @@ export function UpdateOrderModal({
   onUpdated: (updated: OrderResp) => void;
 }) {
   // A vendor-delivered order stays editable until they dispatch it. A shared
-  // basket stops being theirs the moment they confirm — GoMarketi moves it
+  // basket stops being theirs the moment they confirm — Wojalo moves it
   // from there — so the picker closes at that point.
   const editable =
     order.status === "pending" ||
@@ -232,7 +232,7 @@ export function UpdateOrderModal({
             <div className="space-y-3">
               <p className="text-[12.5px] leading-relaxed" style={{ color: "#374151" }}>
                 {order.status === "confirmed" || order.status === "at_hub"
-                  ? "GoMarketi is handling this delivery. Your payment is released once the customer confirms they have it."
+                  ? "Wojalo is handling this delivery. Your payment is released once the customer confirms they have it."
                   : order.status === "shipped"
                     ? "This order is on its way. The customer confirms delivery from their tracking page, which is also what releases your payment."
                     : "This order is closed — there are no further actions for you here."}
@@ -251,7 +251,7 @@ export function UpdateOrderModal({
               </label>
               <p className="text-[11.5px] leading-relaxed" style={{ color: "#6b7280" }}>
                 {order.fulfilment === "gomarketi"
-                  ? "This customer also bought from other vendors, so GoMarketi delivers the whole basket. Confirm the order and get it ready — we take it from there, and your payment is released once the customer has it."
+                  ? "This customer also bought from other vendors, so Wojalo delivers the whole basket. Confirm the order and get it ready — we take it from there, and your payment is released once the customer has it."
                   : order.is_pickup
                     ? "This customer is collecting in person. Mark it ready once it is packed and waiting — they confirm when they have it, which is what releases your payment."
                     : "You deliver this order yourself and keep the delivery fee on top of the items. Mark it dispatched once it is actually on its way; the customer confirms delivery at the end, which is what releases your payment."}

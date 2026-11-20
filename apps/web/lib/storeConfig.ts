@@ -1,4 +1,4 @@
-import { StoreConfig } from "@gomarket/shared-types";
+import { StoreConfig } from "@wojalo/shared-types";
 
 // export const STORE_CONFIG: StoreConfig = {
 //   slug: "eko-fashion",

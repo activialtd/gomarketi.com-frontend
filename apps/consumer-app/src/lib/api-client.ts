@@ -598,7 +598,7 @@ export type CheckoutStoreOrder = {
 
 // OrderStatus mirrors the backend's real lifecycle (see
 // services/orders/internal/dto/orders.go) — a vendor delivers to the
-// GoMarketi hub (at_hub), GoMarketi dispatches the consolidated batch
+// Wojalo hub (at_hub), Wojalo dispatches the consolidated batch
 // (shipped), the buyer confirms receipt (delivered). An order the buyer is
 // collecting gets ready_for_collection in place of shipped: it is waiting on
 // a counter, not on a bike. "awaiting_payment" and "abandoned" bracket the

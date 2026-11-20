@@ -1,6 +1,6 @@
 "use client";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@gomarket/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@wojalo/ui";
 import {
   ShoppingBag,
   Wallet,

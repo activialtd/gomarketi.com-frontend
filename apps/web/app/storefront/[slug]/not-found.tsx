@@ -15,11 +15,11 @@ export default function StoreNotFound() {
           This store doesn't exist or isn't active yet.
         </p>
         <a
-          href="https://gomarketi.com"
+          href="https://wojalo.com"
           className="inline-block mt-6 text-[13px] font-semibold"
           style={{ color: "#1A7A42" }}
         >
-          ← Back to GoMarket
+          ← Back to Wojalo
         </a>
       </div>
     </main>

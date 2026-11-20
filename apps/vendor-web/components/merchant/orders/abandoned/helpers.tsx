@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { type AbandonedCartResp } from "@gomarket/api-client";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { type AbandonedCartResp } from "@wojalo/api-client";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { ChevronDown, Mail, MessageCircle, Package } from "lucide-react";
 import { whatsappLink } from "@/lib/whatsapp";
 

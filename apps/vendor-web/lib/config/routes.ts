@@ -48,7 +48,7 @@ export const ROUTES = {
 
     // Account
     SETTINGS: "/merchant/settings",
-    HELP: "https://www.gomarketi.com/help",
+    HELP: "https://www.wojalo.com/help",
 
     // KYC
     KYC: "/merchant/kyc",

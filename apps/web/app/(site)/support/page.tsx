@@ -5,8 +5,8 @@ import { AwningEdge } from "@/components/site/WaitlistForm";
 import { IconBook, IconFlag, IconMail, IconPlus } from "@/components/site/Icons";
 
 export const metadata: Metadata = {
-  title: "Support | GoMarketi",
-  description: "Answers for buyers and vendors, and how to reach the GoMarketi team.",
+  title: "Support | Wojalo",
+  description: "Answers for buyers and vendors, and how to reach the Wojalo team.",
 };
 
 const FAQ = [
@@ -16,7 +16,7 @@ const FAQ = [
     items: [
       {
         q: "When am I charged?",
-        a: "At checkout, through Paystack. The payment is held by GoMarketi and only released to the vendor after you confirm your order arrived.",
+        a: "At checkout, through Paystack. The payment is held by Wojalo and only released to the vendor after you confirm your order arrived.",
       },
       {
         q: "Why does my order go through a hub?",
@@ -89,10 +89,10 @@ export default function SupportPage() {
         <div className="mx-auto grid max-w-6xl gap-5 px-6 py-14 md:grid-cols-3">
           <ContactCard icon={<IconMail className="h-5 w-5" />} title="Email us">
             <a
-              href="mailto:hello@gomarketi.com"
+              href="mailto:hello@wojalo.com"
               className="font-semibold text-primary underline underline-offset-4"
             >
-              hello@gomarketi.com
+              hello@wojalo.com
             </a>
             <p className="mt-1">For anything about an order, a store or your account.</p>
           </ContactCard>

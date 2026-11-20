@@ -27,7 +27,7 @@ export default function DashboardHome() {
           {greeting()}, {firstName}
         </h1>
         <p className="mt-1 text-[13.5px] text-muted">
-          Here's what's happening across GoMarketi right now.
+          Here's what's happening across Wojalo right now.
         </p>
       </div>
 

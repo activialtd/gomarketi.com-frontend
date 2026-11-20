@@ -8,7 +8,7 @@
 // All money is integer kobo. Every amount here is per unit — the offer's
 // quantity multiplies it, exactly as a cart line's price_kobo does.
 
-import { ApiError } from "@gomarket/api-client";
+import { ApiError } from "@wojalo/api-client";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 

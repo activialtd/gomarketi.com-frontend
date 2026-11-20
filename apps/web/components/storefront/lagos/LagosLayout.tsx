@@ -287,7 +287,7 @@ export default function LagosLayout({
         <div className="border-t border-white/6 px-6 py-5">
           <div className="mx-auto flex max-w-7xl items-center justify-between">
             <p className="text-[10px] text-white/18">© {new Date().getFullYear()} {storeName}</p>
-            <p className="text-[10px] text-white/12">Powered by GoMarketi</p>
+            <p className="text-[10px] text-white/12">Powered by Wojalo</p>
           </div>
         </div>
       </footer>

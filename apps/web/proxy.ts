@@ -1,6 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "gomarketi.com";
+const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "wojalo.com";
+
+// Domains we used to live on. Links to them are still out there — order
+// emails, WhatsApp shares, vendors' social bios — so a request for
+// cobi.gomarketi.com/products/x is sent, permanently, to the same path on
+// cobi.wojalo.com rather than landing on a dead page.
+const LEGACY_ROOT_DOMAINS = ["gomarketi.com"];
+
+function legacyRedirect(req: NextRequest, hostname: string): NextResponse | null {
+  for (const legacy of LEGACY_ROOT_DOMAINS) {
+    if (legacy === ROOT_DOMAIN) continue;
+    if (hostname === legacy || hostname.endsWith(`.${legacy}`)) {
+      const url = req.nextUrl.clone();
+      url.protocol = "https:";
+      url.host = hostname.slice(0, hostname.length - legacy.length) + ROOT_DOMAIN;
+      url.port = "";
+      return NextResponse.redirect(url, 308);
+    }
+  }
+  return null;
+}
 
 // Subdomains that belong to the platform itself, not stores
 const RESERVED = new Set(["www", "vendor", "app", "api", "admin", "mail", "cdn"]);
@@ -20,9 +40,12 @@ export function proxy(req: NextRequest) {
   // Strip port (for local dev: "cobi.localhost:3001" → "cobi.localhost")
   const hostname = host.replace(/:\d+$/, "");
 
+  const moved = legacyRedirect(req, hostname);
+  if (moved) return moved;
+
   const url = req.nextUrl.clone();
 
-  // ── GoMarket subdomain: cobi.gomarketi.com or cobi.localhost ─────────────
+  // ── Wojalo subdomain: cobi.wojalo.com or cobi.localhost ─────────────
   let subdomain: string | null = null;
 
   if (hostname.endsWith(`.${ROOT_DOMAIN}`)) {
@@ -45,7 +68,7 @@ export function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // ── Custom vendor domain: cobi.com (not a gomarketi.com subdomain) ───────
+  // ── Custom vendor domain: cobi.com (not a wojalo.com subdomain) ──────
   const isRootDomain = hostname === ROOT_DOMAIN || hostname === `www.${ROOT_DOMAIN}`;
   const isLocalhost = hostname === "localhost";
 

@@ -3,7 +3,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Orders - Vendor Dashboard",
-  description: "Manage your orders on GoMarketi",
+  description: "Manage your orders on Wojalo",
 };
 
 export default function Page() {

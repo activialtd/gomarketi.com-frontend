@@ -123,7 +123,7 @@ export const NAV: NavSection[] = [
         allowedRoles: ["manager"],
       },
       {
-        label: "GoMarket Wallet",
+        label: "Wojalo Wallet",
         href: ROUTES.MERCHANT.WALLET,
         icon: Wallet,
         allowedRoles: ["manager"],

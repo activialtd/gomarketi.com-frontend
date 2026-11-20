@@ -147,7 +147,7 @@ export function Navbar() {
           {/* Centre — the mark */}
           <Link
             href="/"
-            aria-label="GoMarket home"
+            aria-label="Wojalo home"
             className={`group flex items-center justify-center rounded-lg px-3 ${focusRing}`}
           >
             <Mark
@@ -156,7 +156,7 @@ export function Navbar() {
                 overHero ? "text-lime" : "text-primary",
               ].join(" ")}
             />
-            <span className="sr-only">GoMarket</span>
+            <span className="sr-only">Wojalo</span>
           </Link>
 
           {/* Right — navigation and the call to action */}

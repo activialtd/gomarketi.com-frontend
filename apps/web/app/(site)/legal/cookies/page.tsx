@@ -1,8 +1,8 @@
 import { LegalLayout, PolicySection } from "@/components/LegalSection";
 
 export const metadata = {
-  title: "Cookie Policy · GoMarketi",
-  description: "What cookies GoMarketi uses, why, and how to manage them.",
+  title: "Cookie Policy · Wojalo",
+  description: "What cookies Wojalo uses, why, and how to manage them.",
 };
 
 export default function CookiesPage() {
@@ -10,7 +10,7 @@ export default function CookiesPage() {
     <LegalLayout
       eyebrow="POLICIES"
       title="Cookie Policy"
-      intro="What cookies and similar technologies we use on GoMarketi, why we use them, and how you can control them."
+      intro="What cookies and similar technologies we use on Wojalo, why we use them, and how you can control them."
       updatedAt="15 August 2026"
       toc={[
         { id: "what", label: "What cookies are" },
@@ -37,7 +37,7 @@ export default function CookiesPage() {
       <PolicySection id="types" title="Cookies we use">
         <p>
           <strong>Strictly necessary.</strong> Keep you signed in, remember your
-          cart, and secure your session. GoMarketi cannot function without
+          cart, and secure your session. Wojalo cannot function without
           these. They can't be disabled from within the app.
         </p>
         <p>
@@ -47,7 +47,7 @@ export default function CookiesPage() {
         </p>
         <p>
           <strong>Analytics.</strong> Help us understand how visitors use
-          GoMarketi in aggregate — which pages are popular, where flows break
+          Wojalo in aggregate — which pages are popular, where flows break
           down, how features are performing. These do not identify you
           personally.
         </p>
@@ -59,7 +59,7 @@ export default function CookiesPage() {
       </PolicySection>
 
       <PolicySection id="third-party" title="Third-party cookies">
-        <p>Some cookies on GoMarketi come from trusted third parties:</p>
+        <p>Some cookies on Wojalo come from trusted third parties:</p>
         <ul>
           <li>
             <strong>Paystack</strong> — during checkout, to process your payment
@@ -81,7 +81,7 @@ export default function CookiesPage() {
       <PolicySection id="control" title="Managing cookies">
         <p>
           Every modern browser lets you view, block, or delete cookies from its
-          settings. Blocking essential cookies will break parts of GoMarketi —
+          settings. Blocking essential cookies will break parts of Wojalo —
           you won't be able to stay signed in or complete a checkout.
         </p>
         <p>

@@ -4,7 +4,7 @@ import ProductsPage from "@/components/merchant/products/Products";
 import ProductsSkeleton from "@/components/skeletons/ProductsSkeleton";
 
 export const metadata: Metadata = {
-  title: "Products — GoMarketi",
+  title: "Products — Wojalo",
   description: "Manage your store products",
 };
 

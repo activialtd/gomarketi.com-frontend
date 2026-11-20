@@ -12,7 +12,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@gomarket/ui";
+} from "@wojalo/ui";
 import { ROUTES } from "@/lib/config/routes";
 import {
   CreateProductFormValues,
@@ -25,7 +25,7 @@ import {
   type CollectionResp,
   type CategoryResp,
   type CanonicalProductResp,
-} from "@gomarket/api-client";
+} from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import CanonicalProductTypeahead from "./CanonicalProductTypeahead";
 import { NegotiableRange } from "./NegotiableRange";

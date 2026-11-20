@@ -2,8 +2,8 @@ import { useState, useRef, useCallback } from "react";
 import { Audio } from "expo-av";
 import { Alert } from "react-native";
 
-// const TRANSCRIBE_ENDPOINT = "https://vendor.gomarketi.com/api/transcribe";
-const TRANSCRIBE_ENDPOINT = "https://api.gomarketi.com/api/transcribe";
+// const TRANSCRIBE_ENDPOINT = "https://vendor.wojalo.com/api/transcribe";
+const TRANSCRIBE_ENDPOINT = "https://api.wojalo.com/api/transcribe";
 
 export function useVoiceSearch(onResult: (text: string) => void) {
   const [state, setState] = useState<

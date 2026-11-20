@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { X, CheckCircle2, ArrowDownLeft, ArrowUpRight, AlertCircle, Loader2, Lock, Undo2 } from "lucide-react";
-import { fmtNaira } from "@gomarket/shared-utils";
-import { walletApi, type WalletResp, type WalletTransactionResp } from "@gomarket/api-client";
+import { fmtNaira } from "@wojalo/shared-utils";
+import { walletApi, type WalletResp, type WalletTransactionResp } from "@wojalo/api-client";
 
 export const NIGERIAN_BANKS = [
   "Access Bank",

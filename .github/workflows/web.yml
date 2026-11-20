@@ -1,4 +1,4 @@
-name: Deploy web (gomarketi.com landing)
+name: Deploy web (wojalo.com landing)
 
 on:
   push:
