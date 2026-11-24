@@ -39,3 +39,22 @@ pnpm turbo run build --filter=vendor-web
 ```bash
 pnpm turbo run start --filter=vendor-web
 ```
+
+## 🌍 4. Domains
+
+| Address | Served by |
+| --- | --- |
+| `wojalo.com` | `apps/web` (marketing site) |
+| `<store>.wojalo.com` | `apps/web` (vendor storefronts) |
+| `vendor.wojalo.com` | `apps/vendor-web` |
+| `api.wojalo.com` | Backend API |
+
+Set these in Vercel (Production) for both web projects, then redeploy:
+
+```bash
+NEXT_PUBLIC_API_URL=https://api.wojalo.com
+NEXT_PUBLIC_ROOT_DOMAIN=wojalo.com   # web
+NEXT_PUBLIC_STORE_DOMAIN=wojalo.com  # vendor-web
+```
+
+Old `gomarketi.com` links redirect to the same page on `wojalo.com`.
