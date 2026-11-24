@@ -75,7 +75,7 @@ const CATEGORIES: Category[] = [
     faqs: [
       {
         q: "What payment methods do you accept?",
-        a: "Card (debit or credit), bank transfer, and mobile wallet — all handled securely by Paystack. Card details are entered on Paystack's secure page and never touch GoMarketi's servers.",
+        a: "Card (debit or credit), bank transfer, and mobile wallet — all handled securely by Paystack. Card details are entered on Paystack's secure page and never touch Wojalo's servers.",
       },
       {
         q: "I was charged but no order appeared.",
@@ -87,7 +87,7 @@ const CATEGORIES: Category[] = [
       },
       {
         q: "How long do refunds take?",
-        a: "Once approved: 3–7 business days back to a card, 1–3 days to a bank account, or instant if you choose GoMarketi wallet credit instead.",
+        a: "Once approved: 3–7 business days back to a card, 1–3 days to a bank account, or instant if you choose Wojalo wallet credit instead.",
       },
     ],
   },
@@ -116,12 +116,12 @@ const CATEGORIES: Category[] = [
   },
   {
     id: "vendors",
-    label: "Selling on GoMarketi",
+    label: "Selling on Wojalo",
     icon: Store,
     faqs: [
       {
         q: "How do I sign up as a vendor?",
-        a: "Go to vendor.gomarketi.com and create an account. You'll verify your email, set up your store (name, category, address), pick a plan (or start free), and can begin adding products immediately. To receive payouts you'll need to complete KYC — you can do this at signup or later.",
+        a: "Go to vendor.wojalo.com and create an account. You'll verify your email, set up your store (name, category, address), pick a plan (or start free), and can begin adding products immediately. To receive payouts you'll need to complete KYC — you can do this at signup or later.",
       },
       {
         q: "What does it cost to sell?",
@@ -144,10 +144,10 @@ const CATEGORIES: Category[] = [
     faqs: [
       {
         q: "Is my payment information secure?",
-        a: "Yes. All payments are processed by Paystack, a licensed and PCI-compliant payment processor. Card details are entered on their secure page and never stored on GoMarketi's servers — we only see the last four digits for your reference.",
+        a: "Yes. All payments are processed by Paystack, a licensed and PCI-compliant payment processor. Card details are entered on their secure page and never stored on Wojalo's servers — we only see the last four digits for your reference.",
       },
       {
-        q: "What data does GoMarketi collect about me?",
+        q: "What data does Wojalo collect about me?",
         a: "Only what's needed to run your account and process orders — name, contact details, delivery addresses, order history, and (with permission) approximate location. See our Privacy Policy for the full breakdown.",
       },
       {
@@ -155,8 +155,8 @@ const CATEGORIES: Category[] = [
         a: "Yes. Settings → Notifications, then toggle off Promotional offers. You'll still receive essential order updates.",
       },
       {
-        q: "Someone is claiming to be from GoMarketi and asking for my PIN.",
-        a: "Never share your PIN, full card number, or password with anyone — including someone claiming to be from GoMarketi. We will never ask for these. If someone contacts you asking for this information, report it to support@gomarketi.com immediately.",
+        q: "Someone is claiming to be from Wojalo and asking for my PIN.",
+        a: "Never share your PIN, full card number, or password with anyone — including someone claiming to be from Wojalo. We will never ask for these. If someone contacts you asking for this information, report it to support@wojalo.com immediately.",
       },
     ],
   },
@@ -299,7 +299,7 @@ export default function HelpPage() {
             </div>
 
             <a
-              href="mailto:support@gomarketi.com"
+              href="mailto:support@wojalo.com"
               className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-soft"
             >
               <Mail className="h-4 w-4" />
@@ -397,7 +397,7 @@ function EmptyState({ query }: { query: string }) {
       </p>
 
       <a
-        href="mailto:support@gomarketi.com"
+        href="mailto:support@wojalo.com"
         className="mt-6 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-soft"
       >
         <Mail className="h-4 w-4" />

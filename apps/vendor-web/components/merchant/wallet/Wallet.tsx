@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Eye, EyeOff, ArrowUpRight, Lock, Zap, Wallet, Loader2 } from "lucide-react";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { useAuthStore } from "@/store/useAuthStore";
 import { WithdrawModal, TransactionRow } from "./helpers";
 import { useWallet, useSubscription, useMyStore, invalidate } from "@/lib/swr/hooks";
@@ -22,7 +22,7 @@ export default function WalletPage() {
       <div className="w-full px-6 lg:px-8 py-5">
         <NoStoreBanner
           title="Your wallet isn't set up yet"
-          body="GoMarket Wallet activates once you've created your store — that's what your dedicated account and balance are tied to."
+          body="Wojalo Wallet activates once you've created your store — that's what your dedicated account and balance are tied to."
         />
       </div>
     );
@@ -40,7 +40,7 @@ export default function WalletPage() {
             className="text-[20px] font-extrabold"
             style={{ color: "#1C1C1C", letterSpacing: "-0.3px" }}
           >
-            GoMarket Wallet
+            Wojalo Wallet
           </h1>
           <div
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold"
@@ -94,7 +94,7 @@ export default function WalletPage() {
             </p>
             <p className="text-[11px] mt-2 text-white opacity-60">
               {subscription?.paystack_dva_account_number
-                ? `Your GoMarketi account: ${subscription.paystack_dva_bank_name} — ${subscription.paystack_dva_account_number}`
+                ? `Your Wojalo account: ${subscription.paystack_dva_bank_name} — ${subscription.paystack_dva_account_number}`
                 : "Setting up your payment account…"}
             </p>
           </div>

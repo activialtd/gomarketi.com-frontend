@@ -1,6 +1,6 @@
 "use client";
 
-import type { ThemeConfig } from "@gomarket/api-client";
+import type { ThemeConfig } from "@wojalo/api-client";
 
 interface ThemePreviewProps {
   storeName: string;
@@ -54,7 +54,7 @@ export function ThemePreview({
           ))}
         </div>
         <div className="flex-1 mx-2 px-2 py-0.5 rounded text-[8px] font-mono" style={{ background: "#fff", border: "1px solid #e2e8f0", color: "#94a3b8" }}>
-          your-store.gomarketi.com
+          your-store.wojalo.com
         </div>
       </div>
 
@@ -177,7 +177,7 @@ export function ThemePreview({
       {/* Mini footer */}
       <div className="px-3 py-2 border-t text-center" style={{ background: secondaryColor, borderColor: "rgba(255,255,255,0.1)" }}>
         <p className="text-[7px] opacity-60 text-white">
-          © {storeName || "Your Store"} · Powered by GoMarketi
+          © {storeName || "Your Store"} · Powered by Wojalo
         </p>
       </div>
     </div>

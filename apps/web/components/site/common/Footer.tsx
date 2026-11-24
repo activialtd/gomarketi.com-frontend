@@ -36,7 +36,7 @@ export function Footer() {
     <footer className="bg-ink text-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-[1.6fr_1fr_1fr_1fr]">
         <div>
-          <Mark className="w-11 text-lime" title="GoMarket" />
+          <Mark className="w-11 text-lime" title="Wojalo" />
           <p className="mt-5 max-w-xs text-lg leading-snug font-bold text-white font-[family-name:var(--font-display)]">
             Your market, without the trip.
           </p>
@@ -45,10 +45,10 @@ export function Footer() {
             everything to your door.
           </p>
           <a
-            href="mailto:hello@gomarketi.com"
+            href="mailto:hello@wojalo.com"
             className="mt-5 inline-block text-sm font-semibold text-lime underline underline-offset-4 hover:text-white"
           >
-            hello@gomarketi.com
+            hello@wojalo.com
           </a>
         </div>
 
@@ -75,7 +75,7 @@ export function Footer() {
 
       <div className="border-t border-white/15">
         <div className="mx-auto flex max-w-6xl flex-col gap-2 px-6 py-6 text-xs text-white/60 sm:flex-row sm:justify-between">
-          <p>© {new Date().getFullYear()} GoMarket. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Wojalo. All rights reserved.</p>
           <p>Powered by Activia</p>
         </div>
       </div>

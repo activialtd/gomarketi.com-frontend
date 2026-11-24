@@ -1,4 +1,4 @@
-# GoMarket Monorepo
+# Wojalo Monorepo
 
 This repository uses **Turborepo** and **pnpm workspaces**. All installations and scripts must be run from the **root directory**.
 

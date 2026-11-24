@@ -104,7 +104,7 @@ export function LoginScreen({
             onPress={() => signInWithEmail(email, password).catch(() => {})}
           />
           <View style={s.foot}>
-            <Text style={type.meta}>New to GoMarketi? </Text>
+            <Text style={type.meta}>New to Wojalo? </Text>
             <Pressable onPress={onGoToSignup} hitSlop={HIT}>
               <Text
                 style={[

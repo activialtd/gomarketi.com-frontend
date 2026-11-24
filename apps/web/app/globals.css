@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ─── design tokens ─── */
-/* Brand palette comes from the GoMarket logo guidelines: deep green #0B4B1F,
+/* Brand palette comes from the Wojalo logo guidelines: deep green #0B4B1F,
    bright green #A9E746, white. Everything else is a neutral derived to sit
    with them. */
 @theme {

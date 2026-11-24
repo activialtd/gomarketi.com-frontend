@@ -1,7 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import type { UserDTO } from "@gomarket/api-client";
+import type { UserDTO } from "@wojalo/api-client";
 
 function parseJwtPayload(token: string): Record<string, unknown> {
   try {

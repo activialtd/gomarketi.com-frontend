@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { mutate as globalMutate } from "swr";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Search } from "lucide-react";
-import { ApiError } from "@gomarket/api-client";
+import { ApiError } from "@wojalo/api-client";
 import { useOffers, useOfferCounts, invalidate } from "@/lib/swr/hooks";
 import { useAuthStore } from "@/store/useAuthStore";
 import {

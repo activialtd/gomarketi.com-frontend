@@ -4,7 +4,7 @@ import {
   TrendingUp, ShoppingBag, Users, AlertTriangle, Package, Loader2,
   Eye, Wallet, Tag,
 } from "lucide-react";
-import { fmtK } from "@gomarket/shared-utils";
+import { fmtK } from "@wojalo/shared-utils";
 import { KPICard } from "./helpers";
 import { useAnalyticsOverview, useTopProducts } from "@/lib/swr/hooks";
 import {

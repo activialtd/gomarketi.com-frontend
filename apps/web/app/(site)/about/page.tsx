@@ -5,9 +5,9 @@ import { Mark } from "@/components/site/brand/Mark";
 import { btnGhostLight, btnLime, eyebrow, heading } from "@/components/site/ui";
 
 export const metadata: Metadata = {
-  title: "About — GoMarket",
+  title: "About — Wojalo",
   description:
-    "GoMarket brings Nigeria's markets to the people who shop them, without asking traders to change how they trade.",
+    "Wojalo brings Nigeria's markets to the people who shop them, without asking traders to change how they trade.",
 };
 
 const PRINCIPLES = [
@@ -25,7 +25,7 @@ const PRINCIPLES = [
   },
   {
     title: "Nothing to learn",
-    body: "A trader who can use a phone can use GoMarket. No inventory systems, no jargon, no training course before the first sale.",
+    body: "A trader who can use a phone can use Wojalo. No inventory systems, no jargon, no training course before the first sale.",
   },
 ];
 
@@ -48,7 +48,7 @@ export default function AboutPage() {
             Nigerian markets are some of the best-stocked places to shop
             anywhere — deeper range, better prices, and traders who know their
             goods. What they ask of you is a morning, a drive and a walk between
-            stalls. GoMarket keeps the first part and removes the second.
+            stalls. Wojalo keeps the first part and removes the second.
           </p>
         </div>
       </section>
@@ -73,7 +73,7 @@ export default function AboutPage() {
                 service desk, a payments processor. Most traders want to trade.
               </p>
               <p className="text-lg leading-relaxed text-muted">
-                So GoMarket takes on the parts that are not trading. The vendor
+                So Wojalo takes on the parts that are not trading. The vendor
                 confirms an order and brings it to our hub. We check it, pack it
                 with everything else that buyer ordered, and deliver once. The
                 trader does what they have always done, and reaches people who
@@ -132,7 +132,7 @@ export default function AboutPage() {
           </p>
           <div className="mt-10 flex flex-wrap justify-center gap-4" data-reveal="up">
             <Link href="/vendors" className={btnLime}>
-              Sell on GoMarket
+              Sell on Wojalo
             </Link>
             <Link href="/contact" className={btnGhostLight}>
               Talk to us

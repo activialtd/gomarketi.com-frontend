@@ -1,4 +1,4 @@
-import { Input } from "@gomarket/ui";
+import { Input } from "@wojalo/ui";
 import {
   ChevronUp,
   ChevronDown,
@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useFieldArray } from "react-hook-form";
-import { refreshOnce } from "@gomarket/api-client";
+import { refreshOnce } from "@wojalo/api-client";
 
 export const CATEGORIES = [
   "fashion",

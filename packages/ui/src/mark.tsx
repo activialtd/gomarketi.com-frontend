@@ -15,7 +15,7 @@ export const BRAND_GREEN = "#046244";
 export const BRAND_ORANGE = "#FDA618";
 
 /**
- * The GoMarket symbol: a "G" drawn as a shopping cart — the bowl of the G is
+ * The Wojalo symbol: a "G" drawn as a shopping cart — the bowl of the G is
  * the basket, the orange bar its contents, two wheels below.
  *
  * Traced from the supplied logo artwork, so these are the real curves rather

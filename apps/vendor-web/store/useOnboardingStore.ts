@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { BusinessType, EmployeeRange } from "@gomarket/shared-types";
+import { BusinessType, EmployeeRange } from "@wojalo/shared-types";
 
 export interface OnboardingState {
   // Step 1: Business Draft State

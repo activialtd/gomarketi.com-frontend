@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Typed SWR hooks for the GoMarketi vendor dashboard.
+ * Typed SWR hooks for the Wojalo vendor dashboard.
  *
  * Every hook follows the stale-while-revalidate pattern:
  *  1. Return cached data immediately (zero-latency navigation)
@@ -36,7 +36,7 @@ import {
   identityApi,
   staffApi,
   type PlanResp,
-} from "@gomarket/api-client";
+} from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useNotificationStore } from "@/store/useNotificationStore";
 import { ROUTES } from "@/lib/config/routes";
@@ -319,7 +319,7 @@ export const invalidate = {
 /** Vendor-facing wording for the statuses that arrive over the socket. */
 const ORDER_STATUS_TITLES: Record<string, string> = {
   confirmed: "Order confirmed",
-  at_hub: "Order received at the GoMarketi hub",
+  at_hub: "Order received at the Wojalo hub",
   shipped: "Order dispatched",
   delivered: "Order delivered — payment released",
   cancelled: "Order cancelled",

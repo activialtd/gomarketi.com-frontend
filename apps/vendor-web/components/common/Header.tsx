@@ -29,7 +29,7 @@ export function Header({
   onMenuClick,
   storeName = "My Store",
   storeSlug = "",
-  storeDomain = "gomarketi.com",
+  storeDomain = "wojalo.com",
   merchantName = "Merchant",
   userEmail,
   avatarInitials,
@@ -47,8 +47,8 @@ export function Header({
       .slice(0, 2);
 
   // Strip any accidental protocol prefix from storeDomain (e.g. Vercel env var set
-  // to "https://gomarketi.com" instead of just "gomarketi.com" produces the broken
-  // URL "https://cobi.https://gomarketi.com"). Always strip before using.
+  // to "https://wojalo.com" instead of just "wojalo.com" produces the broken
+  // URL "https://cobi.https://wojalo.com"). Always strip before using.
   const cleanDomain = storeDomain
     .replace(/^https?:\/\//i, "")
     .replace(/\/$/, "");
@@ -57,7 +57,7 @@ export function Header({
   // - Local dev (domain contains "localhost" or a port): path-based routing
   //   → http://localhost:3001/storefront/{slug}  (apps/web dev server)
   // - Production: subdomain routing
-  //   → https://{slug}.gomarketi.com
+  //   → https://{slug}.wojalo.com
   // Local dev uses subdomain routing via the proxy (e.g. cobi.localhost:3001),
   // same as production — never path-based.
   const isLocalDev = cleanDomain.includes("localhost") || /:\d+/.test(cleanDomain);
@@ -124,7 +124,7 @@ export function Header({
       <div className="flex items-center gap-2">
         {/* View Store CTA
             Local dev  → http://localhost:3001/storefront/{slug}  (path-based, apps/web dev server)
-            Production → https://{slug}.gomarketi.com             (subdomain, Cloudflare SSL) */}
+            Production → https://{slug}.wojalo.com             (subdomain, Cloudflare SSL) */}
         {storeSlug && (
           <Link
             href={storeUrl}

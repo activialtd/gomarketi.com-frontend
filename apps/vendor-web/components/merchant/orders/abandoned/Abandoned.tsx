@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import { Search, RotateCcw, TrendingUp, Loader2 } from "lucide-react";
-import { type AbandonedCartResp } from "@gomarket/api-client";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { type AbandonedCartResp } from "@wojalo/api-client";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { AbandonedRow, AbandonedEmptyState } from "./helpers";
 import { useAbandonedCarts } from "@/lib/swr/hooks";
 

@@ -12,15 +12,15 @@ import {
   Globe,
   Share2,
 } from "lucide-react";
-import { Input } from "@gomarket/ui";
+import { Input } from "@wojalo/ui";
 import { storeInfoSchema, StoreInfoValues } from "@/lib/validations/schemas";
 import { LogoUpload, Field, Section } from "./helpers";
-import { NIGERIAN_STATES } from "@gomarket/shared-utils";
-import { storefrontApi, ApiError, type StoreResp } from "@gomarket/api-client";
+import { NIGERIAN_STATES } from "@wojalo/shared-utils";
+import { storefrontApi, ApiError, type StoreResp } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 
-const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "wojalo.com";
 
 export default function StoreInformationPage() {
   const accessToken = useAuthStore((s) => s.accessToken);

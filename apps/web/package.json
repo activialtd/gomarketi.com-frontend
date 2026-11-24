@@ -9,10 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@gomarket/api-client": "workspace:^",
-    "@gomarket/shared-types": "workspace:*",
-    "@gomarket/shared-utils": "workspace:*",
-    "@gomarket/ui": "workspace:*",
+    "@wojalo/api-client": "workspace:^",
+    "@wojalo/shared-types": "workspace:*",
+    "@wojalo/shared-utils": "workspace:*",
+    "@wojalo/ui": "workspace:*",
     "@hookform/resolvers": "^5.4.0",
     "gsap": "^3.15.0",
     "lucide-react": "^1.20.0",

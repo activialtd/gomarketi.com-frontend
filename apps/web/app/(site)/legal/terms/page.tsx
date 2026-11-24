@@ -1,9 +1,9 @@
 import { LegalLayout, PolicySection } from "@/components/LegalSection";
 
 export const metadata = {
-  title: "Terms of Service · GoMarketi",
+  title: "Terms of Service · Wojalo",
   description:
-    "The rules that govern how you use GoMarketi as a customer, vendor, or courier.",
+    "The rules that govern how you use Wojalo as a customer, vendor, or courier.",
 };
 
 export default function TermsPage() {
@@ -11,12 +11,12 @@ export default function TermsPage() {
     <LegalLayout
       eyebrow="POLICIES"
       title="Terms of Service"
-      intro="The agreement between you and GoMarketi. By using the platform, you agree to these terms."
+      intro="The agreement between you and Wojalo. By using the platform, you agree to these terms."
       updatedAt="15 August 2026"
       toc={[
         { id: "accepting", label: "Accepting these terms" },
         { id: "account", label: "Your account" },
-        { id: "using", label: "Using GoMarketi" },
+        { id: "using", label: "Using Wojalo" },
         { id: "roles", label: "Customers, vendors, couriers" },
         { id: "content", label: "Content you post" },
         { id: "payments", label: "Payments & fees" },
@@ -29,13 +29,13 @@ export default function TermsPage() {
     >
       <PolicySection id="accepting" title="Accepting these terms">
         <p>
-          These terms form a binding agreement between you and GoMarketi Limited
-          ("GoMarketi", "we", "us"). By creating an account or using any part of
+          These terms form a binding agreement between you and Activia Ltd, the company that operates Wojalo
+          ("Wojalo", "we", "us"). By creating an account or using any part of
           the platform — the mobile app, vendor dashboard, or storefronts hosted
-          at <strong>*.gomarketi.com</strong> — you accept these terms in full.
+          at <strong>*.wojalo.com</strong> — you accept these terms in full.
         </p>
         <p>
-          If you do not agree, please do not use GoMarketi. You must be at least
+          If you do not agree, please do not use Wojalo. You must be at least
           16 to hold a customer account, and at least 18 to operate as a vendor
           or courier.
         </p>
@@ -53,9 +53,9 @@ export default function TermsPage() {
         </p>
       </PolicySection>
 
-      <PolicySection id="using" title="Using GoMarketi">
+      <PolicySection id="using" title="Using Wojalo">
         <p>
-          GoMarketi is a marketplace that connects customers with independent
+          Wojalo is a marketplace that connects customers with independent
           vendors and courier partners. We provide the technology, payments
           infrastructure, and support that makes those transactions possible —
           we do not manufacture or sell the products offered on our platform.
@@ -72,7 +72,7 @@ export default function TermsPage() {
             <strong>Customers</strong> browse, place orders, and pay through the
             platform. When you place an order, you enter a contract with the
             vendor for the sale of goods and — if delivery is arranged through
-            GoMarketi — with the courier partner for delivery.
+            Wojalo — with the courier partner for delivery.
           </li>
           <li>
             <strong>Vendors</strong> list products, set prices, fulfill orders,
@@ -89,8 +89,8 @@ export default function TermsPage() {
 
       <PolicySection id="content" title="Content you post">
         <p>
-          You retain ownership of the content you post to GoMarketi — reviews,
-          product images, store profiles. By posting, you grant GoMarketi a
+          You retain ownership of the content you post to Wojalo — reviews,
+          product images, store profiles. By posting, you grant Wojalo a
           non-exclusive, worldwide licence to host, display, and distribute that
           content on the platform for as long as you keep it published.
         </p>
@@ -103,10 +103,10 @@ export default function TermsPage() {
       <PolicySection id="payments" title="Payments & fees">
         <p>
           Payments are processed by our payment partner (Paystack). By paying on
-          GoMarketi, you also agree to their terms of service.
+          Wojalo, you also agree to their terms of service.
         </p>
         <p>
-          Customer prices include all applicable taxes. GoMarketi charges
+          Customer prices include all applicable taxes. Wojalo charges
           vendors a platform fee on each transaction — the exact rate is set out
           in the vendor agreement and may vary by category.
         </p>
@@ -115,10 +115,10 @@ export default function TermsPage() {
       <PolicySection id="prohibited" title="Prohibited conduct">
         <p>You must not:</p>
         <ul>
-          <li>Use GoMarketi for anything illegal or fraudulent</li>
+          <li>Use Wojalo for anything illegal or fraudulent</li>
           <li>Sell counterfeit, stolen, or restricted goods</li>
           <li>Interfere with the platform's operation or security</li>
-          <li>Scrape or harvest data from GoMarketi without permission</li>
+          <li>Scrape or harvest data from Wojalo without permission</li>
           <li>Impersonate anyone or misrepresent your affiliation</li>
           <li>Harass, threaten, or abuse other users, vendors, or couriers</li>
         </ul>
@@ -135,10 +135,10 @@ export default function TermsPage() {
 
       <PolicySection id="liability" title="Liability & disclaimers">
         <p>
-          GoMarketi provides the platform on an "as is" basis. We work hard to
+          Wojalo provides the platform on an "as is" basis. We work hard to
           keep it running smoothly but do not warrant that it will be
           uninterrupted or free from errors. Where the law allows, our total
-          liability for any claim relating to your use of GoMarketi is limited
+          liability for any claim relating to your use of Wojalo is limited
           to the fees you paid us in the 12 months before the claim arose.
         </p>
         <p>
@@ -158,7 +158,7 @@ export default function TermsPage() {
 
       <PolicySection id="changes" title="Changes to these terms">
         <p>
-          We may update these terms as GoMarketi evolves. The "Last updated"
+          We may update these terms as Wojalo evolves. The "Last updated"
           date reflects the most recent change. Continued use of the platform
           after changes means you accept the new terms — material changes will
           be flagged in-app and by email before they take effect.

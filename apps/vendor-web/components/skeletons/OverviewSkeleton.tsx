@@ -1,4 +1,4 @@
-import Skeleton from "@gomarket/ui/src/skeleton";
+import Skeleton from "@wojalo/ui/src/skeleton";
 
 export default function PageLoader() {
   return (

@@ -12,7 +12,7 @@ import {
   Loader2,
   ArrowRight,
 } from "lucide-react";
-import { identityApi, type PlanResp } from "@gomarket/api-client";
+import { identityApi, type PlanResp } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ROUTES } from "@/lib/config/routes";
 

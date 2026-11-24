@@ -5,7 +5,9 @@ import Providers from "./providers";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
-  subsets: ["latin"],
+  // latin-ext + vietnamese carry ọ/Ọ for the Yoruba wordmark (Wọjàlọ);
+  // the extra files only download on pages that use those letters.
+  subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
@@ -13,13 +15,13 @@ const jakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   // Needed for app/opengraph-image.png and app/twitter-image.png to resolve to
   // absolute URLs — relative ones are ignored by most link scrapers.
-  metadataBase: new URL("https://vendor.gomarketi.com"),
-  title: "Vendor Dashboard | GoMarket",
-  description: "Manage your GoMarket storefront, products, and orders.",
+  metadataBase: new URL("https://vendor.wojalo.com"),
+  title: "Vendor Dashboard | Wojalo",
+  description: "Manage your Wojalo storefront, products, and orders.",
   openGraph: {
-    title: "GoMarket for vendors",
-    description: "Manage your GoMarket storefront, products, and orders.",
-    siteName: "GoMarket",
+    title: "Wojalo for vendors",
+    description: "Manage your Wojalo storefront, products, and orders.",
+    siteName: "Wojalo",
     type: "website",
   },
 };

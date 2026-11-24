@@ -4,8 +4,8 @@ import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Create Account | GoMarket Vendor",
-  description: "Sign up and start selling your products globally on GoMarket.",
+  title: "Create Account | Wojalo Vendor",
+  description: "Sign up and start selling your products globally on Wojalo.",
 };
 
 export default function SignupPage() {

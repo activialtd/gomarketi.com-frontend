@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Upload, X, Loader2, Check, Image as ImageIcon } from "lucide-react";
-import { storefrontApi, ApiError } from "@gomarket/api-client";
+import { storefrontApi, ApiError } from "@wojalo/api-client";
 
 interface ImageUploadProps {
   label: string;

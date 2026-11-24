@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2, UserPlus, Trash2, PencilLine, CheckCircle2, ShieldCheck, Eye, Package, Headphones, BarChart2 } from "lucide-react";
-import { staffApi, type StaffResp, type CreateStaffReq } from "@gomarket/api-client";
+import { staffApi, type StaffResp, type CreateStaffReq } from "@wojalo/api-client";
 import { useStaff, useSubscription, invalidate } from "@/lib/swr/hooks";
 import { useAuthStore } from "@/store/useAuthStore";
 import { UpgradeBanner } from "@/components/common/PlanGate";

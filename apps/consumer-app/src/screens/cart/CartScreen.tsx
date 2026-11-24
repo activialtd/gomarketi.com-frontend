@@ -51,7 +51,7 @@ export function CartScreen() {
             Cart is empty
           </Text>
           <Text style={[type.body, { textAlign: "center", marginTop: 4 }]}>
-            Ask GoMarketi for anything and add it here.
+            Ask Wojalo for anything and add it here.
           </Text>
         </View>
       ) : (

@@ -86,7 +86,7 @@ export function Logo({ inverted = false }: { inverted?: boolean }) {
           inverted ? "text-white" : "text-foreground"
         }`}
       >
-        GoMarketi
+        Wojalo
       </span>
     </span>
   );

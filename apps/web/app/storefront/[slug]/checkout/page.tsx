@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import EkoCheckout from "@/components/storefront/eko/EkoCheckout";
 import LagosCheckout from "@/components/storefront/lagos/LagosCheckout";
 import { STORE_CONFIG } from "@/lib/storeConfig";
-import type { DeliveryOptionResp } from "@gomarket/api-client";
+import type { DeliveryOptionResp } from "@wojalo/api-client";
 
 export const metadata: Metadata = {
   title: "Checkout",

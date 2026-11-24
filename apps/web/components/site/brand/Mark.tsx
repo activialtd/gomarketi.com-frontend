@@ -1,11 +1,12 @@
-// The symbol itself lives in @gomarket/ui so the dashboard and the marketing
+// The symbol itself lives in @wojalo/ui so the dashboard and the marketing
 // site cannot drift apart. Re-exported here because the site imports it by
 // this path in a dozen places, and the lockup below is site-specific.
-export { Mark, BRAND_GREEN, BRAND_ORANGE } from "@gomarket/ui";
-import { Mark } from "@gomarket/ui";
+export { Mark, BRAND_GREEN, BRAND_ORANGE } from "@wojalo/ui";
+import { Mark } from "@wojalo/ui";
 
 /**
- * Full lockup: the symbol beside the GoMarket wordmark, which is how the
+ * Full lockup: the symbol beside the Wọjàlọ wordmark (Yoruba: wọ ọjà lọ,
+ * "step into the market"), which is how the
  * brand sets it horizontally. `tone` picks the treatment for the ground it
  * sits on.
  */
@@ -29,7 +30,7 @@ export function Wordmark({
       <span
         className={`font-[family-name:var(--font-display)] text-[20px] font-extrabold leading-none tracking-tight ${textColor}`}
       >
-        GoMarket
+        Wọjàlọ
       </span>
     </span>
   );

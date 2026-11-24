@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Loader2, ShieldCheck, Users, BarChart3 } from "lucide-react";
-import { adminApi, ApiError } from "@gomarket/api-client";
+import { adminApi, ApiError } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function LoginPage() {
@@ -47,7 +47,7 @@ export default function LoginPage() {
           >
             <Sparkles className="h-[18px] w-[18px]" style={{ color: "var(--sidebar-accent)" }} />
           </div>
-          <span className="text-[16px] font-extrabold text-white">GoMarketi</span>
+          <span className="text-[16px] font-extrabold text-white">Wọjàlọ</span>
         </div>
 
         <div>
@@ -66,7 +66,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-          © {new Date().getFullYear()} GoMarketi
+          © {new Date().getFullYear()} Wojalo
         </p>
       </div>
 
@@ -80,11 +80,11 @@ export default function LoginPage() {
             >
               <Sparkles className="h-[15px] w-[15px] text-white" />
             </div>
-            <span className="text-[15px] font-extrabold text-foreground">GoMarketi</span>
+            <span className="text-[15px] font-extrabold text-foreground">Wọjàlọ</span>
           </div>
 
           <h2 className="mb-1 text-[20px] font-extrabold text-foreground">Sign in</h2>
-          <p className="mb-7 text-[13px] text-muted">Use your GoMarketi staff credentials.</p>
+          <p className="mb-7 text-[13px] text-muted">Use your Wojalo staff credentials.</p>
 
           <label className="label mb-1.5 block text-[12px] font-semibold text-muted">Email</label>
           <input
@@ -94,7 +94,7 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="input mb-4"
-            placeholder="you@gomarketi.com"
+            placeholder="you@wojalo.com"
           />
 
           <label className="label mb-1.5 block text-[12px] font-semibold text-muted">Password</label>

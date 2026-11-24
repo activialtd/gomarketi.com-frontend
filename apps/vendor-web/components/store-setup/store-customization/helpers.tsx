@@ -823,7 +823,7 @@ export function LivePreview({
               )}
               <p style={{ color: "rgba(255,255,255,0.45)", fontSize: "10px", textAlign: "center" }}>
                 {sec?.footer?.copyright || `© 2026 ${storeName}`}
-                {sec?.footer?.showPoweredBy !== false && " · Powered by GoMarketi"}
+                {sec?.footer?.showPoweredBy !== false && " · Powered by Wojalo"}
               </p>
             </div>
           </div>
@@ -1092,7 +1092,7 @@ export function LivePreview({
               )}
               <p style={{ fontSize: "10px", color: "rgba(247,244,238,0.3)", marginTop: "14px" }}>
                 {sec?.footer?.copyright || `© 2026 ${storeName}`}
-                {sec?.footer?.showPoweredBy !== false && " · Powered by GoMarketi"}
+                {sec?.footer?.showPoweredBy !== false && " · Powered by Wojalo"}
               </p>
             </div>
           </div>

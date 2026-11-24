@@ -7,7 +7,7 @@ import { MarketMarquee } from "@/components/site/MarketMarquee";
 import { btnGhostLight, btnLime } from "@/components/site/ui";
 
 export const metadata: Metadata = {
-  title: "GoMarket — Shop your local market without the trip",
+  title: "Wojalo — Shop your local market without the trip",
   description:
     "Order from the traders you already buy from. Vendors bring your items to our hub, we check them, and one delivery brings everything to your door.",
 };
@@ -23,7 +23,7 @@ const STEPS = [
   },
   {
     title: "Checked at our hub",
-    body: "Every vendor brings your items to the GoMarket hub, where we check each one against your order and pack them together.",
+    body: "Every vendor brings your items to the Wojalo hub, where we check each one against your order and pack them together.",
   },
   {
     title: "One delivery",
@@ -80,7 +80,7 @@ export default function HomePage() {
                 things you buy every week.
               </p>
               <p className="text-lg leading-relaxed text-muted">
-                GoMarket keeps the part that works. The same traders, the same
+                Wojalo keeps the part that works. The same traders, the same
                 prices you would negotiate at the stall, the same choice across
                 a whole market. What it removes is the journey: you shop the
                 stalls from your phone, and we bring the market to you.
@@ -178,7 +178,7 @@ export default function HomePage() {
               </h2>
               <p className="mt-7 max-w-lg text-lg leading-relaxed text-white/70">
                 The trader with the best fabric in Balogun should not lose a sale
-                because a buyer could not face the drive. GoMarket puts your
+                because a buyer could not face the drive. Wojalo puts your
                 stall in front of people who are already looking for what you
                 sell, and handles everything after the sale.
               </p>
@@ -221,7 +221,7 @@ export default function HomePage() {
               Where we are
             </p>
             <h2 className="mt-5 font-[family-name:var(--font-display)] text-[clamp(2rem,4.5vw,3.4rem)] leading-[1.02] font-extrabold tracking-[-0.02em] text-foreground">
-              The markets already on GoMarket.
+              The markets already on Wojalo.
             </h2>
           </div>
         </div>
@@ -248,7 +248,7 @@ export default function HomePage() {
                 Get the app
               </Link>
               <Link href="/vendors" className={btnGhostLight}>
-                Sell on GoMarket
+                Sell on Wojalo
               </Link>
             </div>
           </div>

@@ -14,8 +14,8 @@ import {
 import { type Category } from "@/lib/data/categories";
 import { CategoryFormValues } from "@/lib/validations/schemas";
 import { CategoryFormPanel, CategoryRow, DeleteModal } from "./helpers";
-import { toSlug } from "@gomarket/shared-utils";
-import { catalogueApi } from "@gomarket/api-client";
+import { toSlug } from "@wojalo/shared-utils";
+import { catalogueApi } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 
 export default function Categories() {
@@ -205,7 +205,7 @@ export default function Categories() {
               />
               <span>
                 <strong>Default categories</strong> are shared across all
-                GoMarket stores and can't be deleted — only hidden per product.
+                Wojalo stores and can't be deleted — only hidden per product.
                 Add your own custom categories to match how you organise your
                 inventory.
               </span>

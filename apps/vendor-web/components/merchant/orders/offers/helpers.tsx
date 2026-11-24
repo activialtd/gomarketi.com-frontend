@@ -111,7 +111,7 @@ function offerWhatsappText(offer: Offer): string {
 
 function describeEvent(e: OfferEvent): string {
   const amt = typeof e.amount_kobo === "number" ? nairaWhole(e.amount_kobo) : "";
-  const who = e.actor === "buyer" ? "Buyer" : e.actor === "vendor" ? "You" : "GoMarketi";
+  const who = e.actor === "buyer" ? "Buyer" : e.actor === "vendor" ? "You" : "Wojalo";
   switch (e.action) {
     case "offer":
       return `${who} offered ${amt}`.trim();

@@ -1,5 +1,5 @@
 /**
- * GoMarketi tokens — single source of truth. No hex outside this file.
+ * Wojalo tokens — single source of truth. No hex outside this file.
  * Canonical names first; component aliases derived below them.
  */
 

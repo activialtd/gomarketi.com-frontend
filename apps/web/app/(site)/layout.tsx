@@ -6,7 +6,7 @@ import { Navbar } from "@/components/site/common/Navbar";
 // Anything in the root layout renders on every route in the app — including
 // /storefront/[slug], where each vendor already gets their own themed header
 // and footer from EkoLayout/LagosLayout. A published store was therefore
-// showing GoMarketi's navbar and footer stacked around the vendor's own,
+// showing Wojalo's navbar and footer stacked around the vendor's own,
 // which is not a store the vendor designed.
 //
 // (site) is a route group: the parentheses keep it out of the URL, so "/",

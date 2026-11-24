@@ -113,7 +113,7 @@ export function getTiers(completedTiers: KycTier[]): TierInfo[] {
       unlocks: [
         "Automated Paystack payouts",
         "Up to ₦50,000 withdrawal/day",
-        "GoMarket identity badge",
+        "Wojalo identity badge",
         "Faster dispute resolution",
       ],
       status: completed(2) ? "completed" : "active", // always unlocked
@@ -126,7 +126,7 @@ export function getTiers(completedTiers: KycTier[]): TierInfo[] {
       color: "#1A7A42",
       unlocks: [
         "Unlimited daily withdrawals",
-        "GoMarket Verified Business badge",
+        "Wojalo Verified Business badge",
         "Priority support & account manager",
         "Featured storefront placement",
       ],
@@ -579,7 +579,7 @@ export function StepNIN({
           className="text-[12px] leading-relaxed cursor-pointer"
           style={{ color: "#374151" }}
         >
-          I consent to GoMarket processing my {method === "bvn" ? "BVN" : "NIN"}{" "}
+          I consent to Wojalo processing my {method === "bvn" ? "BVN" : "NIN"}{" "}
           for identity verification, in line with the{" "}
           <strong>Nigeria Data Protection Act (NDPA)</strong>.
         </label>
@@ -997,7 +997,7 @@ export function StepCAC({
         >
           I confirm that the business information provided is accurate and I am
           authorised to submit this on behalf of the company. I consent to
-          GoMarket verifying this information via CAC and FIRS databases in
+          Wojalo verifying this information via CAC and FIRS databases in
           accordance with the{" "}
           <strong>Nigeria Data Protection Act (NDPA)</strong>.
         </label>
@@ -1299,7 +1299,7 @@ export function StepSuccess({
             className="absolute text-[8.5px] font-extrabold tracking-[0.25em]"
             style={{ color: "#1A7A42", bottom: "16px" }}
           >
-            GOMARKET
+            WỌJÀLỌ
           </span>
         </div>
         <div ref={shieldRef}>
@@ -1327,7 +1327,7 @@ export function StepSuccess({
 
         <div data-line className="max-w-sm mx-auto">
           <MRZStrip
-            line1={`P<NGA<GOMARKET<<VENDOR<<TIER${tier}${"<".repeat(20)}`}
+            line1={`P<NGA<WOJALO<<VENDOR<<TIER${tier}${"<".repeat(20)}`}
             line2={`${mrzDate}<NGA<TIER${tier}<STATUS<PENDING${"<".repeat(6)}`}
           />
         </div>

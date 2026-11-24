@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { mutate } from "swr";
 import { ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
-import { adminApi } from "@gomarket/api-client";
+import { adminApi } from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useErrorEvent } from "@/lib/swr/hooks";
 import { fmtDate } from "@/lib/format";

@@ -24,7 +24,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAuthStore } from "@/store/useAuthStore";
-import { ORDER_STATUS_CONFIG } from "@gomarket/shared-utils";
+import { ORDER_STATUS_CONFIG } from "@wojalo/shared-utils";
 import {
   useAnalyticsOverview,
   useOrders,
@@ -46,7 +46,7 @@ import Link from "next/link";
 import { ROUTES } from "@/lib/config/routes";
 import { NoStoreBanner } from "@/components/common/NoStoreBanner";
 
-const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "wojalo.com";
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -316,7 +316,7 @@ export default function OverviewPage() {
                   className="text-[11px] font-bold uppercase tracking-[0.1em]"
                   style={{ color: "rgba(255,255,255,0.45)" }}
                 >
-                  GoMarket Wallet
+                  Wojalo Wallet
                 </span>
               </div>
               <Link

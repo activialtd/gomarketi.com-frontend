@@ -1,5 +1,5 @@
 {
-  "name": "@gomarket/shared-utils",
+  "name": "@wojalo/shared-utils",
   "version": "1.0.0",
   "private": true,
   "main": "./src/index.ts",

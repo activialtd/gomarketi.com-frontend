@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { mutate } from "swr";
 import { ArrowLeft, CheckCircle2, Truck, RotateCcw, Loader2, AlertTriangle, XCircle, Banknote } from "lucide-react";
-import { adminApi, type AdminOrderStatus } from "@gomarket/api-client";
+import { adminApi, type AdminOrderStatus } from "@wojalo/api-client";
 import { useAuthStore, roleAtLeast } from "@/store/useAuthStore";
 import { useBatch } from "@/lib/swr/hooks";
 import { fmtNaira, fmtDate } from "@/lib/format";
@@ -15,7 +15,7 @@ const STATUS_STYLE: Record<AdminOrderStatus, StatusStyle> = {
   awaiting_payment: { bg: "var(--input)", fg: "var(--muted)", label: "Awaiting payment" },
   pending: { bg: "var(--input)", fg: "var(--muted)", label: "Pending" },
   confirmed: { bg: "rgba(59,130,246,0.12)", fg: "#1d4ed8", label: "Confirmed — awaiting hub" },
-  at_hub: { bg: "rgba(245,158,11,0.14)", fg: "#b45309", label: "At GoMarketi hub" },
+  at_hub: { bg: "rgba(245,158,11,0.14)", fg: "#b45309", label: "At Wojalo hub" },
   shipped: { bg: "rgba(34,197,94,0.12)", fg: "#15803d", label: "Dispatched" },
   ready_for_collection: { bg: "rgba(245,158,11,0.14)", fg: "#b45309", label: "Ready to collect" },
   delivered: { bg: "rgba(26,122,66,0.14)", fg: "#0A2E1A", label: "Delivered" },

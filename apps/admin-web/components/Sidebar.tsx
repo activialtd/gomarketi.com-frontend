@@ -15,7 +15,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { useAuthStore, roleAtLeast } from "@/store/useAuthStore";
-import type { AdminRole } from "@gomarket/api-client";
+import type { AdminRole } from "@wojalo/api-client";
 
 interface NavItem {
   href: string;
@@ -75,7 +75,7 @@ export function Sidebar() {
           <Sparkles className="h-[16px] w-[16px]" style={{ color: "var(--sidebar-accent)" }} />
         </div>
         <div>
-          <p className="text-[14px] font-extrabold leading-none text-white">GoMarketi</p>
+          <p className="text-[14px] font-extrabold leading-none text-white">Wọjàlọ</p>
           <p
             className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.12em]"
             style={{ color: "var(--sidebar-fg)" }}

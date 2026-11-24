@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "consumer-app",
+    "name": "Wojalo",
     "slug": "gomarketi",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -41,13 +41,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "GoMarketi uses your location to show nearby vendors and deliver to your door."
+          "locationWhenInUsePermission": "Wojalo uses your location to show nearby vendors and deliver to your door."
         }
       ],
       [
         "expo-av",
         {
-          "microphonePermission": "GoMarketi uses your microphone for voice search."
+          "microphonePermission": "Wojalo uses your microphone for voice search."
         }
       ]
     ],

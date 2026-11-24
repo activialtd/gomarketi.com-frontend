@@ -108,7 +108,7 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
         transition={{ type: "timing", duration: 450, delay: 420 }}
         style={s.word}
       >
-        GoMarketi
+        Wojalo
       </MotiText>
 
       <View style={s.dots}>

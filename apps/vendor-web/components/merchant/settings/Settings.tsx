@@ -36,12 +36,12 @@ import {
   type SocialLinks,
   type ThemeConfig,
   type PlanResp,
-} from "@gomarket/api-client";
+} from "@wojalo/api-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { ImageUpload } from "./ImageUpload";
 import { ThemePreview } from "./ThemePreview";
 
-const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "gomarketi.com";
+const STORE_DOMAIN = process.env.NEXT_PUBLIC_STORE_DOMAIN ?? "wojalo.com";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1140,7 +1140,7 @@ function SocialMediaTab({
         }}
       >
         <strong>Tip:</strong> You can enter handles (e.g. @mystore) or full
-        URLs. GoMarketi will display them correctly.
+        URLs. Wojalo will display them correctly.
       </div>
     </div>
   );
@@ -1173,7 +1173,7 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
           Your Subscription
         </p>
         <p className="text-[12px] mt-0.5" style={{ color: "#6b7280" }}>
-          Manage your GoMarketi plan and billing.
+          Manage your Wojalo plan and billing.
         </p>
       </div>
 
@@ -1302,7 +1302,7 @@ function SubscriptionTab({ plan }: { plan: PlanResp | null }) {
           </p>
           <p className="text-[12px]" style={{ color: "rgba(240,250,243,0.7)" }}>
             Upgrade to Starter or Growth to get higher product limits, priority
-            support, and a GoMarketi Verified badge.
+            support, and a Wojalo Verified badge.
           </p>
           <Link
             href={ROUTES.ONBOARDING.PLANS}

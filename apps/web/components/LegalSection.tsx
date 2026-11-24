@@ -69,10 +69,10 @@ export function LegalLayout({
             <span className="text-muted">
               Reach us at{" "}
               <a
-                href="mailto:support@gomarketi.com"
+                href="mailto:support@wojalo.com"
                 className="text-primary underline underline-offset-2"
               >
-                support@gomarketi.com
+                support@wojalo.com
               </a>{" "}
               — we typically reply within 24 hours.
             </span>

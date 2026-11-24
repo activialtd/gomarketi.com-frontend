@@ -14,7 +14,7 @@ export type StatusStep = { key: OrderStatus; label: string; icon: string };
 
 export const STATUS_STEPS: StatusStep[] = [
   { key: "confirmed", label: "Confirmed", icon: "checkmark-circle" },
-  { key: "at_hub", label: "At GoMarketi hub", icon: "business" },
+  { key: "at_hub", label: "At Wojalo hub", icon: "business" },
   { key: "shipped", label: "Out for delivery", icon: "bicycle" },
   { key: "delivered", label: "Delivered", icon: "home" },
 ];
@@ -54,7 +54,7 @@ export type BatchSummary = {
 };
 
 // A batch is only as far along as its least-advanced (non-cancelled) order —
-// GoMarketi dispatches vendors together, so the honest customer-facing
+// Wojalo dispatches vendors together, so the honest customer-facing
 // status is "what's the slowest part of my order doing".
 export function summarizeBatch(orders: OrderResp[]): BatchSummary {
   const live = orders.filter((o) => o.status !== "cancelled");

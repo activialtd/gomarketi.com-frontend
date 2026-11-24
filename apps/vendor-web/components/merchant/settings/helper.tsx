@@ -42,7 +42,7 @@ export const MOCK_PROFILE: VendorProfile = {
   businessDescription:
     "Premium Nigerian fashion for weddings, events, and everyday life. We specialise in Ankara, Aso-Oke, and contemporary African designs.",
   location: { city: "Surulere", state: "Lagos" },
-  storeUrl: "eko-fashion.gomarketi.com",
+  storeUrl: "eko-fashion.wojalo.com",
   joinedAt: "2026-01-15T00:00:00Z",
   plan: "starter",
   kycStatus: "unverified", // ← toggle to "verified" to see the other state
@@ -75,7 +75,7 @@ export const KYC_CONFIG: Record<
 > = {
   verified: {
     label: "Identity verified",
-    sub: "Your business is verified and eligible for all GoMarket features including payouts.",
+    sub: "Your business is verified and eligible for all Wojalo features including payouts.",
     banner: "#0A2E1A",
     text: "#F0FAF3",
     muted: "rgba(240,250,243,0.55)",

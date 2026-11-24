@@ -51,7 +51,7 @@ const STEPS: {
   {
     target: "go-market-wallet",
     emoji: "💰",
-    title: "GoMarketi Wallet",
+    title: "Wojalo Wallet",
     description:
       "Every paid order credits your wallet automatically. Withdraw to any Nigerian bank account in seconds.",
   },

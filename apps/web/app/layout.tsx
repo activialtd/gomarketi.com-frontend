@@ -8,14 +8,18 @@ import { ErrorReporter } from "@/components/ErrorReporter";
 // the primary face (Blatant) is not licensed for web use here.
 const montserrat = Montserrat({
   variable: "--font-montserrat",
-  subsets: ["latin"],
+  // latin-ext + vietnamese carry ọ/Ọ for the Yoruba wordmark (Wọjàlọ);
+  // the extra files only download on pages that use those letters.
+  subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["500", "600", "700", "800", "900"],
   display: "swap",
 });
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
-  subsets: ["latin"],
+  // latin-ext + vietnamese carry ọ/Ọ for the Yoruba wordmark (Wọjàlọ);
+  // the extra files only download on pages that use those letters.
+  subsets: ["latin", "latin-ext", "vietnamese"],
   weight: ["400", "500", "600", "700", "800"],
   display: "swap",
 });
@@ -24,16 +28,16 @@ export const metadata: Metadata = {
   // Without this, Next emits relative og:image URLs and most scrapers (Slack,
   // WhatsApp, X) drop the preview entirely. It is also what makes the
   // convention-based app/opengraph-image.png and app/twitter-image.png resolve.
-  metadataBase: new URL("https://gomarketi.com"),
-  title: "GoMarket — Shop your local market without the trip",
+  metadataBase: new URL("https://wojalo.com"),
+  title: "Wojalo — Shop your local market without the trip",
   description:
     "Order from the traders you already buy from. Vendors bring your items to our hub, we check them, and one delivery brings everything to your door.",
   openGraph: {
-    title: "GoMarket — Shop your local market without the trip",
+    title: "Wojalo — Shop your local market without the trip",
     description:
       "Order from real market traders. One delivery brings everything to your door.",
-    url: "https://gomarketi.com",
-    siteName: "GoMarketi",
+    url: "https://wojalo.com",
+    siteName: "Wojalo",
     type: "website",
   },
 };

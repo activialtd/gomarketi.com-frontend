@@ -434,7 +434,7 @@ const SLIDES: { key: string; title: Part[]; body: string; Scene: React.FC }[] =
         { text: "Say It", strong: true },
         { text: ", We Find It" },
       ],
-      body: "Type or speak. GoMarketi finds the product and the best vendor near you.",
+      body: "Type or speak. Wojalo finds the product and the best vendor near you.",
       Scene: AskScene,
     },
     {

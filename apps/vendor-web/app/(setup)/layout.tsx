@@ -28,7 +28,7 @@ export default function SetupLayout({
           className="font-extrabold text-[17px] tracking-tight"
           style={{ color: "#1C1C1C" }}
         >
-          GoMarket
+          Wojalo
         </span>
       </div>
       <div className="flex-1">{children}</div>

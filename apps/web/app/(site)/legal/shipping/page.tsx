@@ -1,9 +1,9 @@
 import { LegalLayout, PolicySection } from "@/components/LegalSection";
 
 export const metadata = {
-  title: "Shipping Policy · GoMarketi",
+  title: "Shipping Policy · Wojalo",
   description:
-    "Delivery zones, timelines, fees, and what to do if your order is delayed on GoMarketi.",
+    "Delivery zones, timelines, fees, and what to do if your order is delayed on Wojalo.",
 };
 
 export default function ShippingPage() {
@@ -11,7 +11,7 @@ export default function ShippingPage() {
     <LegalLayout
       eyebrow="POLICIES"
       title="Shipping Policy"
-      intro="How your GoMarketi orders get from the vendor to your doorstep — timelines, fees, and what to expect."
+      intro="How your Wojalo orders get from the vendor to your doorstep — timelines, fees, and what to expect."
       updatedAt="15 August 2026"
       toc={[
         { id: "coverage", label: "Where we deliver" },
@@ -24,7 +24,7 @@ export default function ShippingPage() {
     >
       <PolicySection id="coverage" title="Where we deliver">
         <p>
-          GoMarketi currently operates across major cities in Nigeria. Delivery
+          Wojalo currently operates across major cities in Nigeria. Delivery
           coverage varies by vendor — each store on the platform sets its own
           delivery radius from its physical location.
         </p>
@@ -77,7 +77,7 @@ export default function ShippingPage() {
       <PolicySection id="tracking" title="Tracking your order">
         <p>
           Every order can be tracked in real time from the Orders tab in the
-          GoMarketi app. Once dispatched, you'll see:
+          Wojalo app. Once dispatched, you'll see:
         </p>
         <ul>
           <li>The courier's live location on the map</li>

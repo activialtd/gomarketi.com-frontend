@@ -104,7 +104,7 @@ export default function AuthLayout({
               </svg>
             </div>
             <span className="text-white font-bold text-[17px] tracking-tight">
-              GoMarket
+              Wojalo
             </span>
           </div>
 

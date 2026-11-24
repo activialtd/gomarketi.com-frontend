@@ -13,9 +13,9 @@ import {
   Loader2,
   HandCoins,
 } from "lucide-react";
-import { type OrderResp, type OrderStatus } from "@gomarket/api-client";
+import { type OrderResp, type OrderStatus } from "@wojalo/api-client";
 import { OrderRow, StatCard } from "./helpers";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { useOrders, useOfferCounts, invalidate } from "@/lib/swr/hooks";
 import { ROUTES } from "@/lib/config/routes";
 

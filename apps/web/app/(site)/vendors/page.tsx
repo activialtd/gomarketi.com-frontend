@@ -5,7 +5,7 @@ import { Mark } from "@/components/site/brand/Mark";
 import { btnGhostDark, btnGhostLight, btnLime, eyebrow, heading } from "@/components/site/ui";
 
 export const metadata: Metadata = {
-  title: "Sell on GoMarket — for market traders",
+  title: "Sell on Wojalo — for market traders",
   description:
     "Put your stall online, reach buyers across the city, set your own delivery prices, and get paid to your bank account.",
 };

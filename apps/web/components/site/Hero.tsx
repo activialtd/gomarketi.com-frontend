@@ -139,7 +139,7 @@ export function Hero() {
               href="/vendors"
               className="inline-flex items-center rounded-full border border-white/25 px-7 py-4 text-sm font-bold tracking-wide text-white uppercase transition-colors hover:border-lime hover:text-lime"
             >
-              Sell on GoMarket
+              Sell on Wojalo
             </Link>
           </div>
         </div>

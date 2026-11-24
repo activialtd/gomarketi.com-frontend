@@ -296,7 +296,7 @@ export default function EkoLayout({
             <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.28)" }}>
               © {new Date().getFullYear()} {storeName}. All rights reserved.
             </p>
-            <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>Powered by GoMarketi</p>
+            <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.18)" }}>Powered by Wojalo</p>
           </div>
         </div>
       </footer>

@@ -5,7 +5,7 @@ import {
   Mail, Send, Plus, Loader2, Users, CheckCircle2,
   Clock, AlertCircle, Trash2, X,
 } from "lucide-react";
-import { campaignsApi, type CampaignResp } from "@gomarket/api-client";
+import { campaignsApi, type CampaignResp } from "@wojalo/api-client";
 import { useCampaigns, useSubscribers, invalidate } from "@/lib/swr/hooks";
 import { useAuthStore } from "@/store/useAuthStore";
 

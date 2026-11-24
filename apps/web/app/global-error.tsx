@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { reportClientError } from '@gomarket/api-client';
+import { reportClientError } from '@wojalo/api-client';
 
 // Next.js's top-level error boundary — catches render errors that escape
 // every other boundary, including the root layout itself. Must render its

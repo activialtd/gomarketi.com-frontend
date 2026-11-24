@@ -31,7 +31,7 @@ jobs:
       - name: Build vendor-web
         run: pnpm --filter vendor-web build
         env:
-          NEXT_PUBLIC_API_URL: ${{ github.ref_name == 'main' && 'https://api.gomarketi.com' || 'https://api-staging.gomarketi.com' }}
+          NEXT_PUBLIC_API_URL: ${{ github.ref_name == 'main' && 'https://api.wojalo.com' || 'https://api-staging.wojalo.com' }}
 
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25

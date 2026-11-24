@@ -247,7 +247,9 @@ export function HomeScreen() {
           >
             <View style={s.top}>
               <Animated.Text style={[s.display, riseIn(14)]}>
-                GOMARKET
+                {/* Plain WOJALO, not WỌJÀLỌ: Fredoka has no ọ/Ọ glyph, and a
+                    fallback-font dot would look broken in the hero. */}
+                WOJALO
               </Animated.Text>
               <Animated.Text style={[s.subDisplay, riseIn(20)]}>
                 Instantly access inventory from every major market in the city.

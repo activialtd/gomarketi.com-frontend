@@ -2,10 +2,10 @@
 
 import { useId, useState } from "react";
 
-const CONTACT_EMAIL = "hello@gomarketi.com";
+const CONTACT_EMAIL = "hello@wojalo.com";
 
 const TOPICS = [
-  { value: "buying", label: "Shopping on GoMarket" },
+  { value: "buying", label: "Shopping on Wojalo" },
   { value: "selling", label: "Opening a store" },
   { value: "order", label: "An order I placed" },
   { value: "partnership", label: "Working together" },

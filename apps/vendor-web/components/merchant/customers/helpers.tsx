@@ -1,5 +1,5 @@
-import { type CustomerResp } from "@gomarket/api-client";
-import { fmtNaira } from "@gomarket/shared-utils";
+import { type CustomerResp } from "@wojalo/api-client";
+import { fmtNaira } from "@wojalo/shared-utils";
 import { Mail, Phone, X, ShoppingBag } from "lucide-react";
 
 function initials(name: string) {

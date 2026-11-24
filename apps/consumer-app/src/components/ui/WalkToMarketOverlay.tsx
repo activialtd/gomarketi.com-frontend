@@ -272,7 +272,7 @@ export function WalkToMarketOverlay({
 
       {/* caption up top */}
       <View style={s.captionWrap}>
-        <Text style={s.captionEyebrow}>GOMARKETI</Text>
+        <Text style={s.captionEyebrow}>WỌJÀLỌ</Text>
         <Text style={s.caption}>
           Off to the market{"\n"}for “{query}”…
         </Text>

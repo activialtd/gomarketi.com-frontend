@@ -4,8 +4,8 @@ import {
   CATEGORY_EMOJIS,
 } from "@/lib/data/categories";
 import { CategoryFormValues, categorySchema } from "@/lib/validations/schemas";
-import { toSlug } from "@gomarket/shared-utils";
-import { Input } from "@gomarket/ui";
+import { toSlug } from "@wojalo/shared-utils";
+import { Input } from "@wojalo/ui";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Check,

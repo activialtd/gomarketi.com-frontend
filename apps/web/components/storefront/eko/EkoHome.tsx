@@ -9,7 +9,7 @@ import {
 import { ProductCard } from "@/components/storefront/eko/EkoProductCard";
 import { PriceTypeBadge } from "@/components/storefront/offers/PriceTypeBadge";
 import type { StoreData, ThemeConfig, StorefrontProduct } from "@/app/storefront/[slug]/page";
-import { ordersApi } from "@gomarket/api-client";
+import { ordersApi } from "@wojalo/api-client";
 
 interface Props {
   store?: StoreData;
